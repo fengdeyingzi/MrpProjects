@@ -1,0 +1,22 @@
+[information]
+projectname=print.mpr
+filename=nettest.mrp
+appname=net网络测试
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=风的影子
+output=demo.mrp
+description=net网络测试 风的影子制作 2021.07.01
+include=..\modules\,${MRPBUILDER_HOME}\..\include\
+config=mtk240
+
+[config_mtk240]
+output=net_test.mrp
+bmp_mode=normal
+plat=mtk
+
+[files]
+file01 = main.c
+file100 = buffer.c
