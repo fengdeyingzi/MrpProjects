@@ -1,0 +1,24 @@
+[information]
+projectname=demo
+filename=demo
+appname=dakk
+appid=10001
+version=1001
+visible=1
+cpu=3
+vendor=风的影子
+output=打块块_mr.mrp
+description=用mythroad语言写的练手小游戏 2021.06.30
+
+include = src\
+
+config=mtk
+
+[config_mtk]
+bmp_mode=normal
+output=bin\打块块_mr.mrp
+
+[files]
+file01=src\start.mr
+file02=assets\logo.bmp
+
