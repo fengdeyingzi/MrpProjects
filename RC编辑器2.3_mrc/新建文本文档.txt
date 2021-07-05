@@ -1,0 +1,105 @@
+
+D:\Mythroad SDK\RCEditor2.21>C:\SKYMOBI\SDS4CPv1.0\Compiler\mrpbuilder.NET.exe .
+/Makefile.mpr
+mrpBuilder(.NET) version:B01.05_20100809
+${MRPBUILDER_HOME}: C:\SKYMOBI\SDS4CPv1.0\Compiler\
+target platfrom: mtk
+dealing mtk(mtk) config...
+compiling c\c++ file src\draw.c...
+compiling c\c++ file src\fileview.c...
+compiling c\c++ file src\filerw.c...
+compile resource file res\icon.ico...
+compiling c\c++ file sfw\mrc\mrc_win.c...
+compiling c\c++ file src\appmain.c...
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 46: Error: C2456E: undeclared na
+me, inventing 'extern int fontw'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 46: Error: C2456E: undeclared na
+me, inventing 'extern int fonth'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 50: Warning: C2215W: Deprecated
+declaration fileinit() - give arg types
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 50: Error: C2933E: type disagree
+ment for 'fileinit'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 50: Error: C2225W: declaration l
+acks type/storage-class (assuming 'int'): 'fileinit'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 60: Serious error: C2292E: typed
+ef name 'uint32' used in expression context
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 60: Serious error: C2284E: expec
+ted ';' after command - inserted before 'len'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 60: Error: C2456E: undeclared na
+me, inventing 'extern int len'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 60: Warning: C2917W: no side eff
+ect in void context: 'len'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 61: Error: C3028E: <argument 2 t
+o 'readmrpfile'>: implicit cast of pointer to non-equal pointer
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 79: Warning: C2207W: inventing '
+extern int find_txt();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 83: Warning: C2207W: inventing '
+extern int find_dir();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 87: Warning: C2207W: inventing '
+extern int find_hz();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 94: Warning: C2207W: inventing '
+extern int textListLoad();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 150: Warning: C2870W: variable '
+filelist' declared but not used
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 209: Warning: C2207W: inventing
+'extern int linerect();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 210: Error: C2456E: undeclared n
+ame, inventing 'extern int textcolor'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 210: Serious error: C2947E: Ille
+gal types for operands: '.'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 210: Serious error: C2947E: Ille
+gal types for operands: '.'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 210: Serious error: C2947E: Ille
+gal types for operands: '.'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 210: Error: C2456E: undeclared n
+ame, inventing 'extern int FONT'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 213: Warning: C2207W: inventing
+'extern int toolbar();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 215: Warning: C2207W: inventing
+'extern int gdt();'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 220: Error: C2456E: undeclared n
+ame, inventing 'extern int k_ui'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 220: Error: C2456E: undeclared n
+ame, inventing 'extern int UI_FILE'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 231: Warning: C2870W: variable '
+filelist' declared but not used
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 266: Serious error: C2842E: quot
+e (") inserted before newline
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 267: Serious error: C2842E: quot
+e (") inserted before newline
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 272: Serious error: C2842E: quot
+e (") inserted before newline
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 273: Serious error: C2842E: quot
+e (") inserted before newline
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 280: Warning: C2810W: (possible
+error): >= 10 lines of macro arguments
+"C:\SKYMOBI\SDS4CPv1.0\include\ui_list.h", line 651: Serious error: C2847E: Miss
+ing ')' after printf(... on line 266
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 5: Serious error: C2304E: <command> e
+xpected but found 'enum'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 6: Error: C2456E: undeclared name, in
+venting 'extern int MN_SL'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 8: Error: C2456E: undeclared name, in
+venting 'extern int MN_SR'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 10: Error: C2456E: undeclared name, i
+nventing 'extern int MR_DLG'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 12: Error: C2456E: undeclared name, i
+nventing 'extern int MR_FILE'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 13: Error: C2456E: undeclared name, i
+nventing 'extern int FILE_SL'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 14: Error: C2456E: undeclared name, i
+nventing 'extern int FILE_SR'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 15: Error: C2456E: undeclared name, i
+nventing 'extern int DLG_SL'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 16: Error: C2456E: undeclared name, i
+nventing 'extern int DLG_SR'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 17: Serious error: C2284E: expected '
+;' after command - inserted before '}'
+"C:\SKYMOBI\SDS4CPv1.0\include\ui.h", line 32: Fatal error: C3047U: Too many err
+ors
+
+Compilation abandoned.
+Compile error!
+
+D:\Mythroad SDK\RCEditor2.21>pause
+请按任意键继续. . .

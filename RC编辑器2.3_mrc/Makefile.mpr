@@ -1,0 +1,31 @@
+[information]
+projectname=RCEditor.mpr
+filename=arce.mrp
+appname=RC编辑器V2.3
+appid=8092423
+version=2200
+visible=1
+cpu=3
+vendor=风的影子
+output=RCEditor.mrp
+description=RC编辑器全新升级，支持在mrpoid上运行
+include=sfw/mrc;include;RCEditor2.21/src\;C:\SKYMOBI\SDS4CPv1.0\include\;@xqc/include/;
+
+config=mtk;
+
+[config_mtk]
+define=CONFIG_MTK
+output=arce_mtk.mrp
+bmp_mode=1
+//c_compiler=thumb
+gzip=1
+
+
+[files]
+
+file01 = src/AppMain.c
+
+file07 = res/icon.bmp
+file08 = res/eleqian.bmp
+file09 = res/res_lang0.rc
+file10 = res/fileicon.bmp
