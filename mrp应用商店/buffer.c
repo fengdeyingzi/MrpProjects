@@ -115,6 +115,14 @@ int32 buffer_appendx(STRING_BUFFER* buffer, char *buf, int32 len){
     return -1;
 }
 
+int32 buffer_clear(STRING_BUFFER* buffer){
+    buffer->len = 0;
+    mrc_memset(buffer->data, 0, buffer->max);
+    buffer->len = 0;
+    buffer->body_len = 0;
+    return 0;
+}
+
 int32 buffer_free(STRING_BUFFER* buffer){
     mrc_free(buffer->data);
     mrc_free(buffer);

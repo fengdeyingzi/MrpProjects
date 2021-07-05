@@ -17,6 +17,8 @@ typedef struct{
     char *path;
     char DisplayName[25]; //28:52
     char Desc[65]; //128:192
+    int isDownload; //是否是下载文件
+    int isUTF;
 } MRPHEADER;
 
 typedef struct {
@@ -54,6 +56,8 @@ int list_isshow(ListView *view);
 void list_setBackgroundColor(ListView *view, int color);
 void list_setonclick(ListView *view, void *click);
 void list_add(ListView *view, char *filename);
+void list_clear(ListView *view);
+void list_addData(ListView *view, char *label,char *desc,char *downloadUrl);
 void list_find_txt(ListView *view, char *file);
 int list_event(ListView *view, int32 type, int32 p1, int32 p2);
 void list_free(ListView *view);

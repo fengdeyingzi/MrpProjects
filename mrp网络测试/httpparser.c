@@ -22,12 +22,11 @@ HTTP_ONERROR lis_onerror;
 int32 timer_http;
 
 void http_logoc(int32 data) {
-  char buf[1024];
+  char buf[100];
   int32 con_state = 0;
   int32 temp_int = 0;
   char *temp_str;
   int32 content_len = 0;
-  int32 temp_re = 0;
   if (socket_state == 1) {  // connect
     //  MR_SUCCESS ：  连接成功
     //   MR_FAILED  ：连接失败
@@ -52,8 +51,8 @@ void http_logoc(int32 data) {
     //   drawInfo("send发送失败");
     lis_onerror(HTTP_ERROR_SEND);
     }
-  } else if (socket_state == 3 && socket!=-1) {  // recv
-    mrc_printf("mrc_recv %d ",socket);
+  } else if (socket_state == 3) {  // recv
+    
     temp_int = mrc_recv(socket, buf, sizeof(buf));
     if (temp_int >= 0) {
 		
@@ -80,19 +79,12 @@ void http_logoc(int32 data) {
                 
 				temp_int = isContentSuccess(buffer_http->data,content_len);
 				if(temp_int){
-					temp_re = mrc_closeSocket(socket);
-          if(temp_re == MR_FAILED){
-            mrc_printf("socket关闭失败");
-          }
-          else{
-            mrc_printf("socket关闭成功");
-          }
-          socket = -1;
+					mrc_closeSocket(socket);
 					buffer_http->body = mrc_strstr(buffer_http->data, "\r\n\r\n");
 					buffer_http->body += 4;
           mrc_printf("http获取成功 %s", buffer_http->body);
 					// drawInfo("http获取成功");
-          lis_onsuccess(local_ip, buffer_http->data, buffer_http->body);
+                    lis_onsuccess(local_ip, buffer_http->data, buffer_http->body);
 					// drawBody(buffer_http->body);
           socket_state = -1;
 				}
@@ -136,7 +128,6 @@ int32 onHttpCb(int32 ip) {
     con_state = mrc_connect(socket, ip, 80, MR_SOCKET_BLOCK);
     if (con_state == MR_FAILED) {
     //   drawInfo("connect连接失败");
-    socket_state = -1;
     lis_onerror(HTTP_ERROR_CONNECT);
     } else if (con_state == MR_SUCCESS) {
     //   drawInfo("connect连接成功");
@@ -313,14 +304,12 @@ void http_init(void){
     buffer_http = buffer_create();
 }
 
-
 //获取http数据 参数：url 获取进度 加载成功 加载失败
 //进度 -2 connect -1 send 0 接收head成功 0+ 接收body 
 void getHttpData(char *url, HTTP_ONPROGRESS onprogress, HTTP_ONSUCCESS onsuccess, HTTP_ONERROR onerror){
     lis_progress = onprogress;
     lis_onsuccess = onsuccess;
     lis_onerror = onerror;
-    buffer_clear(buffer_http);
      if (net_init_type != MR_SUCCESS) {
     // drawInfo("net未初始化成功");
     lis_onerror(HTTP_ERROR_NETINIT);

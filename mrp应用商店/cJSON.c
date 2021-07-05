@@ -44,8 +44,8 @@ static int cJSON_strcasecmp(const char *s1,const char *s2)
 	return tolower(*(const unsigned char *)s1) - tolower(*(const unsigned char *)s2);
 }
 
-static void *(*cJSON_malloc)(int sz) = mrc_malloc;
-static void (*cJSON_free)(void *ptr) = mrc_free;
+#define cJSON_malloc( sz)  mrc_malloc(sz)
+#define cJSON_free(ptr) mrc_free(ptr)
 
 static char* cJSON_strdup(const char* str)
 {
@@ -61,20 +61,20 @@ static char* cJSON_strdup(const char* str)
 void cJSON_InitHooks(cJSON_Hooks* hooks)
 {
     if (!hooks) { /* Reset hooks */
-        cJSON_malloc = mrc_malloc;
-        cJSON_free = mrc_free;
+        // cJSON_malloc = mrc_malloc;
+        // cJSON_free = mrc_free;
         return;
     }
 
-	cJSON_malloc = (hooks->malloc_fn)?hooks->malloc_fn:mrc_malloc;
-	cJSON_free	 = (hooks->free_fn)?hooks->free_fn:mrc_free;
+	// cJSON_malloc = (hooks->malloc_fn)?hooks->malloc_fn:mrc_malloc;
+	// cJSON_free	 = (hooks->free_fn)?hooks->free_fn:mrc_free;
 }
 
 /* Internal constructor. */
 static cJSON *cJSON_New_Item(void)
 {
 	cJSON* node = (cJSON*)cJSON_malloc(sizeof(cJSON));
-	if (node) memset(node,0,sizeof(cJSON));
+	if (node) mrc_memset(node,0,sizeof(cJSON));
 	return node;
 }
 
@@ -189,7 +189,7 @@ static unsigned parse_hex4(const char *str)
 }
 
 /* Parse the input text into an unescaped cstring, and populate item. */
-static const unsigned char firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
+static unsigned char firstByteMark[7];
 static const char *parse_string(cJSON *item,const char *str)
 {
 	const char *ptr=str+1;char *ptr2;char *out;int len=0;unsigned uc,uc2;
@@ -324,20 +324,26 @@ static const char *skip(const char *in) {while (in && *in && (unsigned char)*in<
 cJSON *cJSON_ParseWithOpts(const char *value,const char **return_parse_end,int require_null_terminated)
 {
 	const char *end=0;
+	// mrc_printf("cJSON_ParseWithOpts 1");
 	cJSON *c=cJSON_New_Item();
+	mrc_printf("cJSON_ParseWithOpts 1");
 	ep=0;
 	if (!c) return 0;       /* memory fail */
 
 	end=parse_value(c,skip(value));
+	mrc_printf("cJSON_ParseWithOpts 1");
 	if (!end)	{cJSON_Delete(c);return 0;}	/* parse failure. ep is set. */
-
+mrc_printf("cJSON_ParseWithOpts 1");
 	/* if we require null-terminated JSON without appended garbage, skip and then check for a null terminator */
 	if (require_null_terminated) {end=skip(end);if (*end) {cJSON_Delete(c);ep=end;return 0;}}
 	if (return_parse_end) *return_parse_end=end;
 	return c;
 }
 /* Default options for cJSON_Parse */
-cJSON *cJSON_Parse(const char *value) {return cJSON_ParseWithOpts(value,0,0);}
+cJSON *cJSON_Parse(const char *value) {
+	unsigned char temp[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
+	mrc_memcpy(firstByteMark,temp,7);
+	return cJSON_ParseWithOpts(value,0,0);}
 
 /* Render a cJSON item/entity/structure to text. */
 char *cJSON_Print(cJSON *item)				{return print_value(item,0,1,0);}
@@ -661,7 +667,7 @@ static char *print_object(cJSON *item,int depth,int fmt,printbuffer *p)
 /* Get Array size/item / object item. */
 int    cJSON_GetArraySize(cJSON *array)							{cJSON *c=array->child;int i=0;while(c)i++,c=c->next;return i;}
 cJSON *cJSON_GetArrayItem(cJSON *array,int item)				{cJSON *c=array->child;  while (c && item>0) item--,c=c->next; return c;}
-cJSON *cJSON_GetObjectItem(cJSON *object,const char *string)	{cJSON *c=object->child; while (c && cJSON_strcasecmp(c->string,string)) c=c->next; return c;}
+cJSON *cJSON_GetObjectItem(cJSON *object,const char *string)	{cJSON *c=object->child; while (c && mrc_strcmp(c->string,string)) c=c->next; return c;} //xldebug
 
 /* Utility for array list handling. */
 static void suffix_object(cJSON *prev,cJSON *item) {prev->next=item;item->prev=prev;}

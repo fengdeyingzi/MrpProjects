@@ -1,0 +1,11 @@
+{
+    "files.associations": {
+        "mrc_base.h": "c",
+        "buffer.h": "c",
+        "http.h": "c",
+        "stdio.h": "c",
+        "float.h": "c",
+        "filelist.h": "c",
+        "url_docode.h": "c"
+    }
+}

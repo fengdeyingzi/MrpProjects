@@ -1,9 +1,9 @@
 [information]
 projectname=print.mpr
 filename=mrpshop.mrp
-appname=mrp应用商店1.0
+appname=mrp应用商店1.2
 appid=30001
-version=101
+version=102
 visible=1
 cpu=3
 vendor=风的影子
@@ -25,3 +25,4 @@ file102 = url_docode.c
 file103 = cJSON.c
 file104 = filelist.c
 file105 = mpc.c
+file106 = xl_coding.c
