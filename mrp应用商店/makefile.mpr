@@ -1,14 +1,14 @@
 [information]
 projectname=print.mpr
 filename=mrpshop.mrp
-appname=mrp应用商店1.2
+appname=影子应用商店1.3
 appid=30001
-version=102
+version=103
 visible=1
 cpu=3
 vendor=风的影子
 output=mrpshop.mrp
-description=net应用商店 mrp.yzjlb.net 风的影子制作 2021.07.01
+description=影子应用商店 mrp.yzjlb.net 风的影子制作 2021.07.01
 include=..\modules\,${MRPBUILDER_HOME}\..\include\
 config=mtk240
 

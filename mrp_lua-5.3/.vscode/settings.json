@@ -1,0 +1,21 @@
+{
+    "files.associations": {
+        "math.h": "c",
+        "cmath": "cpp",
+        "jsi.h": "c",
+        "memory": "cpp",
+        "base.h": "c",
+        "lua.h": "c",
+        "cstdlib": "c",
+        "cstring": "c",
+        "cstdio": "c",
+        "new": "c",
+        "stdexcept": "c",
+        "mr_helper.h": "c",
+        "fstream": "c",
+        "istream": "c",
+        "limits": "c",
+        "functional": "c",
+        "string": "c"
+    }
+}

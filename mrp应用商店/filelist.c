@@ -151,6 +151,9 @@ void list_clear(ListView *view){
 		mrc_free(view->list[i]);
 		view->list[i] = NULL;
 	}
+	view->list_index = 0;
+	view->list_len = 0;
+	view->list_progress = 0;
 }
 
 void list_addData(ListView *view, char *label,char *desc,char *downloadUrl) {

@@ -25,7 +25,7 @@ enum{
 };
 
 void http_init(void);
-void getHttpData(char *url, HTTP_ONPROGRESS onprogress, HTTP_ONSUCCESS onsuccess, HTTP_ONERROR onerror);
+void http_getData(char *url, HTTP_ONPROGRESS onprogress, HTTP_ONSUCCESS onsuccess, HTTP_ONERROR onerror);
 void http_exit(void);
 
 #endif

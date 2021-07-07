@@ -316,10 +316,11 @@ void http_init(void){
 
 //获取http数据 参数：url 获取进度 加载成功 加载失败
 //进度 -2 connect -1 send 0 接收head成功 0+ 接收body 
-void getHttpData(char *url, HTTP_ONPROGRESS onprogress, HTTP_ONSUCCESS onsuccess, HTTP_ONERROR onerror){
+void http_getData(char *url, HTTP_ONPROGRESS onprogress, HTTP_ONSUCCESS onsuccess, HTTP_ONERROR onerror){
     lis_progress = onprogress;
     lis_onsuccess = onsuccess;
     lis_onerror = onerror;
+    send_len = 0;
     buffer_clear(buffer_http);
      if (net_init_type != MR_SUCCESS) {
     // drawInfo("net未初始化成功");

@@ -12,6 +12,7 @@
 
 ListView *list_mrp;
 ListView *list_shop;
+int shop_page;
 int tab_index;
 
 // int _dtext(const char *pcText, int x, int y, int r, int g, int b, int is_unicode, int font) {
@@ -53,14 +54,14 @@ void searchMrp(char *text) {
 	urlencode(temp);
 	mrc_sprintf(url, "http://mrp.yzjlb.net/api.php?s=%s", temp);
 	mrc_free(temp);
-	getHttpData(url, http_onProgress, http_onSuccess, http_onError);
+	http_getData(url, http_onProgress, http_onSuccess, http_onError);
 }
 
 //获取mrp列表 1开始
 void getMrpList(int page) {
 	char url[300];
 	mrc_sprintf(url, "http://mrp.yzjlb.net/api.php?page=%d", page);
-	getHttpData(url, http_onProgress, http_onSuccess, http_onError);
+	http_getData(url, http_onProgress, http_onSuccess, http_onError);
 }
 
 //显示状态信息
@@ -137,7 +138,8 @@ void switchTab(int index) {
 		list_hide(list_mrp);
 		list_show(list_shop);
 		mrc_printf("switchTab getMrpList");
-		getMrpList(1);
+		if(list_shop->list_len == 0)
+		getMrpList(shop_page);
 	}
 	mrc_printf("switchTab drawUI");
 	drawUI();
@@ -279,12 +281,13 @@ int32 mrc_init() {
 	mrc_refreshScreen(0, 0, SCRW, SCRH);
 	http_init();
 	drawUI();
+	shop_page = 1;
 	//   void* timerCB = http_onSuccess;
 	//   test_test jjj = http_onSuccess;
 	//   HTTP_ONSUCCESS onsuccess = http_onSuccess;
 	//   HTTP_ONPROGRESS onprogress = http_onProgress;
 	//   HTTP_ONERROR onerr = http_onError;
-	// getHttpData("http://mrp.yzjlb.net/api.php", http_onProgress, http_onSuccess, http_onError);
+	// http_getData("http://mrp.yzjlb.net/api.php", http_onProgress, http_onSuccess, http_onError);
 
 	return 0;
 }

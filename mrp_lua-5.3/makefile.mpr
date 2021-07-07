@@ -1,0 +1,59 @@
+[information]
+projectname=lua.mpr
+filename=lua.mrp
+appname=lua解释器
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=风的影子
+output=lua.mrp
+description=lua解释器2021.07.01
+include=C:\SKYMOBI\SDS4CPv1.0\include,C:\SKYMOBI\SDS4CPv1.0\include\plugins,./
+config=mtk240
+
+[config_mtk240]
+output=lua.mrp
+bmp_mode=normal
+plat=mtk
+
+[files]
+file1 = hello.c
+file2 = lua.c
+file3 = myloadlib.c
+file99 = base.c
+file100 = lapi.c 
+file101 = lcode.c 
+file102 = lctype.c 
+file103 = ldebug.c 
+file104 = ldo.c 
+file105 = ldump.c 
+file106 = lfunc.c 
+file107 = lgc.c 
+file108 = llex.c 
+file109 = lmem.c 
+file110 = lobject.c 
+file111 = lopcodes.c 
+file112 = lparser.c 
+file113 = lstate.c 
+file124 = lstring.c 
+file125 = ltable.c 
+file126 = ltm.c 
+file127 = lundump.c 
+file128 = lvm.c 
+file129 = lzio.c 
+file130 = ltests.c
+file131 = lauxlib.c
+file132 = lbaselib.c 
+file133 = ldblib.c 
+file134 = liolib.c 
+file135 = lmathlib.c 
+file136 = loslib.c 
+file137 = ltablib.c 
+file138 = lstrlib.c 
+file139 = lutf8lib.c 
+file140 = lbitlib.c 
+file141 = loadlib.c 
+file142 = lcorolib.c 
+file143 = linit.c  
+
