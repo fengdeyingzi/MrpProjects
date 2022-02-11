@@ -9,7 +9,7 @@ cpu=3
 vendor=风的影子
 output=RCEditor.mrp
 description=RC编辑器全新升级，支持在mrpoid上运行
-include=sfw/mrc;include;RCEditor2.21/src\;C:\SKYMOBI\SDS4CPv1.0\include\;@xqc/include/;
+include=sfw/mrc,include,RCEditor2.21/src\,C:\SKYMOBI\SDS4CPv1.0\include\,@xqc/include/
 
 config=mtk;
 

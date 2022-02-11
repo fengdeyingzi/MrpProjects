@@ -1,0 +1,2 @@
+mrpbuilder -t build -I./sfw/mrc -Iinclude -IRCEditor2.21/src\ -IC:\SKYMOBI\SDS4CPv1.0\include\ -Ixqc/include/ -i src/AppMain.c res/icon.bmp res/eleqian.bmp res/res_lang0.rc res/fileicon.bmp -o rcedit.mrp -appid 8092423 -version 2200 -vendor 风的影子 -desc "RC编辑器全新升级，支持在mrpoid上运行" -filename arce.mrp -displayname RC编辑器V2.3
+rcedit.mrp

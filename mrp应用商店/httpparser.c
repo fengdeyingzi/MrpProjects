@@ -279,7 +279,7 @@ int32 getHost(char *url, MR_GET_HOST_CB cb) {
   mrc_printf("getHost 1");
   mrc_memset(send_buf, '\0', 255);
   mrc_printf("host=%s road=%s",host,road);
-  mrc_sprintf(send_buf, "GET %s HTTP/1.1\r\nHost:%s\r\n\r\n\r\n", road, host);
+  mrc_sprintf(send_buf, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", road, host);
   mrc_free(road);
   mrc_free(host);
   mrc_printf("getHost 2");

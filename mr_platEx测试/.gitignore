@@ -2,9 +2,7 @@
 /lib
 /Debug
 *.mrp
-*.ext
-*.o
-*.fmt
+
 
 
 

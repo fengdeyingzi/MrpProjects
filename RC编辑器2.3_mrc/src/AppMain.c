@@ -1,4 +1,4 @@
-//#include <mrc_base.h>
+#include <mrc_base.h>
 //#include <mrc_exb.h>
 //#include <mrc_win.h>
 
@@ -914,7 +914,8 @@ void MainWinWinEvent(int32 data, int32 eventId)
         break;
     }
 }
-*/
+
+*/
 //ÆÁÄ»&°´¼üÊÂ¼þ
 void MainKeyWinEvent(int32 data, int32 type, int32 p1, int32 p2)
 {
@@ -994,7 +995,8 @@ int _event(int code, int param0, int param1)
     return MR_SUCCESS;
 }
 
-/*
+
+/*
 int32 mrc_appEvent(int32 code, int32 param0, int32 param1)
 {
     event(code, param0, param1);
@@ -1035,3 +1037,12 @@ int32 mrc_exitApp()
     return MR_SUCCESS;
 }
 
+int32 mrc_extRecvAppEvent(int32 app, int32 code, int32 param0, int32 param1) {
+  mrc_printf("mrc_extRecvAppEvent");
+  return 0;
+}
+int32 mrc_extRecvAppEventEx(int32 code, int32 p0, int32 p1, int32 p2, int32 p3,
+                            int32 p4, int32 p5) {
+  mrc_printf("mrc_extRecvAppEventEx");
+  return 0;
+}

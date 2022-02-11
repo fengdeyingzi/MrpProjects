@@ -1,0 +1,52 @@
+[information]
+projectname=mujs.mpr
+filename=mujs.mrp
+appname=mujs运行器
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=风的影子
+output=mujs.mrp
+description=mujs运行器 2021.07.01
+include=C:\SKYsdk\modules,C:\SKYsdk\include,./
+config=mtk240
+
+[config_mtk240]
+output=mujs.mrp
+bmp_mode=normal
+plat=mtk
+
+[files]
+file1 = base.c
+file2 = jsrun/mrc_math.c
+file100 = jsrun/hello.c 
+file101 = jsrun/jscapp.c 
+file102 = jsrun/jsarray.c 
+file103 = jsrun/jsboolean.c 
+file104 = jsrun/jsbuiltin.c  
+file105 = jsrun/jscompile.c 
+file106 = jsrun/jsdate.c 
+file107 = jsrun/jsdtoa.c 
+file108 = jsrun/jsdump.c 
+file109 = jsrun/jserror.c 
+file110 = jsrun/jsfunction.c 
+file111 = jsrun/jsgc.c 
+file112 = jsrun/jsintern.c 
+file113 = jsrun/jslex.c 
+file114 = jsrun/jsmath.c 
+file115 = jsrun/jsnumber.c 
+file116 = jsrun/jsobject.c 
+file117 = jsrun/json.c 
+file118 = jsrun/jsparse.c 
+file119 = jsrun/jsproperty.c 
+file120 = jsrun/jsregexp.c 
+file121 = jsrun/jsrepr.c 
+file122 = jsrun/jsstate.c 
+file123 = jsrun/jsstring.c 
+file124 = jsrun/jsvalue.c 
+file125 = jsrun/jsrun.c 
+file126 = jsrun/regexp.c 
+file127 = jsrun/utf.c 
+file128 = jsrun/utftype.c    
+

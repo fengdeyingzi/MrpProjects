@@ -1,6 +1,6 @@
 #include <mrc_base.h>
 #include <mrc_base_i.h>
-#include <mrc_network.h>
+// #include <mrc_network.h>
 
 #include "buffer.h"
 
@@ -113,12 +113,14 @@ void http_logoc(int32 data) {
     mrc_printf(buffer_http->data);
     
       buffer_appendx(buffer_http, buf, temp_int);
-      mrc_sprintf(buf,"接收数据中 %d %d %d",socket,buffer_http->len,mrc_strlen(buffer_http->data));
-      drawInfo(buf);
+      
 		//判断header是否完成
 		if(mrc_strstr(buffer_http->data, "\r\n\r\n")){
 			//读取头完成
 			temp_str = mrc_strstr(buffer_http->header, "Content-Length");
+      buffer_http->body = mrc_strstr(buffer_http->data, "\r\n\r\n")+4;
+      drawBody(buffer_http->body);
+      
       mrc_printf("!=null");
 			if(temp_str != NULL){
         mrc_printf("getline_value begin");
@@ -126,18 +128,23 @@ void http_logoc(int32 data) {
         mrc_printf("getline_value %s",temp_str);
 				content_len = mrc_atoi(temp_str);
         mrc_printf("atoi %d",content_len);
+        mrc_sprintf(buf,"接收数据中%d %d/%d %d",socket,mrc_strlen(buffer_http->body), content_len,mrc_strlen(buffer_http->body) == content_len);
+        drawInfo(buf);
 				mrc_free(temp_str);
 				temp_int = isContentSuccess(buffer_http->data,content_len);
-				if(temp_int){
-					mrc_closeSocket(socket);
-					buffer_http->body = mrc_strstr(buffer_http->data, "\r\n\r\n");
-					buffer_http->body += 4;
+				if(temp_int || mrc_strlen(buffer_http->body) == content_len){
+					
+					// buffer_http->body = mrc_strstr(buffer_http->data, "\r\n\r\n");
+					// buffer_http->body += 4;
           mrc_printf("http获取成功 %s", buffer_http->body);
 					drawInfo("http获取成功");
 					drawBody(buffer_http->body);
           socket_state = -1;
+          mrc_closeSocket(socket);
 				}
-			}
+			} else {
+        drawInfo("tempstr is null");
+      }
 		}
     } else {
       drawInfo("接收数据失败");
@@ -160,7 +167,7 @@ void drawInfo(char *text) {
 void drawBody(char *text) {
   mr_screenRectSt rect;
   mr_colourSt colors;
-  char temp[300];
+  char temp[500];
   rect.x = 0;
   rect.y = 0;
   rect.w = SCRW;
@@ -169,10 +176,10 @@ void drawBody(char *text) {
   colors.g = 33;
   colors.b = 33;
   
-	UTF8ToUni(text,temp,300);
+	UTF8ToUni(text,temp,500);
   mrc_drawRect(0, 0, SCRW, SCRH - 24, 200, 200, 200);
   mrc_drawTextEx(temp, 0, 0, rect, colors, 1+2, 1);
-  mrc_drawText(temp,0,0,33,33,33,1,1);
+  // mrc_drawText(temp,0,0,33,33,33,1,1);
   mrc_refreshScreen(0, 0, SCRW, SCRH - 24);
   mrc_printf("drawBody %s",text);
 }
@@ -372,7 +379,7 @@ int32 getHost(char *url, MR_GET_HOST_CB cb) {
   mrc_printf("getHost 1");
   mrc_memset(send_buf, '\0', 255);
   mrc_printf("host=%s road=%s",host,road);
-  mrc_sprintf(send_buf, "GET %s HTTP/1.1\r\nHost:%s\r\n\r\n\r\n", road, host);
+  mrc_sprintf(send_buf, "GET %s HTTP/1.1\r\nHost: %s\r\n\r\n\r\n", road, host);
   mrc_free(road);
   mrc_free(host);
   mrc_printf("getHost 2");
@@ -394,6 +401,9 @@ void getHttpData(char *url) {
   if (net_init_type != MR_SUCCESS) {
     drawInfo("net未初始化成功");
   } else {
+    send_len = 0;
+    buffer_http->len = 0;
+    buffer_http->body_len = 0;
     getHost(url, onHttpCb);
   }
 }

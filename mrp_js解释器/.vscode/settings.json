@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "math.h": "c",
+        "cmath": "cpp",
+        "jsi.h": "c",
+        "encode.h": "c"
+    }
+}

@@ -6,6 +6,8 @@
         "stdio.h": "c",
         "float.h": "c",
         "filelist.h": "c",
-        "url_docode.h": "c"
+        "url_docode.h": "c",
+        "mrc_exb.h": "c",
+        "mrc_base_i.h": "c"
     }
 }
