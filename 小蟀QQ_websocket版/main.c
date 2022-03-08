@@ -1663,7 +1663,7 @@ void about_act_call(int32 data)
 	setTitle(28, "关于", str);
 
 	drawBkg();
-	drawTextView1(&about);
+	drawTextView(&about);
 	drawImageView(&about_logo);
 	drawTitle();
 
