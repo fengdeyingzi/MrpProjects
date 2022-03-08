@@ -1,0 +1,74 @@
+[information]
+projectname=xqc.mpr
+filename=xqc.mrp
+appname=mpc运行器
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=xq
+output=xqc.mrp
+description=冒泡实验开发系统运行器!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\mrc\, src\,syslib\,syslib\3d\,bin\
+config=tsq,yxq
+
+
+[config_tsq]
+define=DEMO_DEBUG,includefile
+output=bin\temp\debug.m
+bmp_mode=normal
+
+[config_yxq]
+define=DEMO_DEBUG
+output=bin\temp\runner.m
+bmp_mode=normal
+[files_tsq]
+file01 = syslib\m_packged.c
+
+[files]
+file02 = src\clibrary.c
+file03 = src\expression.c
+file04 = src\heap.c
+file05 = src\include.c
+file07 = src\lex.c
+file12 = src\parse.c
+file13 = src\picoc.c
+file14 = src\platform.c
+file15 = src\table.c
+file16 = src\type.c
+file17 = src\variable.c
+file18 = src\momo.c
+file19 = src\xqc.c
+file20 = src\font.c
+file21 = src\libini.c
+file22 = src\x_graphics.c  
+
+file50 = syslib\haning.c
+file51 = syslib\m_base.c
+file52 = syslib\m_ctype.c
+file53 = syslib\m_sound.c
+file54 = syslib\m_net.c
+file55 = syslib\m_math.c
+file56 = syslib\m_base_i.c
+file57 = syslib\m_graphics.c 
+file58 = syslib\m_mrc_base.c 
+file59 = syslib\m_sd.c 
+
+
+
+file100 = syslib\3d\create.c 
+file101 = syslib\3d\draw.c 
+file102 = syslib\3d\graphics.c 
+file103 = syslib\3d\model.c 
+file104 = syslib\3d\xmmath.c 
+
+[files_yxq]
+
+# 资源 100 - 199
+#file100 = src\setup.ini
+#file101 = main.cc
+
+#file209 = web.cc
+#file210 = main2.cc
+
+#file301 = out\plugin.mrp

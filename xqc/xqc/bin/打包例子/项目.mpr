@@ -1,0 +1,13 @@
+[information]
+projectname=bmp.mpr
+filename=bmp.mrp
+appname=BMP图片显示
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=xq
+description=这是BMP图片显示!
+outmain=打包例子/BMP图片显示.c
+outdir=打包例子/file/
+output=打包例子/BMP图片显示.mrp

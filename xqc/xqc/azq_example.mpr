@@ -1,0 +1,28 @@
+[information]
+projectname=azxqc.mpr
+filename=azxqc.mrp
+appname=安装xqc
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=小钱
+output=azxqc.mrp
+description=安装包_例程!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\mrc\, src\,syslib\,bin\，bin\temp\
+config=mtk240
+
+
+[config_mtk240]
+define=DEMO_DEBUG,CONFIG_240
+output=bin\temp\example.m
+bmp_mode=normal
+
+[files]
+file02 = azq\example\setup.ini
+file03 = azq\example\project\helloworld\hmakefile.mpr
+file04 = azq\example\project\helloworld\hv.vcproj
+file05 = azq\example\project\helloworld\src\hhelloworld.cc
+file06 = azq\example\project\helloworld\src\hhelloworld.h
+file07 = azq\example\project\helloworld\res\hmrc_win.cc
+file08 = azq\example\project\helloworld\res\hmrc_win.h

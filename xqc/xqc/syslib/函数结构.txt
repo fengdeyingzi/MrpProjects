@@ -1,0 +1,51 @@
+//函数定义格式
+void Lib_diy(struct ParseState *Parser, struct Value *ReturnValue, struct Value **Param, int NumArgs);
+/*ReturnValue返回值类型*/
+//无符号8bit整型     uint8
+ReturnValue->Val->Character
+//有符号16bit整型    int16
+ReturnValue->Val->ShortInteger
+//有符号32bit整型    int
+ReturnValue->Val->Integer
+//long
+ReturnValue->Val->LongInteger
+//无符号16bit整型    uint16
+ReturnValue->Val->UnsignedShortInteger
+//有符号32bit整型    int32
+ReturnValue->Val->UnsignedInteger
+//无符号32bit整型    uint32;
+ReturnValue->Val->UnsignedLongInteger
+//浮点型     double  暂不支持
+ReturnValue->Val->FP
+//指针型     void*    通用指针
+ReturnValue->Val->Pointer
+
+/*Param[]参数*/
+//无符号8bit整型     uint8
+Param[0]->Val->Character
+//有符号16bit整型    int16
+Param[0]->Val->ShortInteger
+//有符号32bit整型    int
+Param[0]->Val->Integer
+//long
+Param[0]->Val->LongInteger
+//无符号16bit整型    uint16
+Param[0]->Val->UnsignedShortInteger
+//有符号32bit整型    int32
+Param[0]->Val->UnsignedInteger
+//无符号32bit整型    uint32;
+Param[0]->Val->UnsignedLongInteger
+//浮点型     double  暂不支持
+Param[0]->Val->FP
+//指针型     void*    通用指针
+Param[0]->Val->Pointer
+
+
+/*例子*/
+void Lib_DrawTextEx(struct ParseState *Parser, struct Value *ReturnValue, struct Value **Param, int NumArgs)
+{
+    ReturnValue->Val->LongInteger = mrc_drawTextEx(Param[0]->Val->Pointer,
+        Param[1]->Val->ShortInteger, Param[2]->Val->ShortInteger, 
+        *(mr_screenRectSt*)Param[3]->Val->Pointer,*(mr_colourSt*)Param[4]->Val->Pointer, 
+        Param[5]->Val->Integer, Param[6]->Val->Integer);
+}

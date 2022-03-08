@@ -1,0 +1,27 @@
+[information]
+projectname=Helloworld.mpr
+filename=e_mrp.mrp
+appname=掌上e_mrp
+appid=110124
+version=1001
+visible=1
+cpu=100
+vendor=默水瓶
+output=e_mrp.mrp
+description=掌上e_mrp!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\modules\, src\
+config=mtk
+
+
+[config_mtk]
+output=掌上e_mrp.mrp
+bmp_mode=normal
+c_compiler=thumb
+
+[files]
+file01 = sfw\mrc\mrc_win.c
+file02 = src\helloworld.c
+file03 = src\TOMRP.lib
+file06 = src\dialog.c
+
+file96 = head

@@ -1,0 +1,219 @@
+TCC，全称Tiny C Compiler(http://bellard.org/tcc/)，是一个颇具特色的C编译器，你能把它当作一个C语言解释器来用，也可以嵌入你自己的应用程序作一个动态代码生成器。是的，我们就是这么干的。在我们的项目中，粒子系统的运动规则用C语言来描述，然后由TCC动态生成native code运行。这么做既不失效率又保持了较高的动态能力。
+
+    但是，既然是使用第三方库，那就要准备好享受成果的同时吞下bug。这一次，我们吃到的可是一只非常揪心的虫子。
+
+
+    众所周知，X86 CPU的浮点计算单元(FPU)共有8个浮点数寄存器，它们是按照栈的形式组织的。如果load浮点数进了一个寄存器，那么它就属于被占用的，需要用类似pop的操作把它释放掉后才能重新使用。
+
+
+    对于TCC来说，一个函数如果使用了浮点运算，那么它生成的代码在函数返回的时候会在FPU栈上留下一个垃圾(为什么？
+这是后话，也是本文的主旨。)，这样8个寄存器就只剩下7个可以用了。如果你的程序全部用TCC编译这没什么问题，但是和gcc或者msvc混合使用的话就有问题了。因为这些编译器一直认为在刚刚进入任何一个函数的时候都会有8个浮点寄存器可用，而如果打开了优化开关的话，它们就有可能生成一些很牛B的代码，一下子把8个寄存器全都用满。这就糟糕了，只有7个茅坑(另外一个TCC占着不拉屎)，一下子要蹲8个，于是就触发了FPU内部的“茅坑使用异常”(学名叫FPU invalid operation
+exception:#IE)。关键是这个鸟异常一般情况下是被FPU罩(mask)着的，我们根本不知道，以为天下太平，但是从浮点寄存器
+上取回的值那就错得象一坨屎一样了。
+
+
+    这个bug折磨了我们好几天，同事云风已经说过这事情了。接下来我要带大家掘地三尺，找准位置，痛下杀脚，踩死这只臭虫(看丫还蹦达)。
+
+
+    我们的分析标本是tcc-0.9.25，也是目前最新的官方发行版，源码这里下:http://download.savannah.nongnu. ... /tcc-0.9.25.tar.bz2。
+
+
+    TCC通过`fstp %st(1)'指令在FPU栈上留垃圾。st是FPU stack的简写，st(n)指的是浮点栈的第n号寄存器，栈顶到栈底依次按0、1、2...进行编号。这句指令的意思是不管st(1)有没有被占用，都把st(0)的内容拷贝到st(1)，然后释放st(0)即栈顶，原来的st(1)成为新的栈顶。该指令结束后，FPU栈顶一定是被占用的。
+
+
+    有两个地方会生成`fstp %st(1)'指令(二进制编码是0xd9dd)：tccgen.c的689行(vpop函数内)；tccgen.c的210行(save_reg函数内)。我们首先把它们都改为生成`fstp %st(0)'指令(二进制编码是0xd8dd)。`fstp %st(0)'的意思其实就是弹出FPU栈顶寄存器的内容，使st(0)成为未占用状态，不做任何多余的事。本来vpop和save_reg这两个函数就是为了释放寄存器才生成相关指令的，这么一改就合乎函数的原本意图了。
+
+
+    那是不是这样就万事大吉了呢？显然是不够的，如果真这么简单我用得着写这篇文章吗？让我们试着用修改过的TCC编译下面的函数:
+
+
+void foo()
+{
+  double var = 2.7;
+  var++;
+}
+
+
+它会生成这样的机器码：
+
+
+.text:08000000                 public foo
+.text:08000000 foo             proc near
+.text:08000000
+.text:08000000 var_18          = qword ptr -18h
+.text:08000000 var_10          = qword ptr -10h
+.text:08000000 var_8           = qword ptr -8
+.text:08000000
+.text:08000000                 push    ebp
+.text:08000001                 mov     ebp, esp
+.text:08000003                 sub     esp, 18h
+.text:08000009                 nop
+.text:0800000A                 fld     L_0
+.text:08000010                 fst     [ebp+var_8]
+.text:08000013                 fstp    st(0)
+.text:08000015                 fld     [ebp+var_8]
+.text:08000018                 fst     [ebp+var_10]
+.text:0800001B                 fstp    st(0)
+.text:0800001D                 fst     [ebp+var_18]
+.text:08000020                 fstp    st(0)
+.text:08000022                 fld     L_1
+.text:08000028                 fadd    [ebp+var_10]
+.text:0800002B                 fst     [ebp+var_8]
+.text:0800002E                 fstp    st(0)
+.text:08000030                 leave
+.text:08000031                 retn
+.text:08000031 foo             endp
+.text:08000031
+.text:08000031 _text           ends
+--------------------------------------------------
+.data:08000040 ; Segment type: Pure data
+.data:08000040 ; Segment permissions: Read/Write
+.data:08000040 ; Segment alignment '32byte' can not be represented in assembly
+.data:08000040 _data           segment page public 'DATA' use32
+.data:08000040                 assume cs:_data
+.data:08000040                 ;org 8000040h
+.data:08000040 L_0             dq 400599999999999Ah
+.data:08000048 L_1             dq 3FF0000000000000h
+.data:08000048 _data           ends
+
+
+请注意从0800000A到08000013的指令片段：
+
+
+// double var = 2.7; 把一个常数load进st(0)
+.text:0800000A                 fld     L_0
+// double var = 2.7; 把st(0)的内容拷贝到变量`var'中
+.text:08000010                 fst     [ebp+var_8]
+// double var = 2.7; poping st(0)，这会清空浮点栈
+.text:08000013                 fstp    st(0)
+
+
+这之后的指令是TCC通过调用`void inc(int post, int c)'这个函数(tccgen.c的2150行)产生的。其中08000015到0800001B的指令通过inc->gv_dup这条调用链生成：
+
+
+// 把变量`var'的内容加载进st(0)
+.text:08000015                 fld     [ebp+var_8]
+// 把st(0)的内容拷贝进内存中的一个临时位置
+.text:08000018                 fst     [ebp+var_10]
+// poping st(0)，这会清空浮点栈
+.text:0800001B                 fstp    st(0)
+
+
+接下来，调用链(gen_op('+')->gen_opif('+')->gen_opf('+')->gv(rc=2)->get_reg(rc=2)->save_reg(r=3))
+产生0800001D到08000020的指令：
+
+
+// 把st(0)的内容拷贝进内存中的一个临时位置，但是请注意，整个浮点栈都是空的，st(0)里根本没有合法的内容！
+.text:0800001D                 fst     [ebp+var_18]
+// poping st(0)，同样的问题，整个浮点栈都是空的！
+.text:08000020                 fstp    st(0)
+
+
+  实际运行过程中，0800001D号指令会引起FPU invalid operation exception(#IE)。
+
+
+  为什么TCC会生成这么傻的代码？请仔细阅读inc调用的`gv_dup'函数，注意它里面有下面几行：
+
+
+(1):  r = gv(rc);
+(2):  r1 = get_reg(rc);
+(3):  sv.r = r;
+      sv.c.ul = 0;
+      load(r1, &sv); /* move r to r1 */
+(4)   vdup();
+(5)   /* duplicates value */
+      vtop->r = r1;
+
+
+  首先要解释一下，机器指令生成中非常关键的一件事情就是如何分配变量对寄存器的使用，这是因为绝大部分的硬件指令
+都需要至少一个操作数在寄存器里面。TCC为了做这件事情，把当前所有局部变量的信息组织成栈的形式，称为vstack，
+栈顶称为vtop。这其中就包含了变量此时处于什么位置(是在哪个寄存器里，还是在某个内存地址当中)之类的信息。TCC对
+寄存器的假设是非常保守的，定义了3个通用寄存器和1个浮点寄存器，用enum值标识，TREG_ST0代表浮点寄存器。为什么做这么保守的假设？我猜测是因为有些架构(比如ARM？)的CPU并没有那么强大，而为了跨平台，TCC选择了一个所有架构都共有的最小公共寄存器集合。
+
+
+  再解释一下几个函数的行为。gv会想办法(比如生成指令)把vtop代表的变量load进某个寄存器，而该寄存器一定要属于rc(我猜是register class的缩写，即寄存器类别)指定的类别，如果vtop已经位于一个该类别的寄存器里，那么gv就什么都不用做，不管哪种情况，gv最终都返回vtop所在的寄存器标号。get_reg(rc)想得到一个自由(即未被任何变量占用)的rc类别的寄存器，如果该类寄存器全部被占用，那么这个过程就会导致某个已经占用了该类寄存器的变量被挤到内存(的一个临时地址)中去，从而释放出一个寄存器来。get_reg的返回值是自由寄存器标号。vdup会复制vtop，并使得新复制出来的元素成为新的vstack栈顶，即新的vtop。
+
+
+  现在让我们一行一行来分析。(1)会想办法把vtop加载进一个浮点类型的寄存器中，又因为只有一个浮点寄存器，所以(1)会让vtop占用TREG_ST0, 并且返回值r等于TREG_ST0。(2)尝试获得一个自由的浮点寄存器，但是同样地因为只有一个浮点寄存器，它已经被vtop占用了，所以get_reg会迫使vtop进入到内存当中，并且返回TREG_ST0给r1。(3)其实是想生成指令把r寄存器的内容move到r1寄存器里去，但是因为r等于r1，所以最终它什么都没做。(4)复制vtop。最后(5)会把新复制出来的vtop的
+位置指定为TREG_ST0，TCC认为这个新vtop合法地占有了那个唯一的浮点寄存器。
+
+
+  嘿，发现问题了吗？请注意，老的vtop已经被挤出寄存器到了内存当中，其后复制的新vtop所处的位置应该和老的一样，也在内存中，不在寄存器里。但是TCC却通过`vtop->r = r1'想当然地把浮点寄存器指定给了新的vtop，但是同时却没有生成任何把新vtop加载进寄存器的代码。随后因为`gen_op('+')'需要至少一个操作数在寄存器里，又因为它不正确地认为TREG_ST0已经被vtop占用了，所以导致生成0800001D和08000020号指令想把vtop放到一个临时的内存区域中去。
+
+
+  其实gv_dup本来想干的事情是加载vtop进r寄存器，然后在栈顶复制vtop，并把新vtop加载进r1寄存器中。但是在r等于r1的情况下， 这种语义是没有办法保证的。而如果是浮点类寄存器的话，那么r又一定会等于r1。所以对于浮点寄存器来说，gv_dup是一定不能按照要求完成任务的。
+
+
+  至此，我可以大胆地猜测一下。当初TCC的作者在那两个生成`fstp %st(1)'指令的位置可能也是想写`fstp %st(0)'的，但是
+因为gv_dup里面寄存器分配的bug，这样写的话会导致很多浮点运算编译出来的代码都有错，于是作者尝试了一下很tricky的
+`fstp %st(1)'指令，发现好象能解决问题，于是代码保留下来，真正的错误被隐藏。苦了我们这些使用者啊！
+
+
+  解决办法是什么呢？很简单，如果r等于r1的情况下，就不要让新的vtop非法地占用r1寄存器了。把(6)改成
+
+
+if (r != r1)
+{
+  vtop->r = r1;
+}
+
+
+
+
+  用再次修改过的TCC编译我们的例子，生成代码如下：
+
+
+.text:08000000                 push    ebp
+.text:08000001                 mov     ebp, esp
+.text:08000003                 sub     esp, 10h
+.text:08000009                 nop
+.text:0800000A                 fld     L_0
+.text:08000010                 fst     [ebp+var_8]
+.text:08000013                 fstp    st(0)
+.text:08000015                 fld     [ebp+var_8]
+.text:08000018                 fst     [ebp+var_10]
+.text:0800001B                 fstp    st(0)
+.text:0800001D                 fld     L_1
+.text:08000023                 fadd    [ebp+var_10]
+.text:08000026                 fst     [ebp+var_8]
+.text:08000029                 fstp    st(0)
+.text:0800002B                 leave
+.text:0800002C                 retn
+
+
+  更加简单，更加符合直觉，更重要的是它没有错误。
+
+
+  如果需要一个测试用例的话，下面这个程序很适合：
+
+
+void foo()
+{
+  double var = 2.7;
+  var++;
+}
+
+
+int
+main()
+{
+  // unmask FPU #IE(Invalid Operation Exception) flag of control word
+  unsigned short custom = 0;
+  asm("fstcw %0"
+      :
+      : "m" (custom));
+  custom &= 0xfffe;
+  asm("fldcw %0"
+      :
+      : "m" (custom));
+  // before foo(), FPU registers stack is empty
+  foo();
+  // after foo(), st(0) is left unclean
+  asm("fld1;"
+      "fld1;"
+      "fld1;"
+      "fld1;"
+      "fld1;"
+      "fld1;"
+      "fld1;"
+      "fld1;");

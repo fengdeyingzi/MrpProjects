@@ -1,0 +1,8 @@
+正在编译……
+c/测试/tcc.mpr
+处理<mtk>配置...
+xqc: 错误: _start 没有定义
+
+
+---编译完成---
+xqc/temp/code.o: 错误: 未被认出的ELF文件

@@ -1,0 +1,48 @@
+使用VC++2003编译TinyCC
+2008年12月20日 星期六 3:09
+
+TCC官方网址：http://bellard.org/tcc/
+
+下载最新源代码：http://download.savannah.nongnu.org/releases/tinycc/tcc-0.9.24.tar.bz2   (最新版本0.9.24)
+
+说明文档中使用的是MinGW32来编译Windows版本，按说明书就能编译出来。
+
+现在使用VC++2003来编译Windows版本。
+
+步骤如下：
+
+1、新建空的控制台项目 TinyCC-Win32
+
+2、新建文件config.h
+
+config.h代码如下：
+#define CONFIG_TCCDIR "."
+#define TCC_VERSION "0.9.24"
+
+#define _WIN32
+#define TCC_TARGET_PE
+#define inline __inline
+
+3、解压tcc源代码。
+
+tcc.c
+tccasm.c
+tccelf.c
+tccpe.c
+i386-asm.c
+i386-gen.c
+libtcc.h
+stab.def
+stab.h
+tcctok.h
+unistd.h
+elf.h
+i386-asm.h
+将以上这13个文件复制到TinyCC-Win32工程目录下，将tcc.c添加到工程中，注意不要将其他点C文件添加到工程中，否则不成功。
+
+4、修改tcc.c源代码
+#include <unistd.h>　　修改成 #include "unistd.h"
+
+5、就这么简单。运行TinyCC-Win32.exe时把
+
+\tcc-0.9.24\win32目录下的include和lib两个目录复制到你的TinyCC-Win32.exe所在的目录下。

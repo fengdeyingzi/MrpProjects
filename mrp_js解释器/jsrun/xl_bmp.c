@@ -115,8 +115,8 @@ BITMAP_565* bmp_read(void *buf, int len){
   return NULL;
  }
  //检测是否为透明图
- if(bmp->bitmap[0] == 0xf81f){
-   bmp_settranscolor(bmp, 0xf81f);
+ if(bmp->bitmap[0] == 0xf81f || bmp->bitmap[0] == 0x0){ //紫色和黑色
+   bmp_settranscolor(bmp, bmp->bitmap[0]);
  }
  //debug_printf("返回bmp\n");
  return bmp;

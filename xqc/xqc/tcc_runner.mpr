@@ -1,0 +1,58 @@
+[information]
+projectname=han.mpr
+filename=han.mrp
+appname=º¯Êý¿â²å¼þ
+appid=8073230
+version=1002
+visible=0
+cpu=3
+vendor=qian
+description=..¡£
+include= C:\SKYMOBI\SDS4CPv1.0\Compiler\include\,src\,tcc\,tcc\lib\,tcc\src\
+difine=DEMO_DEBUG,COMPILE
+
+
+plugin=appdev
+config=mtk
+
+[config_mtk]
+output=out\plugin.mrp
+bmp_mode=normal
+plat=mtk
+
+
+[files_mtk]
+file01 = plugin.ext(name=runner.ext)
+
+
+
+[files]
+
+[config_plugin]
+[files_plugin]
+file05 = tcc\src\main.c
+file06 = tcc\src\qd2.c
+file02 = tcc\src\patch.c
+file03 = src\packged.c
+file04 = src\libini.c
+file11 = tcc\tccrun.c
+file12 = tcc\libtcc.c
+file13 = tcc\tccpp.c
+file14 = tcc\tccgen.c
+file15 = tcc\tccelf.c
+file16 = tcc\arm-gen.c
+
+
+
+file100 = tcc\lib\l_base.c
+file101 = tcc\lib\l_sound.c
+file102 = tcc\lib\l_bmp.c
+file103 = tcc\lib\l_network.c
+file104 = tcc\lib\l_base_i.c
+file105 = tcc\lib\l_image.c
+file106 = tcc\lib\l_exb.c
+file107 = tcc\lib\l_camera.c
+file108 = tcc\lib\l_math.c
+file109 = tcc\lib\l_tcc.c
+
+

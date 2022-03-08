@@ -1,0 +1,207 @@
+
+
+借助Cinpy和C语言解释器TinyCC，可以在python程序里面直接嵌入C语言片断、不经编译直接使用C编写的函数了。
+
+win2k平台上，简单的测试对比数据如下（递归方法计算第四十项兔子数列fib（40））
+
+语言
+	
+
+实现
+	
+
+时间
+（单位：秒）
+	评
+python 	官方python 2.4.3 	纯python fib函数 	568.718 	天啊
+使用psyco加速的python fib函数 	17.922 	比较接近，还行
+使用swig直接转换的C语言编写的模块 	13.453
+使用Cinpy嵌入fib函数 	11.532
+　 	　 	　 	　 	　
+C 	VC6 	速度优化编译的可执行文件 	5.562 	　
+TinyCC 0.9.23 	编译的可执行文件 	6.719 	　
+解释执行 	6.813 	　
+　 	　 	　 	　 	　
+FreeBASIC 	fbc 0.16b 	编译的可执行文件（-arch 486) 	8.022 	　
+编译的可执行文件（-arch 686) 	7.619 	　
+　 	　 	　 	　 	　
+forth 	4th 3.5a2 	4th cx fib.4th 	277 	这个表现太失望了
+4th csv fib.4th fib.hx
+4th lx fib.hx 	196
+4th lg fib.hx fib.c
+mingw -O2 fib.c -o fib.exe 	110
+gforth-0.6.2 	Gforth-fast fib.gfth 	14.719 	不错，不过不是说和C的速度可以比嘛？
+怎么也就是优化的python的速度啊
+
+　
+
+注：
+
+    其余源程序
+        freebasic
+
+        function fib(x as integer) as integer
+        	if x<=1 then
+        		return 1
+        	else
+        		return fib(x-1) + fib(x-2)
+        	end if
+        end function
+
+        dim starttime, endtime as double
+        dim res as integer
+
+        starttime=timer
+        res=fib(40)
+        endtime=timer
+        print "fib(40)= ";res
+        print "time elapsed: "; (endtime-starttime); " s"
+              
+
+        4th　
+
+        : fib ( x -- y )
+        	dup 2 > if
+        		dup  1 - recurse
+        		swap 2 - recurse +
+        		exit
+        	then
+        		drop 1 ;
+
+        time
+
+        41 fib . cr
+
+        time
+        swap -
+        ." time elapsed " . ." s" cr
+
+        gforth-0.6.2
+
+        : fib ( x -- y ) 
+        	dup 2 > if 
+        		dup  1 - recurse 
+        		swap 2 - recurse +  
+        		exit 
+        	then 
+        		drop 1 ;
+        		
+        utime
+
+        41 fib . cr
+
+        utime
+        2swap d- 
+        ." time elapsed " d. ." us" cr
+
+     
+    如果在windows下使用mingw编译当前的TinyCC，嵌入C脚本会报错：
+    tcc: file '/c/Program Files/tcc/libtcc1.a' not found
+
+    Doug Currie在tcc的邮件列表里面提供了一个补丁：
+
+    Here is what I did (and reported to the mailing list) last February,
+    so the patch may not be accurate for more recent versions, but the
+    issues are the same...
+
+    I have been able to create a libtcc.dll for WinXP using MinGW/MSYS;
+    the changes that were necessary were very minor. Perhaps this
+    description will help others use libtcc on Windows.
+
+    First, a small bug to report:
+
+    In tcc.c the function tcc_basename() follows the line:
+
+    #if !defined(LIBTCC)
+
+    but the function tcc_basename() is used in pe_build_exports() in
+    tccpe.c -- moving the #if line below the function tcc_basename()
+    eliminates a link error building libtcc.dll in PE target mode.
+
+    Second, configuring and making tcc with MSYS places a pathname in
+    config.h in MSYS format. For example, I passed the argument
+
+    --prefix=/c/Dev/tcc
+
+    to configure; this path was good for building tcc.exe and didn't
+    contain any spaces, unlike the default path. This creates the line
+
+    #define CONFIG_TCCDIR "/c/Dev/tcc"
+
+    in config.h. Manually changing this line to
+
+    #define CONFIG_TCCDIR "C:/Dev/tcc"
+
+    enables libtcc.dll to find the include files and libraries once the
+    library is built. [The application tcc.exe avoids this problem by
+    setting tcc_lib_path from the application's directory at startup. A
+
+    similar solution could be used for the library using DllMain.]
+
+    So, after configure, fix CONFIG_TCCDIR in config.h and make.
+
+
+    Finally, the library libtcc.dll can be built with the MSYS command:
+
+    gcc -O2 -shared -Wall -Wl,--export-all-symbols /
+    -mpreferred-stack-boundary=2 /
+    -march=i386 -falign-functions=0 -fno-strict-aliasing /
+    -DTCC_TARGET_PE -DLIBTCC -o libtcc.dll tcc.c
+
+    Below is a diff of tcc-0.9.23 tcc.c and the changes for LIBTCC with
+    TCC_TARGET_PE and DLL location of library files.
+
+    Regards,
+
+    e
+
+
+    $ diff -u ../tcc-0.9.23-o/tcc.c tcc.c
+    --- ../tcc-0.9.23-o/tcc.c       Fri Jun 17 18:09:15 2005
+    +++ tcc.c       Tue Feb 28 17:03:44 2006
+    @@ -10157,8 +10157,6 @@
+                         flag_name, value);
+     }
+
+    -#if !defined(LIBTCC)
+    -
+     /* extract the basename of a file */
+     static const char *tcc_basename(const char *name)
+     {
+    @@ -10175,6 +10173,35 @@
+         return p;
+     }
+
+    +#if defined(LIBTCC)
+    +
+    +#ifdef WIN32
+    +int __stdcall DllMain(void * hinstDLL, unsigned long fdwReason, void *
+    lpvReserved)
+    +{
+    +    if (fdwReason == 1/*DLL_PROCESS_ATTACH*/)
+    +    {
+    +    /* on win32, as implemented in main()
+    +       we suppose the lib and includes are at the location of this library
+    +    */
+    +        static char path[1024];
+    +        char *p, *d;
+    +
+    +        GetModuleFileNameA(hinstDLL, path, sizeof path);
+    +        p = d = strlwr(path);
+    +        while (*d)
+    +        {
+    +            if (*d == '//') *d = '/', p = d;
+    +            ++d;
+    +        }
+    +        *p = '/0';
+    +        tcc_lib_path = path;
+    +    }
+    +    return 1 /*TRUE*/;
+    +}
+    +#endif
+    +
+    +#else /* !LIBTCC */
+     static int64_t getclock_us(void)
+     {
+     #ifdef WIN32
+

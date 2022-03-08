@@ -1,0 +1,61 @@
+#define RES_BITMAP_FILENAME_LEN 15
+
+//bitmap information struct
+typedef struct BITMAP_INFO_T{
+CHAR filename[RES_BITMAP_FILENAME_LEN];
+Uint16 width;
+Uint16 height;
+}BITMAP_INFO, *PBITMAP_INFO;
+
+static const BITMAP_INFO bmpInfo[RES_BITMAP_COUNT] =
+{
+
+#ifdef SCREEN_SIZE_240320
+
+{"arrdown.bmp", 15,18},
+{"arrdown_p.bmp", 15,18},
+{"arrleft.bmp", 16,16},
+{"arrleft_p.bmp", 16,16},
+{"arrright.bmp", 16,16},
+{"arrright_p.bmp", 16,16},
+{"spin.bmp", 16,26},
+{"spin_p.bmp", 16,26},
+{"file.bmp", 16,16},
+{"folder.bmp", 16,16},
+{"scrlogo.bmp", 111,30},
+
+#endif //SCREEN_SIZE_240320
+
+#ifdef SCREEN_SIZE_176220
+
+{"arrdown.bmp", 15,18},
+{"arrdown_p.bmp", 15,18},
+{"arrleft.bmp", 16,16},
+{"arrleft_p.bmp", 16,16},
+{"arrright.bmp", 16,16},
+{"arrright_p.bmp", 16,16},
+{"spin.bmp", 16,26},
+{"spin_p.bmp", 16,26},
+{"file.bmp", 16,16},
+{"folder.bmp", 16,16},
+{"scrlogo.bmp", 111,31},
+
+#endif //SCREEN_SIZE_176220
+
+#ifdef SCREEN_SIZE_240400
+
+{"arrdown.bmp", 15,18},
+{"arrdown_p.bmp", 15,18},
+{"arrleft.bmp", 16,16},
+{"arrleft_p.bmp", 16,16},
+{"arrright.bmp", 16,16},
+{"arrright_p.bmp", 16,16},
+{"spin.bmp", 16,26},
+{"spin_p.bmp", 16,26},
+{"file.bmp", 16,16},
+{"folder.bmp", 16,16},
+{"scrlogo.bmp", 111,32},
+
+#endif //SCREEN_SIZE_240400
+
+};

@@ -1,0 +1,39 @@
+[information]
+projectname=azxqc.mpr
+filename=azxqc.mrp
+appname=安装xqc
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=小钱
+output=azxqc.mrp
+description=This is 安装包!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, azq\sfw\mrc\, azq\src\, sfw\mrc\, src\,syslib\,bin\，bin\temp\
+config=mtk240
+
+
+[config_mtk240]
+define=DEMO_DEBUG,CONFIG_240
+output=bin\安装包.mrp
+bmp_mode=normal
+
+[files]
+file01 = src\libini.c
+file02 = azq\sfw\mrc\mrc_win.c
+file03 = src\font.c
+file00 = azq\src\Helloworld.c
+
+file12 = azq\setup.ini
+file13 = azq\xqcset.ini
+file14 = bin\temp\include.m
+file15 = bin\temp\example.m
+file16 = wensrc\skin.ini
+
+#file20 = bin\temp\debug.m
+file21 = bin\temp\editor.m
+file22 = bin\temp\qidong.m
+#file24 = bin\temp\runner.m
+file25 = bin\temp\tcc_mtk.m
+
+

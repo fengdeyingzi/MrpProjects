@@ -1,0 +1,233 @@
+    本文介绍 GNU/Linux 系统上最小的 C 语言编译器 Tiny C 编译器。Tiny C 编译器不仅仅是一个常规意义上的 C 语言编译器，它还使得用户可以像使用脚本语言一样使用 C 语言进行快捷的脚本编程。我们着重介绍用 C 语言进行脚本程序开发的魅力。这个系列将由三篇文章组成，这是第一篇，介绍；在第二篇中，我们将说明如何用标准 C 语言完成通常用 sed 和 awk 完成的字符串处理的工作；在第三篇中，我们将说明如何在自己的编译器项目中使用 TCC 作为机器代码生成器。
+    TCC 介绍
+
+    在下文中，我们说 Tiny C 编译器、Tiny CC、或者 TCC 都是指的这个 Fabrice Bellard 发明的 GNU/Linux 环境下最小的 ANSI C 语言编译器。TCC 的主页在文后的参考资料中列出。在 Debian GNU/Linux 系统中，可以方便的用 apt-get install tcc 来从网络上安装 TCC 编译器。TCC 的主页上提供有给 Red Hat 系统上使用的 RPM 软件包。在微软 Windows 环境下，可以使用 Cygwin 的模拟 UNIX 的开发环境来编译和使用 Tiny C 编译器。TCC 是自由软件，软件许可证是 GNU LGPL，注意不是 GPL。
+
+    TCC 最有趣的特性是可以用 UNIX 系统上常见的 #!/usr/bin/tcc 的方式来执行 ANSI C 语言写就的源程序，省略掉了在命令行上进行编译和链接的步骤，而可以直接运行 C 语言写就的源程序。这样就能做到像任何一种其它的脚本语言比如 Perl 或者是 Python 一样，显著的加快开发步调。可以像编写 Shell 脚本一样的使用 C 语言，随便想一想都觉得是一件奇妙的事情。但是 TCC 还有一些其它的特性呢！
+
+    TCC 的体积非常小，全部源代码打包压缩以后不到 200 K 字节大小，编译后的 tcc 可执行程序不过 80 K 字节大小。这意味着我们几乎可以在任何场合使用 TCC 提供给我们的编写 C 语言脚本的能力。这其中当然包括硬盘空间十分紧张的环境，比如嵌入式系统和启动软盘等等。
+    在给 TCC 的源程序中可以使用任何在给 GCC 的源程序中可以使用的动态链接库。TCC 不仅支持标准的 ANSI C 语言，而且也支持 ISO C99 标准和一部分来自于 GCC 的对 C 语言所做的扩展。
+    TCC 直接生成经过部分优化的 X86 机器代码。并不需要生成任何虚拟机的二进制代码。据 TCC 作者提供的数据，TCC 的编译速度比 GNU C 编译器在不做任何代码优化工作（gcc -O0）的时候都要快。当然啦，要是让 GCC 做代码优化的话，那么编译速度就更加比不上 TCC 喽。
+    下面我们用几个例子来说明 TCC 带给我们的方便。
+
+    TCC 的问候
+
+    这里是一个简单的 C 语言的 Hello, world! 程序。我们利用这个经典的问候的机会来对 GCC 和 TCC 做一个简单的比较。
+
+
+    --------8<-------- 以下是 hello.c
+    #include <stdio.h>
+
+    int main(int argc, char **argv)
+    {
+            printf("Hello, world!\n");
+            return 0;
+    }
+    -------->8-------- 以上是 hello.c
+
+ 
+
+    在命令行上用 gcc -Wall -O2 -o hello hello.c 编译后，再加以 strip hello 把可执行文件中的调试信息都删掉。在 Debian GNU/Linux 上我们得到一个 2592 字节大小的可执行程序。作为比较，我们可以在命令行上用 tcc -run hello.c 直接运行这个经典的问候程序：
+
+
+    --------8<-------- 以下是控制台信息
+    $ tcc -run hello.c
+    Hello, world!
+    $
+    -------->8-------- 以上是控制台信息
+
+ 
+
+    程序达到同样的运行效果，可是所需要的相对应的硬盘空间却只有 hello.c 这个文本文件所占用的 95 个字节。另一方面，我们也可以在命令行上用 tcc -o hello hello.c 像使用 gcc 一样把 hello.c 编译成 ELF 格式的可执行文件然后再运行。在命令行上使用 strip hello 把调试信息删掉以后，我们在同样的 Debian GNU/Linux 系统上得到了一个 1724 字节大小的可执行文件，和 GCC 得到的 2592 字节相比还是小了不少。
+
+    为了充分发挥 TCC 的书写 C 语言脚本程序的能力，我们还可以在 hello.c 这个源文件的第一行上按照 UNIX 编写脚本程序的传统加入：
+
+
+    #!/usr/bin/tcc -run
+
+ 
+
+    上面的 /usr/bin/tcc 是 Debian GNU/Linux 系统上 tcc 的安装路径，如果你是自己下载的 tcc 源代码进行编译安装的话，你的系统上的 tcc 的安装路径肯定会有所不同，那么当然需要在这里作相应的改变。加入了这一行以后，我们在命令行上 chmod a+x hello.c 使得 hello.c 变成一个可执行文件。这样我们就可以直接运行 hello.c 这个程序了。就像我们可以在命令行上直接运行 Shell 脚本或者是用 Perl 和 Python 写就的脚本程序一样：
+
+
+    --------8<-------- 以下是控制台信息
+    $ cat hello.c
+    #!/usr/bin/tcc -run
+    #include <stdio.h>
+    int main(int argc, char **argv)
+    {
+            printf("Hello, world!\n");
+            return 0;
+    }
+    $ ./hello.c
+    Hello, world!
+    $
+    -------->8-------- 以上是控制台信息
+
+ 
+
+    在这里看出来，TCC 让我们可以省略掉在用 C 语言编程序的时候麻烦的一遍遍的编译和链接的步骤，这真的是非常方便。
+
+    TCC 呀 TCC 呀 TCC
+
+    在这一小节，让我们来玩一个小小的多重嵌套 TCC 的游戏。
+
+    首先说明一下 TCC 是怎样把命令行参数传递给应用程序的。在命令行 Shell 上输入 tcc -run program.c 就可以不带参数的运行 program.c 这个程序。如果我们需要从命令行上给 program.c 里面的 main(int argc, char **argv) 函数传递命令行参数的话，我们就需要在命令行上输入 tcc -run program.c arg1 arg2 这样的命令；这样 arg1 和 arg2 就被 tcc 传递给了 program.c 程序中的 main() 函数。了解了这一点之后，我们来开始我们的小小游戏。
+
+    首先是直接在命令行 Shell 上运行 tcc -v 以输出 tcc 的版本信息。并做一下系统运行时间的测试评估。这里的 tcc 命令是 Debian GNU/Linux 系统上安装在 /usr/bin 目录下面的 tcc 命令。关于 time 命令的细节，读者朋友们可以参考相应的 Manual Page 页面。
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ time tcc -v
+    tcc version 0.9.19
+
+    real    0m0.019s
+    user    0m0.001s
+    sys     0m0.017s
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    接下来让 tcc 嵌套运行 tcc.c 这个源程序。这是 TCC 的 C 语言写就的源程序的主文件，其中有 main() 函数这个 C 语言的入口函数。文件 tcc.c 位于下载自 TCC 主页的 tcc 压缩软件包之中。相关链接在文后一并列出。把下载的 tcc 压缩软件包解开在相应的目录下面，进入该目录，就可以按照如下所示继续我们的小小游戏了。很显然，程序运行所需要的时间变长了。但是让 tcc 自己运行自己，读者朋友们不觉得很有趣吗？下面我们还可以看到更加有趣的东西呢。
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ time tcc -run tcc.c -v
+    tcc version 0.9.19
+
+    real    0m0.385s
+    user    0m0.147s
+    sys     0m0.178s
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    似乎上面让 tcc 自己运行自己还不够好玩，我们要让这样的嵌套更深入一层。首先说明一下 tcc 的 -B 选项设置 tcc 寻找函数库文件的路径；-I 选项设置 tcc 寻找 C 语言头文件的路径。在 Debian GNU/Linux 系统里面，相关的函数库文件和 C 语言头文件安装在下面的命令中所显示出来的路径位置上。系统安装好了的 tcc 自然可以自动找到这些个位置。但是从源文件运行的 tcc.c 则需要我们来告诉它这些文件的位置在哪里。
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ time tcc -run > tcc.c -I/usr/lib/tcc/include -B/usr/lib/tcc -run > tcc.c -v
+    tcc version 0.9.19
+
+    real    0m0.793s
+    user    0m0.463s
+    sys     0m0.249s
+    -------->8-------- 以上是命令行运行记录
+
+现在我们可以看到这样的嵌套几乎可以无休止的进行下去了。让我们把这个嵌套再深入两层，结束我们这个小小的游戏吧。
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ time tcc -run > tcc.c -I/usr/lib/tcc/include -B/usr/lib/tcc -run > tcc.c -I/usr/lib/tcc/include -B/usr/lib/tcc -run > tcc.c -v
+    tcc version 0.9.19
+
+    real    0m1.427s
+    user    0m0.844s
+    sys     0m0.406s
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    下面再来一层嵌套：
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ time tcc -run > tcc.c -I/usr/lib/tcc/include -B/usr/lib/tcc -run > tcc.c -I/usr/lib/tcc/include -B/usr/lib/tcc -run > tcc.c -I/usr/lib/tcc/include -B/usr/lib/tcc -run > tcc.c -v
+    tcc version 0.9.19
+
+    real    0m2.381s
+    user    0m1.167s
+    sys     0m0.664s
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    我想有一些“勤恳认真”的读者朋友们不免要问上一句，上面这个小游戏到底有什么意思呢？我的回答是这样的：上面这个小游戏意在说明小巧的东西是很灵活的。这个游戏一方面可以说明 TCC 的代码质量；另一方面，我相信，也可以说服读者朋友们同意，小巧灵活的东西往往可以有出人意料的精彩表演。
+
+    在 Shell 管道中使用 TCC
+
+    TCC 提供给我们用 C 语言进行脚本编程的能力，但是要最大限度的发挥出脚本编程的潜力来，我们需要在命令行 Shell 的环境中，让 TCC 的脚本程序和其它的命令行 Shell 工具能够紧密的合作才好。在 UNIX 的命令行 Shell 环境中让若干个工具合作的方式就是通过我们熟知的 Shell 的管道机制。下面我们来看看 TCC 和 Shell 的管道机制如何配合。
+
+    TCC 和 Shell 管道的配合有两个方面：一是 TCC 编译器本身如何使用管道；二是用 TCC 编写的 C 语言脚本程序如何使用管道。
+
+    我们先来看 TCC 编译器本身如何使用 Shell 管道。在 GNU/Linux 系统上处理管道输入的常见的办法，是让命令行程序可以处理特殊的减号（-）作为命令行参数。本来需要从某一个文件读取输入数据的命令行程序，在接收到这个减号作为命令行参数以后，就改为从标准输入（stdin）读取数据。这样就可以和 Shell 的管道机制配合起来。但是在当前的 TCC 0.9.19 版本中还不能处理这个减号作为命令行参数。不过我们可以有一个替代的办法，就是利用 GNU/Linux 系统上的 /dev/stdin 设备文件。
+
+    下面的测试是在 Debian GNU/Linux 系统上做出的。在 Debian GNU/Linux 系统上 /dev/stdin 其实是一个指向 /dev/fd/0 的符号链接；而后者又是一个指向 /dev/pts/0 的符号链接。如果你的 GNU/Linux 系统上没有 /dev/stdin 的话，你还可以使用 /proc/self/fd/0 来代替。
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ cat hello.c | tcc -run /dev/stdin
+    Hello, world!
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    上面的这个 hello.c 还是本文开始的时候列出的那个 hello.c 程序。这里我们看到了 TCC 如何利用 GNU/Linux 上的 /dev/stdin 文件来和 Shell 的管道机制协调运行。我们还是再来看一个嵌套运行 tcc.c 的例子。文件 tcc.c 有将近 300 K 字节大小，用 bzip2 压缩以后就只剩下 50 K 字节多一点点。我们现在又知道了怎样利用 Shell 管道，就可以像下面这样运行 tcc 呢。这样在存储空间比较紧张的情况下，又可以节省不少空间了。
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ bzcat tcc.c.bz2 | tcc -I. -B/usr/lib/tcc -run /dev/stdin -v
+    tcc version 0.9.19
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    知道了 TCC 编译器如何支持 Shell 的管道功能，我们就可以方便的为我们的 C 语言脚本程序做各式各样所需要的预处理。这样方便的支持对程序源文件进行预处理的功能，对于我们的 C 语言软件开发是极为方便的。
+
+    上面讲了 TCC 编译器本身如何支持 Shell 管道，下面讲用 TCC 编写的 C 语言脚本程序如何支持 Shell 管道。
+
+    这个其实是很简单的，只要在你的 C 语言脚本程序中恰到好处地使用标准输入（stdin）和标准输出（stdout）就可以了。我们来看一个简单的例子。
+
+
+    --------8<-------- 以下是 dup.c
+    #include <stdio.h>
+
+    int main(int argc, char **argv)
+    {
+            int c;
+            while ((c = fgetc(stdin)) != EOF) {
+                    fputc(c, stdout);
+                    fputc(c, stdout);
+            }
+            return 0;
+    }
+    -------->8-------- 以上是 dup.c
+
+ 
+
+ 这个程序很简单，它把从标准输入传递进来的每一个字符都重复一遍，然后再传递到标准输出。我们看一下它的运行效果：
+
+
+    --------8<-------- 以下是命令行运行记录
+    $ echo "a"|tcc -run dup.c
+    aa
+
+    $ echo "a"|tcc -run dup.c|sed -e 's/a/b/'
+    ba
+
+    $ echo "a"|tcc -run dup.c|sed -e 's/a/b/g'
+    bb
+
+    -------->8-------- 以上是命令行运行记录
+
+ 
+
+    上面这个例子虽然简单，却提示我们可以用 TCC 来做一些简单的字符串处理。这些字符串处理的工作通常都是用 awk 和 sed 这样的工具来完成的。现在有了 TCC 这个工具，我们也可以用 C 语言来完成了。在本系列的下一篇文章中，我们就来看看这方面的例子。
+
+    小结
+
+    TCC 的小巧灵活的特性使得我们可以在诸如安装软盘、急救软盘、以及微型 GNU/Linux 系统上使用 C 语言进行脚本程序编程工作。在中小型的 C 语言项目中，在开发阶段使用 TCC 进行工作，可以免去编译和链接的步骤，加快测试的速度。这两点是 TCC 带给我们的主要的好处。
+
+    此外，我想读者朋友们也会同意用 C 语言进行脚本程序编程，这实在是一件非常有趣的事情。
+
+    感谢
+
+    感谢 Fabrice Bellard 给我们带来 TCC 这样一个美妙的工具。此外，作者还要感谢 Fabrice Bellard 和 Damian M Gryski 在 Tinycc-devel 邮件列表上提供给作者的帮助。
+
+    参考资料
+
+    Tiny CC 的主页 http://fabrice.bellard.free.fr/tcc/
+    Debian 的 tcc 软件包的主页 http://packages.debian.org/unstable/devel/tcc.html
+    Cygwin 是一个微软 Windows 环境下的模拟 UNIX 的开发和使用环境，大部分主要的 GNU 工具包都有 Cygwin 下的版本。可以在 Cygwin 环境下使用 TCC。Cygwin 的主页在 http://www.cygwin.com
+
+ 

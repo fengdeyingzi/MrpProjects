@@ -1,0 +1,53 @@
+[information]
+projectname=azxqc.mpr
+filename=azxqc.mrp
+appname=安装xqc
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=小钱
+output=azxqc.mrp
+description=安装包_库文件!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\mrc\, src\,syslib\,bin\，bin\temp\
+config=mtk240
+
+
+[config_mtk240]
+define=DEMO_DEBUG,CONFIG_240
+output=bin\temp\include.m
+bmp_mode=normal
+
+[files]
+file02 = azq\include\setup.ini
+file20 = tcc\include\l_math.h
+file21 = tcc\include\l_base_i.h
+file22 = tcc\include\l_sound.h
+file23 = tcc\include\l_ctype.h
+file24 = tcc\include\l_base.h
+file25 = tcc\include\l_acmera.h
+file26 = tcc\include\l_graphics.h
+file27 = tcc\include\l_hcc.h
+
+file50 = tcc\include\mrc_base.h
+file51 = tcc\include\mrc_bmp.h
+file52 = tcc\include\mrc_sound.h
+file53 = tcc\include\mrc_exb.h
+file54 = tcc\include\mrc_image.h
+file55 = tcc\include\mrc_network.h
+file56 = tcc\include\mrc_camera.h
+file57 = tcc\include\mrc_base_i.h
+
+file100 = tcc\include\h_base.h
+file101 = tcc\include\h_ctype.h
+file102 = tcc\include\h_sound.h
+file103 = tcc\include\h_base_i.h
+
+file150 = tcc\include\l_base.cc
+
+file200 = tcc\include\stdlib.o
+
+file500 = tcc\include\help.txt
+
+
+

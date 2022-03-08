@@ -1,0 +1,7 @@
+文件'xqc/temp/temp.txt'不存在
+文件'xqc/temp/temp.txt'不存在
+文件'xqc/temp/temp.txt'不存在
+new_bind=1 new_shndx=fff1 new_vis=0 old_bind=1 old_shndx=fff1 old_vis=0
+new_bind=1 new_shndx=fff1 new_vis=0 old_bind=1 old_shndx=fff1 old_vis=0
+new_bind=1 new_shndx=fff1 new_vis=0 old_bind=1 old_shndx=fff1 old_vis=0
+new_bind=1 new_shndx=fff1 new_vis=0 old_bind=1 old_shndx=fff1 old_vis=0

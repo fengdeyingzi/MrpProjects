@@ -1,0 +1,50 @@
+移植TinyCC到mythroad平台要点 by eleqian
+
+打开如下宏：
+#define CONFIG_TCC_STATIC
+#define TCC_TARGET_ARM
+#define TCC_IS_NATIVE
+#define TCC_ARM_EABI
+
+需要实现的库函数：
+vsprintf  在信息输出方面大量使用，必须实现，不需要支持浮点数格式
+realloc  关键代码有用到，必须实现
+open close read write 读写文件用，用mrc_open等替代
+lseek 读取lib时需要用mrc_tell替换，否则用mrc_seek
+unlink 替换为mrc_remove
+strtod strtof strtold ldexp  在处理浮点数时用到，应当实现
+strtol  在读取*.a静态库时用到，如果需要就实现
+strtoull  内置链接器用于支持64位程序，可以用strtol替代
+fprintf fputs  输出预处理结果等需要，不需要输出就不用了
+printf  主要是调试时输出信息，暂时用mrc_printf替代
+exit  发生不可捕获的错误时使用，暂时用mrc_exit替代
+strrchr  替换成mrc_strrchr
+stricmp  使用代码实现
+snprintf vsnprintf  修改代码，使用不带n的版本
+time localtime  支持__DATE__/__TIME__宏，暂时未实现，代码已注释
+getenv 输出可执行文件使用，返回空串即可
+
+需要包含的头文件：
+
+mrc_base.h mrc_exb.h  SDK带的
+setjmp.h stdarg.h  标准库，自己实现后就不需要包含
+math.h  ldexp函数，已经实现，不包含
+
+其它：
+#define inline __inline  // 内联函数关键字要替换
+typedef unsigned int size_t;  // 定义size_t
+extern int errno;  // 定义errno变量，有些地方用到
+#define SEEK_SET 0  // 不需多说，下同
+#define SEEK_CUR 1
+#define SEEK_END 2
+#define O_RDONLY MR_FILE_RDONLY
+#define O_WRONLY MR_FILE_WRONLY
+#define O_CREAT  MR_FILE_CREATE
+#define O_BINARY 0
+#define O_TRUNC  0
+
+消除struct Sym中的匿名union，因为ADS1.2不支持，工作量比较大，查找替换时注意别搞错；
+涉及到fopen系列的替换为open系列实现；
+特别注意tcc对浮点处理是硬件指令，不一定适用mrp平台
+如果mrc_tell函数不可用（如模拟器），需要替代实现
+

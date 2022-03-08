@@ -1,0 +1,22 @@
+[information]
+projectname=Helloworld.mpr
+filename=TOMRP.lib
+appname=ÕÆÉÏe_mrp
+appid=110124
+version=1001
+visible=1
+cpu=100
+vendor=Ä¬Ë®Æ¿
+output=e_mrp.mrp
+description=ÕÆÉÏe_mrp!
+output_format=lib
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\modules\, src\
+config=mtk
+
+
+[config_mtk]
+output=TOMRP.lib
+
+[files]
+file03 = src\mrp.c
+

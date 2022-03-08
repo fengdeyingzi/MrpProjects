@@ -1,0 +1,24 @@
+[information]
+projectname=xqc.mpr
+filename=xqc.mrp
+appname=小钱c
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=xq
+output=xqc.mrp
+description=冒泡实验开发系统运行器!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\mrc\, src\,syslib\,bin\
+config=mtk240
+
+
+[config_mtk240]
+define=DEMO_DEBUG,CONFIG_240
+output=bin\temp\qidong.m
+bmp_mode=normal
+
+[files]
+file01 = azq\logo.bmp
+file02 = azq\qidongqi.c
+

@@ -1,0 +1,124 @@
+系统背景：
+N800的主要硬件环境是 OMAP2420 SoC，其中 FPU是 VFP指令集。
+我安装的是OS2008, maemo 4.0，代号 chinook。 该 linux kernel 支持捕捉浮点指令异常。系统ABI是 EABI4。
+
+本测试主要有这些不同组合：
+
+1、如果使用softfloat, 使用什么softfloat库
+2、使用不同FPU指令集
+
+我自己编译了两套不同的工具链：
+
+    arm-linux-gnueabi_glibc-nptl-softfloat
+
+使用 EABI4，glibc 为 softfloat的，编译出来的程序可以直接在 OS2008 上跑。
+
+    arm-linux-gnu_glibc-nptl-softfloat
+
+使用 OABI，glibc 为 softfloat的，编译出来的程序需要chroot后才能运行。OABI 不像EABI 指定了浮点函数的接口，所以这种情况下需要独立的float库。我编译了 libfloat，并将 libfloat.a 作为这种情况下的 softfloat 库。
+
+测试程序如下：
+
+#include <stdio.h>
+
+int main(void) {
+    int i;
+    double d1 = 1.1;
+    double d2 = 2.002;
+    double d3;
+
+    for(i = 0; i < 0xFFFFF;++i)d3 = d1*d2;
+    for(i = 0; i < 0xFFFFF;++i)d3 = d1/d2;
+
+    return 0;
+}
+
+测试结果如下：
+
+time arm-linux-gnueabi_glibc-nptl-softfloat/linux-gnueabi.soft.soft
+real	0m 1.93s
+user	0m 1.92s
+sys	0m 0.00s
+
+本测试使用gcc提供的 softfloat 库，并且用EABI4的浮点函数，直接在OS2008下运行。
+编译方式：
+linux-gnueabi.soft.soft: test.c
+    $(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mfloat-abi=soft $< -S -o $@.s
+    $(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mfloat-abi=soft $@.s -o $@
+
+time chroot arm-linux-gnueabi_glibc-nptl-softfloat /linux-gnueabi.soft.soft
+real	0m 1.85s
+user	0m 1.80s
+sys	0m 0.00s
+
+本测试使用同样的程序，不过在我编译的 glibc 下 chroot 运行。结果无太大差别。
+
+time arm-linux-gnueabi_glibc-nptl-softfloat/linux-gnueabi.soft.softfp.fpa
+real	0m 10.10s
+user	0m 0.35s
+sys	0m 9.33s
+
+本测试使用softfp float-abi。不过指令集使用是FPA. 使用soft-float 的调用规范执行浮点硬件指令，这样做能保证linux在捕捉到浮点指令错误的时候在内核态模拟浮点计算。
+omap2420 不支持FPA指令，所以这里的浮点硬件指令全部异常，由linux内核计算，于是sys占用了9秒，总体运行时间是前面的5倍。
+编译方式：
+linux-gnueabi.soft.softfp.fpa: test.c
+    $(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mfpu=fpa -mfloat-abi=softfp $< -S -o $@.s
+    $(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mfpu=fpa -mfloat-abi=softfp $@.s -o $@
+
+time chroot arm-linux-gnueabi_glibc-nptl-softfloat /linux-gnueabi.soft.softfp.fpa
+real	0m 9.69s
+user	0m 0.21s
+sys	0m 9.46s
+
+本测试类似上面，不过是chroot后运行，结果也类似。
+
+time arm-linux-gnueabi_glibc-nptl-softfloat/linux-gnueabi.soft.softfp.vfp
+real	0m 0.23s
+user	0m 0.23s
+sys	0m 0.00s
+本测试仍然使用 softfp float-abi，不过这次使用了正确的 vfp 指令集，时间大大缩短，比软件计算快了五倍。
+编译方式：
+linux-gnueabi.soft.softfp.vfp: test.c
+	$(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mfpu=vfp -mfloat-abi=softfp $< -S -o $@.s
+	$(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mfpu=vfp -mfloat-abi=softfp $@.s -o $@
+
+time chroot arm-linux-gnueabi_glibc-nptl-softfloat /linux-gnueabi.soft.softfp.vfp
+real	0m 0.24s
+user	0m 0.23s
+sys	0m 0.00s
+
+本测试类似上面，不过是chroot后运行，结果也类似。
+
+time arm-linux-gnueabi_glibc-nptl-softfloat/linux-gnueabi.soft.hard.fpa
+real	0m 9.67s
+user	0m 0.25s
+sys	0m 9.40s
+
+本测试直接使用硬件fpa指令，从生成的汇编代码看，和 softfp fpa 生成的代码一模一样，所以结果一样。
+
+linux-gnueabi.soft.hard.fpa: test.c
+	$(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mhard-float -mfpu=fpa $< -S -o $@.s
+	$(LINUX_GNUEABI_SOFT_CC) $(CFLAGS) -mhard-float -mfpu=fpa $@.s -o $@
+
+time chroot arm-linux-gnueabi_glibc-nptl-softfloat /linux-gnueabi.soft.hard.fpa
+real	0m 9.68s
+user	0m 0.26s
+sys	0m 9.40s
+
+类似上面，不过在 chroot 下运行。
+
+time chroot arm-linux-gnu_glibc-nptl-softfloat /linux-gnu.soft.soft
+real	0m 5.98s
+user	0m 5.94s
+sys	0m 0.00s
+
+最后一个测试使用 libfloat 库，从数据上看该库非常慢。所以编译 ARM Linux 的一般都使用 EABI， 指定target 的时候设置为 arm-linux-gnueabi 而不是 arm-linux-gnu
+编译测试：
+linux-gnu.soft.soft: test.c
+    $(LINUX_GNU_SOFT_CC) $(CFLAGS) -mfloat-abi=soft $< -S -o $@.s
+    $(LINUX_GNU_SOFT_CC) $(CFLAGS) -mfloat-abi=soft $@.s -lfloat -o $@
+
+
+
+本测试没有测试 hard-float vfp 指令生成的代码，因为GCC告诉我：
+test.c:1: sorry, unimplemented: -mfloat-abi=hard and VFP

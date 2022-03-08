@@ -1,0 +1,57 @@
+1. 运行时库的路径
+
+指定方式：
+（1） 连接选项 –libpath
+（2） 环境变量 ARMLIB
+
+优先级：
+    libpath 高于 ARMLIB
+
+被指定的路径：
+    包含 armlib, cpplib 的父路径。
+
+2. 运行时库的命名格式。
+
+C/C++ 运行时库格式：
+    Root_<arch><fpu><dfmt><stack><entrant>.<endian>
+
+Root 取值如下：
+    c – ANSI C 及 C++ 基本运行时支持。
+    f – C/Java 的浮点算术运算支持。
+    g – IEEE 的浮点算术运算支持
+    m – 超越类数学函数。
+    cpp – 无浮点算数运算的高级 C++ 算数
+    cppfp – 有浮点算数运算的高级 C++ 算数
+
+arch 取值如下：
+
+    a – ARM 运行时库
+    t – Thumb 运行时库
+
+fpu 取值如下：
+    f – 使用 FPA 指令集
+    v – 使用 VFP 指令集
+    - - 不使用浮点运算指令
+
+dmft 取值如下：
+    p – 单纯内存模式（ endian 格式）的双精度格式
+    m – 混合内存模式（ endian 格式）的双精度格式
+    - - 不使用双精度浮点数。
+
+Stack 取值如下：
+    u – 不使用软件的数据栈溢出检查
+    s - 使用软件的数据栈溢出检查
+    - - 未规定该选项
+
+entrant 取值如下：
+    n – 函数不可重入的。
+    e – 函数可重入的。
+    - - 未规定该选项
+
+endian 取值如下：
+    l – little endian
+    b – big endian
+
+举例说明：
+    c_a_se    C 运行时库， ARM, 数据栈溢出检查，可重入。
+    c_t_un    C 运行时库， Thumb, 无数据栈溢出检查， 不可重入。 

@@ -1,0 +1,317 @@
+前言:
+MCIMX31 是一款基于ARM1136JF-S的多媒体处理器。他适合用来做智能手机，手持式游戏终端，多媒体播放器等智能手持式设备。有关这款CPU的参数特性可以参考Freescale的DataSheet。
+最近使用MCIMX31的VFP有些收获，写出来与大家分享。
+调试环境：
+成都莱得科技有限公司([url=http://www.nidetech.com/]http://www.nidetech.com[/url])的I.MX31开发板。
+1. VFP的功能特点
+在我看来VFP除了提供浮点数基本运算（加、减、乘、除、开方、比较、取反）提供支持之外，最有特点是它向量（vectors）功能。它同时支持最多8组单精度4组双精度浮点数的运算。有关这部分的叙述请参考<<ARM Architecture Reference Manual>> Chapter C5 VFP Addressing Modes。下面看一个程序实例，程序是用arm-none-linux-gnueabi-gcc 4.1.2编译，运行在MCIMX31 Linux 2.6.24.5平台下。
+#include <unistd.h>
+#include <stdio.h>
+void vfp_regs_load(float arrays[32])
+{
+    asm volatile("fldmias %0, {s0-s31}\n"
+            :
+            :"r"(arrays));
+}
+void vfp_regs_save(float arrays[32])
+{
+    asm volatile ("fstmias %0, {s0-s31}"
+            :
+            :"r"(arrays));
+}
+void print_array(float array[32])
+{
+    int i;
+    for(i=0; i<32; i++)
+    {
+        if(i%8==0)
+            printf("\n");
+        printf("%f ",i, array[i]);
+    }
+    printf("\n");
+}
+int main()
+{
+    unsigned int fpscr;
+    float f1=1.0, f2=1.0;
+    float farrays[32], farrays2[32];
+    int i;
+    fpscr = 0x130000;
+    asm volatile ("fmxr fpscr, %0\n"
+            :
+            :"r"(fpscr));
+    asm volatile ("fmrx %0, fpscr\n"
+            :"=r"(fpscr));
+    vfp_regs_save(farrays2);
+    for(i=0; i<32; i++)
+        farrays[i] = f1+f2*(float) i;
+    vfp_regs_load(farrays);
+    vfp_regs_save(farrays2);
+    printf("\n1:ScalarA op ScalarB->ScalarD");
+    vfp_regs_load(farrays);
+    asm volatile("fadds s0, s1, s2");
+    vfp_regs_save(farrays2);
+    print_array(farrays2);
+    printf("\n2:VectorA[?] op ScalarB->VectorD[?]");
+    vfp_regs_load(farrays);
+    asm volatile("fadds s8,  s24, s0");
+    vfp_regs_save(farrays2);
+    print_array(farrays2);
+    printf("\n3:VectorA[?] op VectorB[?]->VectorD[?]");
+    vfp_regs_load(farrays);
+    asm volatile("fadds s8,  s16, s24");
+    vfp_regs_save(farrays2);
+    print_array(farrays2);
+}
+
+运行结果：
+1:ScalarA op ScalarB->ScalarD
+5.000000 2.000000 3.000000 4.000000 5.000000 6.000000 7.000000 8.000000
+9.000000 10.000000 11.000000 12.000000 13.000000 14.000000 15.000000 16.000000
+17.000000 18.000000 19.000000 20.000000 21.000000 22.000000 23.000000 24.000000
+25.000000 26.000000 27.000000 28.000000 29.000000 30.000000 31.000000 32.000000
+2:VectorA[?] op ScalarB->VectorD[?]
+1.000000 2.000000 3.000000 4.000000 5.000000 6.000000 7.000000 8.000000
+26.000000 10.000000 28.000000 12.000000 30.000000 14.000000 32.000000 16.000000
+17.000000 18.000000 19.000000 20.000000 21.000000 22.000000 23.000000 24.000000
+25.000000 26.000000 27.000000 28.000000 29.000000 30.000000 31.000000 32.000000
+3:VectorA[?] op VectorB[?]->VectorD[?]
+1.000000 2.000000 3.000000 4.000000 5.000000 6.000000 7.000000 8.000000
+42.000000 10.000000 46.000000 12.000000 50.000000 14.000000 54.000000 16.000000
+17.000000 18.000000 19.000000 20.000000 21.000000 22.000000 23.000000 24.000000
+25.000000 26.000000 27.000000 28.000000 29.000000 30.000000 31.000000 32.000000
+第一种情况是最简单的两个浮点数相加(fadds s0, s1, s2) 我们看到的结果是s0(5.00)=s1(2.00)+s2(3.00)。
+第二种情况是一组Vector和一个Scalar相加(fadds s8,  s24, s0),我们看到的结果就是：
+S8(26.00)=S24(25.00)+S0(1.00)
+S10(28.00)=S26(27.00)+S0(1.00)
+S12(30.00)=S28(29.00)+S0(1.00)
+S14(32.00)=S30(31.00)+S0(1.00)
+第三种情况是两组Vectors相加(fadds s8,  s16, s24),我们看到的结果就是：
+S8(42.00)=S24(25.00)+S16(17.00)
+S10(46.00)=S26(27.00)+S18(19.00)
+S12(50.00)=S28(29.00)+S20(21.00)
+S14(54.00)=S30(31.00)+S22(23.00)
+至于为什么是有4组结果，并且相邻结果间隔一个。有兴趣的可以参考<<VFP11? Vector Floating-point Coprocessor for ARM1136JF-S processor r1p3 Technical Reference Manual>>有关FPSCR的叙述。
+2. 硬件支持
+ARM1136JF-S通过两个协处理器CP10和CP11来实现VFP。其中CP10支持单精度浮点操作，CP11支持双精度浮点操作。所以所有的VFP指令其实就是一些协处理器的指令比如FADDS其实就是一个CDP指令，一个FLDS就是一个LDC指令。理论上讲只要采用了ARM1136JF-S的CPU就应该能够支持VFP。
+
+3. 编译器对VFP的支持
+一个浮点数操作最后是翻译成VFP指令，还是翻译成fpa，或者是softfloat是编译器决定的。实例：
+[sjl@sjl vfp]$ cat f.c
+int main()
+{
+    float f1=1.2,f2=1.3;
+    f1 = f2*f1;
+}
+[sjl@sjl vfp]$ arm-linux-gcc -v
+....
+gcc version 3.4.4
+[sjl@sjl vfp]$ arm-linux-gcc -c f.c
+[sjl@sjl vfp]$ arm-linux-objdump -d f.o
+f.o:     file format elf32-littlearm
+Disassembly of section .text:
+00000000 <main>:
+   0:   e1a0c00d        mov     ip, sp
+   4:   e92dd800        stmdb   sp!, {fp, ip, lr, pc}
+   8:   e24cb004        sub     fp, ip, #4      ; 0x4
+   c:   e24dd008        sub     sp, sp, #8      ; 0x8
+  10:   e59f3024        ldr     r3, [pc, #36]   ; 3c <.text+0x3c>
+  14:   e50b3010        str     r3, [fp, #-16]
+  18:   e59f3020        ldr     r3, [pc, #32]   ; 40 <.text+0x40>
+  1c:   e50b3014        str     r3, [fp, #-20]
+  20:   ed1b1104        ldfs    f1, [fp, #-16]
+  24:   ed1b0105        ldfs    f0, [fp, #-20]
+  28:   ee910100        fmls    f0, f1, f0
+  2c:   ed0b0104        stfs    f0, [fp, #-16]
+  30:   e1a00003        mov     r0, r3
+  34:   e24bd00c        sub     sp, fp, #12     ; 0xc
+  38:   e89da800        ldmia   sp, {fp, sp, pc}
+  3c:   3f99999a        swicc   0x0099999a
+  40:   3fa66666        swicc   0x00a66666
+我们用arm-linux-gcc 3.4.4编译明显，生成的不是VFP指令。
+
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-gcc -v
+....
+gcc version 4.1.2
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-gcc -c f.c
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-objdump -d f.o
+f.o:     file format elf32-littlearm
+Disassembly of section .text:
+00000000 <main>:
+   0:   e1a0c00d        mov     ip, sp
+   4:   e92dd800        stmdb   sp!, {fp, ip, lr, pc}
+   8:   e24cb004        sub     fp, ip, #4      ; 0x4
+   c:   e24dd008        sub     sp, sp, #8      ; 0x8
+  10:   e59f3024        ldr     r3, [pc, #36]   ; 3c <.text+0x3c>
+  14:   e50b3014        str     r3, [fp, #-20]
+  18:   e59f3020        ldr     r3, [pc, #32]   ; 40 <.text+0x40>
+  1c:   e50b3010        str     r3, [fp, #-16]
+  20:   e51b0014        ldr     r0, [fp, #-20]
+  24:   e51b1010        ldr     r1, [fp, #-16]
+  28:   ebfffffe        bl      0 <__aeabi_fmul>
+  2c:   e1a03000        mov     r3, r0
+  30:   e50b3014        str     r3, [fp, #-20]
+  34:   e24bd00c        sub     sp, fp, #12     ; 0xc
+  38:   e89da800        ldmia   sp, {fp, sp, pc}
+  3c:   3f99999a        svccc   0x0099999a
+  40:   3fa66666        svccc   0x00a66666
+我们用arm-none-linux-gnueabi-gcc 4.1.2 默认也不是生成VFP指令。
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-gcc -mfpu=vfp -mfloat-abi=softfp -c f.c
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-objdump -d f.o
+f.o:     file format elf32-littlearm
+Disassembly of section .text:
+00000000 <main>:
+   0:   e1a0c00d        mov     ip, sp
+   4:   e92dd800        stmdb   sp!, {fp, ip, lr, pc}
+   8:   e24cb004        sub     fp, ip, #4      ; 0x4
+   c:   e24dd008        sub     sp, sp, #8      ; 0x8
+  10:   e59f3020        ldr     r3, [pc, #32]   ; 38 <.text+0x38>
+  14:   e50b3014        str     r3, [fp, #-20]
+  18:   e59f301c        ldr     r3, [pc, #28]   ; 3c <.text+0x3c>
+  1c:   e50b3010        str     r3, [fp, #-16]
+  20:   ed1b7a05        flds    s14, [fp, #-20]
+  24:   ed5b7a04        flds    s15, [fp, #-16]
+  28:   ee677a27        fmuls   s15, s14, s15
+  2c:   ed4b7a05        fsts    s15, [fp, #-20]
+  30:   e24bd00c        sub     sp, fp, #12     ; 0xc
+  34:   e89da800        ldmia   sp, {fp, sp, pc}
+  38:   3f99999a        svccc   0x0099999a
+  3c:   3fa66666        svccc   0x00a66666
+用arm-none-linux-gnueabi-gcc 4.1.2指定-mfpu=vfp -mfloat-abi=softfp参数之后生成VFP指令。
+好像是从GCC 4之后才支持VFP，如果你要在原有GCC 3里面使用VFP，如何解决，大家可以一起思考这个问题。
+
+4. 操作系统对VFP的支持
+应用程序要使用VFP指令，还需要操作系统配合。
+在ARM1136JF-S里面有几个重要的协处理器与VFP有关。
+CP15 c1 协处理器访问控制寄存器，这个寄存器规定了用户模式和特权对协处理器的访问权限。我们要使用VFP当然要运行用户模式访问CP10和CP11。
+另外一个寄存器是VFP的FPEXC Bit30这是VFP功能的使用位。
+其实操作系统在做了这两件事情之后，用户程序就可以使用VFP了。
+例子：
+编译内核取消VFP的支持，编写一个内核驱动，加入以下代码：
+void enable_vfp(void)
+{
+    int ret = 0;
+    unsigned int value;
+    asm  volatile ("mrc p15, 0, %0, c1, c0, 2"
+            :"=r"(value)
+            :);
+    value |= 0xf00000;/*enable CP10, CP11 user access*/
+    asm volatile("mcr p15, 0, %0, c1, c0, 2"
+            :
+            :"r"(value));
+    asm volatile("fmrx %0, fpexc"
+               :"=r"(value));
+    value |=(1<<30);
+    asm volatile("fmxr fpexc, %0"
+               :
+               :"r"(value));
+}
+编写一个应用程序：
+int main()
+{
+    float f1=1.2,f2=1.3;
+    f1 = f2*f1;
+    printf("%f\n", f1);
+}
+adsdebian:/dev/shm# ./a.out
+1.560000
+看见了吧，结果正确。
+但，我们看内核的VFP支持代码，还是干了很多其他的事情。
+让我们来想想这个问题：
+    8374:       ed1b7a05        flds    s14, [fp, #-20]
+    8378:       ed5b7a04        flds    s15, [fp, #-16]
+    837c:       ee677a27        fmuls   s15, s14, s15
+    8380:       ed4b7a05        fsts    s15, [fp, #-20]
+    8384:       ed5b7a05        flds    s15, [fp, #-20]
+我们知道s14,s15这些是协处理器的寄存器，属于所有进程共有的资源。所以当上述例子执行到0x8378时程序切换到其他进程，恰好这个其他进程也访问了s14那结果就可想而知了。
+实例：
+加载上面我们提到的禁用VFP的Linux kernel并且加载一个驱动修改对应的协处理器寄存器运行用户程序执行VFP指令。
+[sjl@sjl vfp]$ cat fork.c
+#include <unistd.h>
+#include <stdio.h>
+int main()
+{
+    float f1=1.0,f2=1.0;
+    pid_t pid;
+    fork();
+    pid = getpid();
+    while(1)
+    {
+        f1 +=f2;
+        printf("%d %f\n", pid, f1);
+    }
+}
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-gcc -O2 -mfpu=vfp -mfloat-abi=softfp fork.c
+[sjl@sjl vfp]$ arm-none-linux-gnueabi-objdump -d a.out|less
+...
+000083b4 <main>:
+    83b4:       e92d4010        stmdb   sp!, {r4, lr}
+    83b8:       ed2d8b03        fstmdbx sp!, {d8}
+    83bc:       e24dd004        sub     sp, sp, #4      ; 0x4
+    83c0:       ebffffc7        bl      82e4 <.text-0x18>
+    83c4:       ebffffc3        bl      82d8 <.text-0x24>
+    83c8:       ed9f8a08        flds    s16, [pc, #32]
+    83cc:       eef08a48        fcpys   s17, s16
+    83d0:       e1a04000        mov     r4, r0
+    83d4:       ee388a28        fadds   s16, s16, s17
+    83d8:       eeb77ac8        fcvtds  d7, s16
+    83dc:       e1a01004        mov     r1, r4
+    83e0:       ec532b17        fmrrd   r2, r3, d7
+    83e4:       e59f0008        ldr     r0, [pc, #8]    ; 83f4 <.text+0xf8>
+    83e8:       ebffffc0        bl      82f0 <.text-0xc>
+    83ec:       eafffff8        b       83d4 <main+0x20>
+    83f0:       3f800000        svccc   0x00800000
+    83f4:       0000847c        andeq   r8, r0, ip, ror r4
+...
+执行结果：
+.....
+1382 915.000000
+1382 916.000000
+1381 2.000000
+1381 917.000000
+1381 918.000000
+....
+我们看到进程1381的执行结果与我们程序设计的意图不同。
+经过我们上面的例子，我们知道为了让应用程序能够正常的执行，操作系统要保存进程的VFP现场，当然为支持VFP操作系统还要做不少其他的事情。
+看来操作系统至少要在进程切换的时候保存应用程序保存VFP的寄存器值。来看看Linux是怎么做的。
+5、VFP代码情景
+进程在切换的时候，内核的函数调用过程是这样的(ARM Arch)：
+__schedule()->context_switch()->switch_to()->__switch_to()
+__switch_to()在Arch/arm/kernel/entry-armv.S中实现，这段代码不长，这里我比较关心的是
+...
+mov r5, r0
+add r4, r2, #TI_CPU_SAVE
+ldr r0, =thread_notify_head
+mov r1, #THREAD_NOTIFY_SWITCH
+bl atomic_notifier_call_chain
+mov r0, r5
+...
+翻译成C就是atomic_notifier_call_chain(thread_notify_head,THREAD_NOTIFY_SWITCH,next->cpu_context);
+到我们的VFP代码中去看,
+static struct notifier_block vfp_notifier_block = {
+.notifier_call = vfp_notifier,
+};
+vfp_init()
+{
+...
+thread_register_notifier(&vfp_notifier_block);
+...
+}
+很明显进程在切换的时候会执行到vfp_notifier()中去。仔细研究vfp_notifier()的代码，没有发现保存VFP寄存器的代码。倒是这段代码比较可疑：
+...
+fmxr(FPEXC, fpexc & ~FPEXC_EN);
+...
+FPEXC的FPEXC_EN是VFP功能的使能位，如果这位未被设置，CPU在执行到VFP指令时会产生“未定义指令”中断。好了，每次一个新进程被切换到CPU的时候FPEXC_EN总是未被设置，此时一个VFP指令就产生了一个“未定义指令”中断。
+好了。程序这下跑到__und_usr()->call_fpe()->do_vfp()，这个过程其实还是很复杂的，有兴趣可以仔细阅读代码。
+do_vfp:
+...
+  ldr r4, .LCvfp
+ldr r11, [r10, #TI_CPU] @ CPU number
+add r10, r10, #TI_VFPSTATE @ r10 = workspace
+ldr pc, [r4]  @ call VFP entry point
+...
+.LCvfp:
+.word vfp_vector
+好吗跑到vfp_vector，vfp_vector这个函数指针在vfp_init()里面赋值 vfp_vector = vfp_support_entry;
+关键就在vfp_support_entry里面。vfp_support_entry不仅负责保存/恢复进程的VFP寄存器值，还负责处理VFP的异常(例如除0等等)。
+具体的实现过程有兴趣的可以慢慢的看了。

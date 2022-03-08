@@ -1,0 +1,482 @@
+VA函数（variable argument function），参数个数可变函数，又称可变参数函数。C/C++编程中，系统提供给编程人员的va函数很少。*printf()/*scanf()系列函数，用于输入输出时格式化字符串；exec*()系列函数，用于在程序中执行外部文件(main(int argc, char* argv[]算不算呢，与其说main()也是一个可变参数函数，倒不如说它是exec*()经过封装后的具备特殊功能和意义的函数，至少在原理这一级上有很多相似之处)。由于参数个数的不确定，使va函数具有很大的灵活性，易用性，对没有使用过可变参数函数的编程人员很有诱惑力；那么，该如何编写自己的va函数，va函数的运用时机、编译实现又是如何。作者借本文谈谈自己关于va函数的一些浅见。
+
+一、 从printf()开始
+
+从大家都很熟悉的格式化字符串函数开始介绍可变参数函数。
+
+原型：int printf(const char * format, ...);
+
+参数format表示如何来格式字符串的指令，…
+
+表示可选参数，调用时传递给"..."的参数可有可无，根据实际情况而定。
+
+系统提供了vprintf系列格式化字符串的函数，用于编程人员封装自己的I/O函数。
+
+int vprintf / vscanf(const char * format, va_list ap); // 从标准输入/输出格式化字符串
+int vfprintf / vfsacanf(FILE * stream, const char * format, va_list ap); // 从文件流
+int vsprintf / vsscanf(char * s, const char * format, va_list ap); // 从字符串
+
+// 例1：格式化到一个文件流，可用于日志文件
+
+
+FILE *logfile;
+int WriteLog(const char * format, ...)
+{
+va_list arg_ptr;
+
+va_start(arg_ptr, format);
+int nWrittenBytes = vfprintf(logfile, format, arg_ptr);
+va_end(arg_ptr);
+
+return nWrittenBytes;
+}
+…
+// 调用时，与使用printf()没有区别。
+WriteLog("%04d-%02d-%02d %02d:%02d:%02d      %s/%04d logged out.",
+nYear, nMonth, nDay, nHour, nMinute, szUserName, nUserID);
+
+
+同理，也可以从文件中执行格式化输入；或者对标准输入输出，字符串执行格式化。
+
+在上面的例1中，WriteLog()函数可以接受参数个数可变的输入，本质上，它的实现需要vprintf()的支持。如何真正实现属于自己的可变参数函数，包括控制每一个传入的可选参数。
+
+二、 va函数的定义和va宏
+
+C语言支持va函数，作为C语言的扩展--C++同样支持va函数，但在C++中并不推荐使用，C++引入的多态性同样可以实现参数个数可变的函数。不过，C++的重载功能毕竟只能是有限多个可以预见的参数个数。比较而言，C中的va函数则可以定义无穷多个相当于C++的重载函数，这方面C++是无能为力的。va函数的优势表现在使用的方便性和易用性上，可以使代码更简洁。C编译器为了统一在不同的硬件架构、硬件平台上的实现，和增加代码的可移植性，提供了一系列宏来屏蔽硬件环境不同带来的差异。
+
+ANSI C标准下，va的宏定义在stdarg.h中，它们有：va_list，va_start()，va_arg()，va_end()。
+
+// 例2：求任意个自然数的平方和：
+
+
+int SqSum(int n1, ...)
+{
+va_list arg_ptr;
+int nSqSum = 0, n = n1;
+
+va_start(arg_ptr, n1);
+while (n > 0)
+{
+        nSqSum += (n * n);
+        n = va_arg(arg_ptr, int);
+}
+va_end(arg_ptr);
+
+return nSqSum;
+}
+
+// 调用时
+int nSqSum = SqSum(7, 2, 7, 11, -1);
+
+
+可变参数函数的原型声明格式为：
+
+type VAFunction(type arg1, type arg2, … );
+
+参数可以分为两部分：个数确定的固定参数和个数可变的可选参数。函数至少需要一个固定参数，固定参数的声明和普通函数一样；可选参数由于个数不确定，声明时用"…"表示。固定参数和可选参数公同构成一个函数的参数列表。
+
+借助上面这个简单的例2，来看看各个va_xxx的作用。
+va_list arg_ptr：定义一个指向个数可变的参数列表指针；
+
+va_start(arg_ptr, argN)：使参数列表指针arg_ptr指向函数参数列表中的第一个可选参数，说明：argN是位于第一个可选参数之前的固定参数，（或者说，最后一个固定参数；…之前的一个参数），函数参数列表中参数在内存中的顺序与函数声明时的顺序是一致的。如果有一va函数的声明是void va_test(char a, char b, char c, …)，则它的固定参数依次是a,b,c，最后一个固定参数argN为c，因此就是va_start(arg_ptr, c)。
+
+va_arg(arg_ptr, type)：返回参数列表中指针arg_ptr所指的参数，返回类型为type，并使指针arg_ptr指向参数列表中下一个参数。
+
+va_copy(dest, src)：dest，src的类型都是va_list，va_copy()用于复制参数列表指针，将dest初始化为src。
+
+va_end(arg_ptr)：清空参数列表，并置参数指针arg_ptr无效。说明：指针arg_ptr被置无效后，可以通过调用va_start()、va_copy()恢复arg_ptr。每次调用va_start() / va_copy()后，必须得有相应的va_end()与之匹配。参数指针可以在参数列表中随意地来回移动，但必须在va_start() … va_end()之内。
+
+
+三、 编译器如何实现va
+
+例2中调用SqSum(7, 2, 7, 11, -1)来求7, 2, 7, 11的平方和，-1是结束标志。
+
+简单地说，va函数的实现就是对参数指针的使用和控制。
+
+
+typedef char *      va_list;      // x86平台下va_list的定义
+
+
+函数的固定参数部分，可以直接从函数定义时的参数名获得；对于可选参数部分，先将指针指向第一个可选参数，然后依次后移指针，根据与结束标志的比较来判断是否已经获得全部参数。因此，va函数中结束标志必须事先约定好，否则，指针会指向无效的内存地址，导致出错。
+
+这里，移动指针使其指向下一个参数，那么移动指针时的偏移量是多少呢，没有具体答案，因为这里涉及到内存对齐（alignment）问题，内存对齐跟具体使用的硬件平台有密切关系，比如大家熟知的32位x86平台规定所有的变量地址必须是4的倍数(sizeof(int) = 4)。va机制中用宏_INTSIZEOF(n)来解决这个问题，没有这些宏，va的可移植性无从谈起。
+
+首先介绍宏_INTSIZEOF(n)，它求出变量占用内存空间的大小，是va的实现的基础。
+
+
+#define _INTSIZEOF(n)      ((sizeof(n)+sizeof(int)-1)&~(sizeof(int) - 1) )
+
+
+#define va_start(ap,v) ( ap = (va_list)&v + _INTSIZEOF(v) )              //第一个可选参数地址
+#define va_arg(ap,t) ( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) ) //下一个参数地址
+#define va_end(ap)       ( ap = (va_list)0 )                               // 将指针置为无效
+
+
+下表是针对函数int TestFunc(int n1, int n2, int n3, …) 参数传递时的内存堆栈情况。（C编译器默认的参数传递方式是__cdecl。）
+
+对该函数的调用为int result = TestFunc(a, b, c, d. e); 其中e为结束标志。
+
+va_xxx宏如此编写的原因。
+
+1． va_start。为了得到第一个可选参数的地址，我们有三种办法可以做到：
+
+A) = &n3 + _INTSIZEOF(n3)
+// 最后一个固定参数的地址 + 该参数占用内存的大小
+
+B) = &n2 + _INTSIZEOF(n3) + _INTSIZEOF(n2)
+// 中间某个固定参数的地址 + 该参数之后所有固定参数占用的内存大小之和
+
+C) = &n1 + _INTSIZEOF(n3) + _INTSIZEOF(n2) + _INTSIZEOF(n1)
+// 第一个固定参数的地址 + 所有固定参数占用的内存大小之和
+
+从编译器实现角度来看，方法B)，方法C)为了求出地址，编译器还需知道有多少个固定参数，以及它们的大小，没有把问题分解到最简单，所以不是很聪明的途径，不予采纳；相对来说，方法A)中运算的两个值则完全可以确定。va_start()正是采用A)方法，接受最后一个固定参数。调用va_start()的结果总是使指针指向下一个参数的地址，并把它作为第一个可选参数。在含多个固定参数的函数中，调用va_start()时，如果不是用最后一个固定参数，对于编译器来说，可选参数的个数已经增加，将给程序带来一些意想不到的错误。(当然如果你认为自己对指针已经知根知底，游刃有余，那么，怎么用就随你，你甚至可以用它完成一些很优秀（高效）的代码，但是，这样会大大降低代码的可读性。)
+
+注意：宏va_start是对参数的地址进行操作的，要求参数地址必须是有效的。一些地址无效的类型不能当作固定参数类型。比如：寄存器类型，它的地址不是有效的内存地址值；数组和函数也不允许，他们的长度是个问题。因此，这些类型时不能作为va函数的参数的。
+
+2． va_arg身兼二职：返回当前参数，并使参数指针指向下一个参数。
+
+初看va_arg宏定义很别扭，如果把它拆成两个语句，可以很清楚地看出它完成的两个职责。
+
+
+#define va_arg(ap,t)       ( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) ) //下一个参数地址
+// 将( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )拆成：
+/* 指针ap指向下一个参数的地址 */
+1． ap += _INTSIZEOF(t)；            // 当前，ap已经指向下一个参数了
+/* ap减去当前参数的大小得到当前参数的地址，再强制类型转换后返回它的值 */
+2． return *(t *)( ap - _INTSIZEOF(t))
+
+
+回想到printf/scanf系列函数的%d %s之类的格式化指令，我们不难理解这些它们的用途了- 明示参数强制转换的类型。
+
+(注：printf/scanf没有使用va_xxx来实现，但原理是一致的。)
+
+3．va_end很简单，仅仅是把指针作废而已。
+
+#define va_end(ap) (ap = (va_list)0) // x86平台
+
+四、 简洁、灵活，也有危险
+
+从va的实现可以看出，指针的合理运用，把C语言简洁、灵活的特性表现得淋漓尽致，叫人不得不佩服C的强大和高效。不可否认的是，给编程人员太多自由空间必然使程序的安全性降低。va中，为了得到所有传递给函数的参数，需要用va_arg依次遍历。其中存在两个隐患：
+
+1）如何确定参数的类型。 va_arg在类型检查方面与其说非常灵活，不如说是很不负责，因为是强制类型转换，va_arg都把当前指针所指向的内容强制转换到指定类型；
+
+2）结束标志。如果没有结束标志的判断，va将按默认类型依次返回内存中的内容，直到访问到非法内存而出错退出。例2中SqSum()求的是自然数的平方和，所以我把负数和0作为它的结束标志。例如scanf把接收到的回车符作为结束标志，大家熟知的printf()对字符串的处理用'\0'作为结束标志，无法想象C中的字符串如果没有'\0'， 代码将会是怎样一番情景，估计那时最流行的可能是字符数组，或者是malloc/free。
+
+允许对内存的随意访问，会留给不怀好意者留下攻击的可能。当处理cracker精心设计好的一串字符串后，程序将跳转到一些恶意代码区域执行，以使cracker达到其攻击目的。(常见的exploit攻击)所以，必需禁止对内存的随意访问和严格控制内存访问边界。
+
+五、 Unix System V兼容方式的va声明
+
+上面介绍可变参数函数的声明是采用ANSI标准的，Unix System V兼容方式的声明有一点点区别，它增加了两个宏：va_alist，va_dcl。而且它们不是定义在stdarg.h中，而是varargs.h中。stdarg.h是ANSI标准的；varargs.h仅仅是为了能与以前的程序保持兼容而出现的，现在的编程中不推荐使用。
+
+va_alist：函数声明/定义时出现在函数头，用以接受参数列表。
+
+va_dcl：对va_alist的声明，其后无需跟分号"；"
+
+va_start的定义也不相同。因为System V可变参数函数声明不区分固定参数和可选参数，直接对参数列表操作。所以va_start()不是va_start(ap,v)，而是简化为va_start(ap)。其中，ap是va_list型的参数指针。
+
+Unix System V兼容方式下函数的声明形式：
+
+type VAFunction(va_alist)
+va_dcl      // 这里无需分号
+{
+        // 函数体内同ANSI标准
+}// 例3：猜测execl的实现（Unix System V兼容方式），摘自SUS V2
+
+
+#include <varargs.h>
+
+#define MAXARGS        100
+/ * execl(file, arg1, arg2, ..., (char *)0); */
+
+execl(va_alist)
+va_dcl
+{
+        va_list ap;
+        char *file;
+        char *args[MAXARGS];
+        int argno = 0;
+
+        va_start(ap);
+        file = va_arg(ap, char *);
+        while ((args[argno++] = va_arg(ap, char *)) != (char *)0)
+            ;
+        va_end(ap);
+        return execv(file, args);
+}
+
+六、 扩展与思考
+
+个数可变参数在声明时只需"..."即可；但是，我们在接受这些参数时不能"..."。va函数实现的关键就是如何得到参数列表中可选参数，包括参数的值和类型。以上的所有实现都是基于来自stdarg.h的va_xxx的宏定义。 <思考>能不能不借助于va_xxx，自己实现VA呢？，我想到的方法是汇编。在C中，我们当然就用C的嵌入汇编来实现，这应该是可以做得到的。至于能做到什么程度，稳定性和效率怎么样，主要要看你对内存和指针的控制了。
+
+七、写一个简单的可变参数的C函数
+
+下面我们来探讨如何写一个简单的可变参数的C函数.写可变参数的
+C函数要在程序中用到以下这些宏:
+void va_start( va_list arg_ptr, prev_param );
+
+type va_arg( va_list arg_ptr, type );
+
+void va_end( va_list arg_ptr );
+va在这里是variable-argument(可变参数)的意思.
+这些宏定义在中,所以用到可变参数的程序应该包含这个
+头文件.下面我们写一个简单的可变参数的函数,改函数至少有一个整数
+参数,第二个参数也是整数,是可选的.函数只是打印这两个参数的值.
+void simple_va_fun(int i, ...)
+{
+va_list arg_ptr;
+int j=0;
+
+va_start(arg_ptr, i);
+j=va_arg(arg_ptr, int);
+va_end(arg_ptr);
+printf("%d %d\n", i, j);
+return;
+}
+我们可以在我们的头文件中这样声明我们的函数:
+extern void simple_va_fun(int i, ...);
+我们在程序中可以这样调用:
+simple_va_fun(100);
+simple_va_fun(100,200);
+从这个函数的实现可以看到,我们使用可变参数应该有以下步骤:
+1)首先在函数里定义一个va_list型的变量,这里是arg_ptr,这个变
+量是指向参数的指针.
+2)然后用va_start宏初始化变量arg_ptr,这个宏的第二个参数是第
+一个可变参数的前一个参数,是一个固定的参数.
+3)然后用va_arg返回可变的参数,并赋值给整数j. va_arg的第二个
+参数是你要返回的参数的类型,这里是int型.
+4)最后用va_end宏结束可变参数的获取.然后你就可以在函数里使
+用第二个参数了.如果函数有多个可变参数的,依次调用va_arg获
+取各个参数.
+如果我们用下面三种方法调用的话,都是合法的,但结果却不一样:
+1)simple_va_fun(100);
+结果是:100 -123456789(会变的值)
+2)simple_va_fun(100,200);
+结果是:100 200
+3)simple_va_fun(100,200,300);
+结果是:100 200
+我们看到第一种调用有错误,第二种调用正确,第三种调用尽管结果
+正确,但和我们函数最初的设计有冲突.下面一节我们探讨出现这些结果
+的原因和可变参数在编译器中是如何处理的.
+
+(二)可变参数在编译器中的处理
+
+我们知道va_start,va_arg,va_end是在stdarg.h中被定义成宏的,
+由于1)硬件平台的不同 2)编译器的不同,所以定义的宏也有所不同,下
+面以VC++中stdarg.h里x86平台的宏定义摘录如下(’\’号表示折行):
+
+typedef char * va_list;
+
+#define _INTSIZEOF(n) \
+((sizeof(n)+sizeof(int)-1)&~(sizeof(int) - 1) )
+
+#define va_start(ap,v) ( ap = (va_list)&v + _INTSIZEOF(v) )
+
+#define va_arg(ap,t) \
+( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )
+
+#define va_end(ap) ( ap = (va_list)0 )
+
+定义_INTSIZEOF(n)主要是为了某些需要内存的对齐的系统.C语言的函
+数是从右向左压入堆栈的,图(1)是函数的参数在堆栈中的分布位置.我
+们看到va_list被定义成char*,有一些平台或操作系统定义为void*.再
+看va_start的定义,定义为&v+_INTSIZEOF(v),而&v是固定参数在堆栈的
+地址,所以我们运行va_start(ap, v)以后,ap指向第一个可变参数在堆
+栈的地址,如图:
+
+高地址|-----------------------------|
+|函数返回地址 |
+|-----------------------------|
+|....... |
+|-----------------------------|
+|第n个参数(第一个可变参数) |
+|-----------------------------|<--va_start后ap指向
+|第n-1个参数(最后一个固定参数)|
+低地址|-----------------------------|<-- &v
+图( 1 )
+
+然后,我们用va_arg()取得类型t的可变参数值,以上例为int型为例,我
+们看一下va_arg取int型的返回值:
+j= ( *(int*)((ap += _INTSIZEOF(int))-_INTSIZEOF(int)) );
+首先ap+=sizeof(int),已经指向下一个参数的地址了.然后返回
+ap-sizeof(int)的int*指针,这正是第一个可变参数在堆栈里的地址
+(图2).然后用*取得这个地址的内容(参数值)赋给j.
+
+高地址|-----------------------------|
+|函数返回地址 |
+|-----------------------------|
+|....... |
+|-----------------------------|<--va_arg后ap指向
+|第n个参数(第一个可变参数) |
+|-----------------------------|<--va_start后ap指向
+|第n-1个参数(最后一个固定参数)|
+低地址|-----------------------------|<-- &v
+图( 2 )
+
+最后要说的是va_end宏的意思,x86平台定义为ap=(char*)0;使ap不再
+指向堆栈,而是跟NULL一样.有些直接定义为((void*)0),这样编译器不
+会为va_end产生代码,例如gcc在linux的x86平台就是这样定义的.
+在这里大家要注意一个问题:由于参数的地址用于va_start宏,所
+以参数不能声明为寄存器变量或作为函数或数组类型.
+关于va_start, va_arg, va_end的描述就是这些了,我们要注意的
+是不同的操作系统和硬件平台的定义有些不同,但原理却是相似的.
+
+(三)可变参数在编程中要注意的问题
+
+因为va_start, va_arg, va_end等定义成宏,所以它显得很愚蠢,
+可变参数的类型和个数完全在该函数中由程序代码控制,它并不能智能
+地识别不同参数的个数和类型.
+有人会问:那么printf中不是实现了智能识别参数吗?那是因为函数
+printf是从固定参数format字符串来分析出参数的类型,再调用va_arg
+的来获取可变参数的.也就是说,你想实现智能识别可变参数的话是要通
+过在自己的程序里作判断来实现的.
+另外有一个问题,因为编译器对可变参数的函数的原型检查不够严
+格,对编程查错不利.如果simple_va_fun()改为:
+void simple_va_fun(int i, ...)
+{
+va_list arg_ptr;
+char *s=NULL;
+
+va_start(arg_ptr, i);
+s=va_arg(arg_ptr, char*);
+va_end(arg_ptr);
+printf("%d %s\n", i, s);
+return;
+}
+可变参数为char*型,当我们忘记用两个参数来调用该函数时,就会出现
+core dump(Unix) 或者页面非法的错误(window平台).但也有可能不出
+错,但错误却是难以发现,不利于我们写出高质量的程序.
+以下提一下va系列宏的兼容性.
+System V Unix把va_start定义为只有一个参数的宏:
+va_start(va_list arg_ptr);
+而ANSI C则定义为:
+va_start(va_list arg_ptr, prev_param);
+如果我们要用system V的定义,应该用vararg.h头文件中所定义的
+宏,ANSI C的宏跟system V的宏是不兼容的,我们一般都用ANSI C,所以
+用ANSI C的定义就够了,也便于程序的移植.
+
+八、头文件
+
+va_list structure
+Used to hold information needed by va_arg and va_end macros. Called function declares variable of type va_list that can be passed as argument to another function.
+---STDARG.H
+
+#ifndef _VA_LIST_DEFINED
+
+#ifdef _M_ALPHA
+typedef struct {
+char *a0; /* pointer to first homed integer argument */
+int offset; /* byte offset of next parameter */
+} va_list;
+#else
+typedef char *va_list;
+#endif
+
+#define _VA_LIST_DEFINED
+#endif
+
+
+#if defined(_M_IX86)
+
+/*
+* define a macro to compute the size of a type, variable or expression,
+* rounded up to the nearest multiple of sizeof(int). This number is its
+* size as function argument (Intel architecture). Note that the macro
+* depends on sizeof(int) being a power of 2!
+*/
+#define _INTSIZEOF(n) ( (sizeof(n) + sizeof(int) - 1) & ~(sizeof(int) - 1) )
+
+#define va_dcl va_list va_alist;
+#define va_start(ap) ap = (va_list)&va_alist
+#define va_arg(ap,t) ( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )
+#define va_end(ap) ap = (va_list)0
+
+
+#elif defined(_M_MRX000) /* _MIPS_ */
+
+
+#define va_dcl int va_alist;
+#define va_start(list) list = (char *) &va_alist
+#define va_end(list)
+#define va_arg(list, mode) ((mode *)(list =\
+(char *) ((((int)list + (__builtin_alignof(mode)<=4?3:7)) &\
+(__builtin_alignof(mode)<=4?-4:-8))+sizeof(mode))))[-1]
+/* +++++++++++++++++++++++++++++++++++++++++++
+Because of parameter passing conventions in C:
+use mode=int for char, and short types
+use mode=double for float types
+use a pointer for array types
++++++++++++++++++++++++++++++++++++++++++++ */
+
+
+#elif defined(_M_ALPHA)
+
+/*
+* The Alpha compiler supports two builtin functions that are used to
+* implement stdarg/varargs. The __builtin_va_start function is used
+* by va_start to initialize the data structure that locates the next
+* argument. The __builtin_isfloat function is used by va_arg to pick
+* which part of the home area a given register argument is stored in.
+* The home area is where up to six integer and/or six floating point
+* register arguments are stored down (so they can also be referenced
+* by a pointer like any arguments passed on the stack).
+*/
+extern void * __builtin_va_start(va_list, ...);
+
+#define va_dcl long va_alist;
+#define va_start(list) __builtin_va_start(list, va_alist, 0)
+#define va_end(list)
+#define va_arg(list, mode) \
+( *( ((list).offset += ((int)sizeof(mode) + 7) & -8) , \
+(mode *)((list).a0 + (list).offset - \
+((__builtin_isfloat(mode) && (list).offset <= (6 * 8)) ? \
+(6 * 8) + 8 : ((int)sizeof(mode) + 7) & -8) \
+) \
+) \
+)
+
+
+#elif defined(_M_PPC)
+
+/*
+* define a macro to compute the size of a type, variable or expression,
+* rounded up to the nearest multiple of sizeof(int). This number is its
+* size as function argument (PPC architecture). Note that the macro
+* depends on sizeof(int) being a power of 2!
+*/
+/* this is for LITTLE-ENDIAN PowerPC */
+
+/* bytes that a type occupies in the argument list */
+#define _INTSIZEOF(n) ( (sizeof(n) + sizeof(int) - 1) & ~(sizeof(int) - 1) )
+/* return 'ap' adjusted for type 't' in arglist */
+#define _ALIGNIT(ap,t) \
+((((int)(ap))+(sizeof(t)<8?3:7)) & (sizeof(t)<8?~3:~7))
+
+#define va_dcl va_list va_alist;
+#define va_start(ap) ap = (va_list)&va_alist
+#define va_arg(ap,t) ( *(t *)((ap = (char *) (_ALIGNIT(ap, t) + _INTSIZEOF(t))) - _INTSIZEOF(t)) )
+#define va_end(ap) ap = (va_list)0
+
+#else
+
+/* A guess at the proper definitions for other platforms */
+
+#define _INTSIZEOF(n) ( (sizeof(n) + sizeof(int) - 1) & ~(sizeof(int) - 1) )
+
+#define va_dcl va_list va_alist;
+#define va_start(ap) ap = (va_list)&va_alist
+#define va_arg(ap,t) ( *(t *)((ap += _INTSIZEOF(t)) - _INTSIZEOF(t)) )
+#define va_end(ap) ap = (va_list)0
+
+
+#endif
+
+
+#ifdef __cplusplus
+}
+#endif
+
+#ifdef _MSC_VER
+#pragma pack(pop)
+#endif /* _MSC_VER */
+
+#endif /* _INC_VARARGS */  

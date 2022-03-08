@@ -1,0 +1,109 @@
+[information]
+projectname=editornow.mpr
+filename=xqc.mrp
+appname=小钱c
+appid=30001
+version=101
+visible=1
+cpu=3
+vendor=xq
+output=xqc.mrp
+description=冒泡实验开发系统运行器!
+include=C:\SKYMOBI\SDS4CPv1.0\Compiler\include\, sfw\, sfw\res\, sfw\common\, sfw\gui\, sfw\controls\, sfw\net\, src\,syslib\,bin\,wensrc\
+config=application,application2
+
+
+[config_application]
+define= VER=1.102,DATE=0325,SCREEN_SIZE_240320
+output=bin\temp\editor.m
+bmp_mode=normal
+shell=0
+
+[config_application2]
+define= VER=1.102,DATE=0325,SCREEN_SIZE_240320
+output=bin\editor.mrp
+bmp_mode=normal
+shell=0
+
+
+[files]
+#resource file id between 0 - 199
+file0 = sfw\res\res_str.mrp
+file16 = sfw\res\bmp\240320\arrdown.bmp
+file17 = sfw\res\bmp\240320\arrdown_p.bmp
+file18 = sfw\res\bmp\240320\spin.bmp
+file19 = sfw\res\bmp\240320\spin_p.bmp
+file20 = sfw\res\bmp\240320\arrleft.bmp
+file21 = sfw\res\bmp\240320\arrleft_p.bmp
+file22 = sfw\res\bmp\240320\arrright.bmp
+file23 = sfw\res\bmp\240320\arrright_p.bmp
+file24 = sfw\res\bmp\240320\file.bmp
+file25 = sfw\res\bmp\240320\folder.bmp
+file26 = sfw\res\bmp\240320\scrlogo.bmp
+
+[files]
+#common files between 300 - 399
+file300 = sfw\common\base64_decode.c
+file301 = sfw\common\base64_encode.c
+file302 = sfw\common\md5.c
+file303 = sfw\common\string.c
+file304 = sfw\common\des.c
+#file305 = sfw\common\camera.c
+
+#gui files between 400 - 499
+file400 = sfw\gui\bmp.c
+file401 = sfw\gui\gal.c
+file403 = sfw\gui\i18n.c
+file404 = sfw\gui\platform.c
+file405 = sfw\gui\rect.c
+file406 = sfw\gui\sound.c
+file407 = sfw\gui\window.c
+
+#control file between 600 - 699
+file600 = sfw\controls\smp.c
+file601 = sfw\controls\smp_button.c
+file602 = sfw\controls\smp_edit.c
+file603 = sfw\controls\smp_list.c
+file604 = sfw\controls\smp_menu.c
+file605 = sfw\controls\smp_menuwnd.c
+file606 = sfw\controls\smp_msgbox.c
+file607 = sfw\controls\smp_scrollbar.c
+file608 = sfw\controls\smp_textinfo.c
+file609 = sfw\controls\smp_toolbar.c
+file610 = sfw\controls\smp_flashbox.c
+file611 = sfw\controls\smp_label.c
+file612 = sfw\controls\plt_menu.c
+file613 = sfw\controls\plt_text.c
+file614 = sfw\controls\plt_msgbox.c
+file615 = sfw\controls\smp_progbar.c
+file616 = sfw\controls\smp_combobox.c
+file617 = sfw\controls\smp_tabwindow.c
+file618 = sfw\controls\smp_spin.c
+file619 = sfw\controls\smp_calendar.c
+file620 = sfw\controls\smp_datepicker.c
+file621 = sfw\controls\smp_scrollview.c
+file622 = sfw\controls\smp_titlebar.c 
+file623 = sfw\controls\smp_inputbox.c 
+
+#application files between 1000 - 
+file1000 = wensrc\topwnd.c
+file1001 = wensrc\application.c
+file1002 = wensrc\mainwnd.c
+file1003 = wensrc\Editor.c
+file1006 = src\font.c
+file1007 = wensrc\packged.c
+file1008 = wensrc\anjian.c
+file1009 = wensrc\opendlg.c
+file1010 = wensrc\skin.c 
+file1011 = wensrc\editormain.c
+file1012 = wensrc\HighLight.c
+file1013 = wensrc\palette.c
+file1014 = wensrc\Keyboard.c
+file1015 = wensrc\logo.c
+file1016 = wensrc\keypad.c
+
+file1100 = src\libini.c
+
+
+file1200 = wensrc\wordlib.txt
+

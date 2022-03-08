@@ -1,0 +1,136 @@
+Lua这种东西大家肯定不陌生了,要说这类的嵌入式脚本语言对写程序来说,确实会方便不少.但是lua有几个缺点不得不提.
+
+1.lua的语法很怪异,这对于习惯了脚本开发的人员也许没什么,但是对于一个ASM和C++的程序员无疑的很痛苦的.
+
+2.lua的执行速度很慢,极端的情况下,可能达到同类二进制执行速度的及百分之一.基本上不能用来代替主程序做大计算量的工作.
+
+我之前也是用lua,痛苦不言而喻,后来在有花的提醒下,发现了这么一个代替lua的好东西--Tiny C Compiler.
+
+TCC的优点:
+
+1.她是一个完全符合ISOC99的规范的C语言编译器.用在嵌入式脚本上,对于C程序员,基本没有障碍.
+
+2.她是直接编译化的嵌入式脚本,只要事先编译了脚本,执行的时候对于效率影响微乎其微.
+
+3.由于她是个编译器,所以所有的windows函数,C运行库函数,甚至你可以找到的任何DLL,LIB都可以被她用来作为扩充函数.
+
+有这么多有点当然是好的,但是很不幸,这东西的资料实在少的可怜,那干巴巴的一点点文档是专门说编译器的,对于嵌入式上的文档几乎找不到(google搜索tcc_set_lib_path这类函数名,结果居然是0,可见其保密性做的多好.-_-).唯一的途径就是阅读源代码摸索出其用途.
+
+好在关于怎么将tcc用在嵌入式上的方法,还是很简单的,不花多少时间,就能搞定,为了更多的人不再重复的劳动,我写了这么一篇文章.我用的是0.9.25版本,以下默认为这个版本.
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+首先,tcc是可以直接混在工程中编译的.参考源代码中的那份"libtcc_test.c"文件,这里说一下编译方法:
+
+1.include了TCC源码目录下的libtcc.h文件.
+
+2.在工程中添加config.h头文件,内容如下:
+
+#define TCC_VERSION "0.9.25"
+#define TCC_TARGET_PE 1
+#define CONFIG_TCCDIR "."
+#define CONFIG_SYSROOT ""
+
+3.调用tcc_set_lib_path函数设置tcc目录(这点下面代码中有详细说明).
+
+4.tcc_delete(s);必须在func之后调用.(这点下面代码中有详细说明)
+
+注意:如果你的Tcc脚本中,使用了运行库.记得把工程设置为ASCII,可能因为TCC不支持unicode,如果你的工程是Unicode,在Tcc获取运行库函数指针的时候,将获取不到.(或许还有其他办法,我没再琢磨了)
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+然后.其实大多数人用的是下面这些:
+
+直接参与编译的方法很别扭,或者你的工程是Unicode的,那可以采用独立编译成Dll(关于独立编译的方法和上面直接参与工程编译的差不多,就不累述了,我已经独立编译出了一个包提供给大家),然后动态链接的方式使用Tcc,方法如下:
+
+1.下载我提供的Tcc系统包(在我的网络硬盘,blog首页有)--libtcc.rar
+
+2.将代码解压缩到指定的目录(下面例子中比如说是"Z:\\tcc"目录).
+
+3.将包中的.libtcc_zv.dll,拷贝到你的程序当前目录(或者系统目录)
+
+4.编译如下代码(wind32-console工程).
+
+#include <stdio.h>
+
+//这是tcc的连接目录
+#include "Z:\\tcc\\tcc\\tcc.h"
+#pragma comment(lib, "Z:\\tcc\\tcc\\Libtcc.lib")
+
+//这是打算加入到TCC中的代码
+int add(int a, int b)
+{
+return a + b;
+}
+
+//这是TCC脚本(姑且算作脚本吧.lua看习惯了.)
+char my_program[] =
+"int fib(int n)\n"
+"{\n"
+"    if (n <= 2)\n"
+"        return 1;\n"
+"    else\n"
+"        return fib(n-1) + fib(n-2);\n"
+"}\n"
+"\n"
+"int foo(int n)\n"
+"{\n"
+"    printf(\"Hello World!\\n\");\n"
+"    printf(\"fib(%d) = %d\\n\", n, fib(n));\n"
+"    printf(\"add(%d, %d) = %d\\n\", n, 2 * n, add(n, 2 * n));\n"
+"    return 0;\n"
+"}\n";
+
+int main(int argc, char *argv[])
+{
+//申请一个TCC对象
+TCCState *s = tcc_new();
+
+//加入Tcc连接目录
+//注意,这里虽然有lib字样,但不是lib目录,这个目录下应该包含lib目录和include目录
+//tcc会自动的在这个目录下加上/lib和/include,以备使用
+//这个目录用\\或者用/都可以,TCC源码中用的是/
+tcc_set_lib_path(s, "Z:\\tcc");
+
+//设置输出模式为内存
+tcc_set_output_type(s, TCC_OUTPUT_MEMORY);
+
+//编译代码(也就是编译脚本成可执行文件)
+if (tcc_compile_string(s, my_program) == -1)
+{
+   printf("compile error\n");
+   return 1;
+}
+
+//将exe中的add函数的符号加入到编译后的脚本中
+tcc_add_symbol(s, "add", add);
+
+//重定位代码中的符号,并输出到用户指定内存中
+int size = tcc_relocate(s, NULL);
+if (size == -1) return 1;
+void *mem = malloc(size);
+tcc_relocate(s, mem);
+
+//获取tcc脚本中的一个函数符号
+void (*func)(int);
+func = (void(*)(int))tcc_get_symbol(s, "foo");
+if (!func) return 1;
+
+//执行该函数
+func(32);
+
+//注意,原tcc例子中,这个delete是放在func之上的
+//貌似我读源码的时候,如果这个在func调用之前调用,那么可能会释放一些dll/
+//比如msvcrt.dll,这样,tcc脚本中的一些printf这类CRT函数就将会被连接到一个无效地址
+//引发异常.所以这个delete只好放在func之后调用了.
+tcc_delete(s);
+
+//释放重定位之后存放的内存.
+free(mem);
+
+return 0;
+}
+
+***
+
+另据着眼同学反馈,VC6编译的时候,TCC的头文件中出现long long定义错误,改为__int64即可.2003之后版本的VC没有这个问题.
