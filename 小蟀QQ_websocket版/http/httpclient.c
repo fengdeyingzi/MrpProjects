@@ -416,6 +416,8 @@ int32 getHost(char *url, MR_GET_HOST_CB cb) {
 			//   drawInfo("getHostByName失败");
 			// lis_onerror(HTTP_ERROR_HOST);
 			websocket->onError((int32)websocket, HTTP_ERROR_HOST);
+		}else if(re == MR_WAITING){
+			mrc_printf("-------- 使用回调函数获取IP..........");
 		} else {  //直接获取ip
 			mrc_printf("getHost 3");
 			cb(re);
