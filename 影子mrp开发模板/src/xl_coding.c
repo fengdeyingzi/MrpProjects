@@ -1,91 +1,90 @@
-#include <mrc_base.h>
-#include <mrc_exb.h>
+#include <mpc.h>
 #include "xl_coding.h"
 
 
-//ex_codingå‡½æ•°å®ç° ä¸‡èƒ½ç¼–ç è½¬æ¢å‡½æ•°
+//ex_codingº¯ÊıÊµÏÖ ÍòÄÜ±àÂë×ª»»º¯Êı
 char* xl_ex_coding(char* text,int len,char* coding,char* tocoding){
 	char *temp_un = NULL;
 	int32 len_un = 0;
 	char *retext = NULL;
 	int32 relen = len;
-	//åˆ¤æ–­æ–‡æœ¬æ˜¯å¦ä¸ºunç¼–ç  å¦‚æœä¸æ˜¯ å°±è½¬æ¢æˆunç¼–ç ï¼ˆå¤§ç«¯ï¼‰
-	if(mrc_strcmp(coding,"UTF16-BE") == 0 || mrc_strcmp(coding,"utf16-be") == 0 || mrc_strcmp(coding,"UNICODE") == 0|| mrc_strcmp(coding,"unicode") == 0){
+	//ÅĞ¶ÏÎÄ±¾ÊÇ·ñÎªun±àÂë Èç¹û²»ÊÇ ¾Í×ª»»³Éun±àÂë£¨´ó¶Ë£©
+	if(strcmp(coding,"UTF16-BE") == 0 || strcmp(coding,"utf16-be") == 0 || strcmp(coding,"UNICODE") == 0|| strcmp(coding,"unicode") == 0){
 		temp_un = text;
 		len_un = len;
 		relen = len*2;
 	}
 	else{
-		if(mrc_strcmp(coding, "GBK")==0 || mrc_strcmp(coding,"gbk")==0 || mrc_strcmp(coding,"GB2312")==0 || mrc_strcmp(coding,"gb2312")==0){
+		if(strcmp(coding, "GBK")==0 || strcmp(coding,"gbk")==0 || strcmp(coding,"GB2312")==0 || strcmp(coding,"gb2312")==0){
 			temp_un = gbToUn(text);
-			len_un = mrc_wstrlen(temp_un);
+			len_un = wstrlen(temp_un);
 			relen = len*2;
 		}
-		else if(mrc_strcmp(coding,"UTF-8")==0 || mrc_strcmp(coding,"utf-8")==0){
+		else if(strcmp(coding,"UTF-8")==0 || strcmp(coding,"utf-8")==0){
 			len_un = len*2;
-			temp_un = mrc_malloc(len_un);
+			temp_un = malloc(len_un);
 			relen = len*2;
 			UTF8ToUni(text, temp_un, len_un);
 		}
-		else if(mrc_strcmp(coding, "ANSI")==0 || mrc_strcmp(coding, "ansi")==0){
+		else if(strcmp(coding, "ANSI")==0 || strcmp(coding, "ansi")==0){
 			relen = len*3;
 			temp_un = gbToUn(text);
-			len_un = mrc_wstrlen(temp_un);
+			len_un = wstrlen(temp_un);
 		}
 		else{
 			return NULL;
 		}
 	}
-	if(mrc_strcmp(tocoding, "unicode")==0 || mrc_strcmp(tocoding,"UNICODE")==0 || mrc_strcmp(tocoding,"UTF-16BE")==0 || mrc_strcmp(tocoding,"utf-16be")==0){
+	if(strcmp(tocoding, "unicode")==0 || strcmp(tocoding,"UNICODE")==0 || strcmp(tocoding,"UTF-16BE")==0 || strcmp(tocoding,"utf-16be")==0){
 	return temp_un;
 	}
-    else if(mrc_strcmp(tocoding,"UTF-8")==0 || mrc_strcmp(tocoding,"utf-8")==0){
-		retext = mrc_malloc(relen);
+    else if(strcmp(tocoding,"UTF-8")==0 || strcmp(tocoding,"utf-8")==0){
+		retext = malloc(relen);
 		UniToUTF8(temp_un, retext, relen);
 		return retext;
 	}
-	else if(mrc_strcmp(tocoding,"gbk")==0 || mrc_strcmp(tocoding,"GBK")==0 || mrc_strcmp(tocoding,"gb2312")==0 || mrc_strcmp(tocoding,"GB2312")==0){
+	else if(strcmp(tocoding,"gbk")==0 || strcmp(tocoding,"GBK")==0 || strcmp(tocoding,"gb2312")==0 || strcmp(tocoding,"GB2312")==0){
 		return unToGb(temp_un);
 	}
 	
 	return NULL;
 }
 
-//gbç¼–ç è½¬unicode è¿”å›çš„å­—ç¬¦ä¸²éœ€è¦é‡Šæ”¾å†…å­˜
+//gb±àÂë×ªunicode ·µ»ØµÄ×Ö·û´®ĞèÒªÊÍ·ÅÄÚ´æ
 char *gbToUn(char *text)
 {
- int32 len;
- return (char*)mrc_c2uVM(text, NULL, &len);
+ int len;
+ return (char*)c2u(text, NULL, &len);
  
 }
 
-//unicodeç¼–ç è½¬gb è¿”å›çš„å­—ç¬¦ä¸²éœ€è¦é‡Šæ”¾å†…å­˜
+//unicode±àÂë×ªgb ·µ»ØµÄ×Ö·û´®ĞèÒªÊÍ·ÅÄÚ´æ
 char *unToGb(char *text)
 {
  char *input= text;
-  int32 output_len;
-int32 input_len= mrc_wstrlen(input);
- char *output= mrc_malloc(input_len+2);
- mrc_printf("input_len %d\n",input_len);
+  int output_len;
+int input_len= wstrlen(input);
+ char *output= malloc(input_len+2);
+ printf("input_len %d\n",input_len);
 
- mrc_unicodeToGb2312((uint8*)input, input_len, (uint8**)&output, &output_len);
+ u2c( input, input_len, &output, &output_len);
  return output;
 }
 
-//åˆ¤æ–­utfç¼–ç ï¼Œ0ä¸ºæˆåŠŸï¼Œ-1å¤±è´¥
+//ÅĞ¶Ïutf±àÂë£¬0Îª³É¹¦£¬-1Ê§°Ü
 int IsUTF8(void *pBuffer, long size) {
 	int IsUTF8 = 0;
 	unsigned char *start = (unsigned char *)pBuffer;
 	unsigned char *end = (unsigned char *)pBuffer + size;
 	while (start < end) {
-		if (*start < 0x80)	// (10000000): å€¼å°äº0x80çš„ä¸ºASCIIå­—ç¬¦
+		if (*start < 0x80)	// (10000000): ÖµĞ¡ÓÚ0x80µÄÎªASCII×Ö·û
 		{
 			start++;
-		} else if (*start < (0xC0))	 // (11000000): å€¼ä»‹äº0x80ä¸0xC0ä¹‹é—´çš„ä¸ºæ— æ•ˆUTF-8å­—ç¬¦
+		} else if (*start < (0xC0))	 // (11000000): Öµ½éÓÚ0x80Óë0xC0Ö®¼äµÄÎªÎŞĞ§UTF-8×Ö·û
 		{
 			IsUTF8 = -1;
 			break;
-		} else if (*start < (0xE0))	 // (11100000): æ­¤èŒƒå›´å†…ä¸º2å­—èŠ‚UTF-8å­—ç¬¦
+		} else if (*start < (0xE0))	 // (11100000): ´Ë·¶Î§ÄÚÎª2×Ö½ÚUTF-8×Ö·û
 		{
 			if (start >= end - 1)
 				break;
@@ -94,7 +93,7 @@ int IsUTF8(void *pBuffer, long size) {
 				break;
 			}
 			start += 2;
-		} else if (*start < (0xF0))	 // (11110000): æ­¤èŒƒå›´å†…ä¸º3å­—èŠ‚UTF-8å­—ç¬¦
+		} else if (*start < (0xF0))	 // (11110000): ´Ë·¶Î§ÄÚÎª3×Ö½ÚUTF-8×Ö·û
 		{
 			if (start >= end - 2)
 				break;
@@ -123,7 +122,7 @@ int32 isGBK(const char *buf, int size){
         if(!(0x80 & buf[i]))
         {
             ret = FALSE;
-            mrc_printf("GBKç¼–ç æ£€æµ‹å¤±è´¥ pos:%d, line:%d\n", i,line);
+            mrc_printf("GBK±àÂë¼ì²âÊ§°Ü pos:%d, line:%d\n", i,line);
             break;
         }
     }
@@ -149,7 +148,7 @@ int32 isGB2312(const char *buf, int size) {
 				type = 1;
 			} else if (c < 128) {
 			} else {
-                mrc_printf("GBKç¼–ç æ£€æµ‹å¤±è´¥ pos:%d, line:%d\n", start,line);
+                mrc_printf("GBK±àÂë¼ì²âÊ§°Ü pos:%d, line:%d\n", start,line);
 				isGBK = FALSE;
 				goto GBWHILE;
 			}
@@ -159,7 +158,7 @@ int32 isGB2312(const char *buf, int size) {
 				type = 0;
 			} else {
 				isGBK = FALSE;
-                mrc_printf("GBKç¼–ç æ£€æµ‹å¤±è´¥ pos:%d, line:%d\n", start,line);
+                mrc_printf("GBK±àÂë¼ì²âÊ§°Ü pos:%d, line:%d\n", start,line);
 				goto GBWHILE;
 			}
 		}
@@ -171,28 +170,28 @@ GBWHILE:
 	return isGBK;
 }
 
-//å¤åˆ¶unicodeç¼–ç å­—ç¬¦ä¸²ï¼Œè¿”å›çš„å­—ç¬¦ä¸²éœ€è¦æ‰‹åŠ¨mrc_free
+//¸´ÖÆunicode±àÂë×Ö·û´®£¬·µ»ØµÄ×Ö·û´®ĞèÒªÊÖ¶¯free
 char *un_copy(char *text)
 {
- int len= mrc_wstrlen(text)+2;
- char *temp= mrc_malloc(len);
- mrc_memcpy(temp,text,len);
+ int len= wstrlen(text)+2;
+ char *temp= malloc(len);
+ memcpy(temp,text,len);
  return temp;
 }
 
-//unç¼–ç æ•°å­—è½¬æ¢ä¸ºint
+//un±àÂëÊı×Ö×ª»»Îªint
 int un_atoi(char *text)
 {
  char *temp=unToGb(text);
  int num=atoi(temp);
- mrc_free(temp);
+ free(temp);
  return num;
 }
 
 
-// unicodeå­—ç¬¦ä¸²æ¯”è¾ƒ
+// unicode×Ö·û´®±È½Ï
 /*
-int wmrc_strcmp(char *str1, char *str2)
+int wstrcmp(char *str1, char *str2)
 {
     while ((str1[0] || str1[1]) && str1[0] == str2[0] && str1[1] == str2[1])
     {
@@ -204,7 +203,7 @@ int wmrc_strcmp(char *str1, char *str2)
 }
 */
 
-// unicodeå­—ç¬¦ä¸²å¤åˆ¶
+// unicode×Ö·û´®¸´ÖÆ
 /*
 char *wstrcpy(char *dst, char *src)
 {
@@ -223,7 +222,7 @@ char *wstrcpy(char *dst, char *src)
 }
 */
 
-// unicodeå­—ç¬¦ä¸²å¤åˆ¶æŒ‡å®šé•¿åº¦
+// unicode×Ö·û´®¸´ÖÆÖ¸¶¨³¤¶È
 /*
 char *wstrncpy(char *dst, char *src, int32 size)
 {
@@ -246,16 +245,16 @@ char *wstrncpy(char *dst, char *src, int32 size)
 }
 */
 
-// unicodeå­—ç¬¦ä¸²é™„åŠ 
+// unicode×Ö·û´®¸½¼Ó
 /*
 char *wstrcat(char *dst, char *src)
 {
-    int len = mrc_wstrlen(dst);
+    int len = wstrlen(dst);
     return wstrcpy(dst + len, src);
 }
 */
 /*
-// unicodeå­—ç¬¦ä¸²å¤åˆ¶
+// unicode×Ö·û´®¸´ÖÆ
 char *wstrdup( char *str)
 {
     int len = 0;
@@ -264,19 +263,19 @@ char *wstrdup( char *str)
     if (NULL == str)
         return NULL;
 
-    len = mrc_wstrlen(str) + 2;
-    pDest = (char*)mrc_malloc(len);
+    len = wstrlen(str) + 2;
+    pDest = (char*)malloc(len);
     if(NULL != pDest)
-        mrc_memcpy(pDest, str, len);
+        memcpy(pDest, str, len);
 
     return pDest;
 }
 */
 /*---------------------------------------------------------------------------*/
 
-//UTF8è½¬æ¢ä¸ºUnicode
-//å‚æ•°ï¼šUTF8å­—ç¬¦ä¸²ï¼ŒUnicodeç¼“å†²åŒºï¼Œç¼“å†²åŒºå¤§å°
-//è¿”å›ï¼šç¼“å†²åŒºä½¿ç”¨å¤§å°
+//UTF8×ª»»ÎªUnicode
+//²ÎÊı£ºUTF8×Ö·û´®£¬Unicode»º³åÇø£¬»º³åÇø´óĞ¡
+//·µ»Ø£º»º³åÇøÊ¹ÓÃ´óĞ¡
 int UTF8ToUni( char *utf8str, char *unistr, int size)
 {
     int32 i = 0, u = 0;
@@ -313,9 +312,9 @@ int UTF8ToUni( char *utf8str, char *unistr, int size)
     return u;
 }
 
-//Unicodeè½¬æ¢ä¸ºUTF8
-//å‚æ•°ï¼šUnicodeå­—ç¬¦ä¸²ï¼ŒUTF8ç¼“å†²åŒºï¼Œç¼“å†²åŒºå¤§å°
-//è¿”å›ï¼šç¼“å†²åŒºä½¿ç”¨å¤§å°
+//Unicode×ª»»ÎªUTF8
+//²ÎÊı£ºUnicode×Ö·û´®£¬UTF8»º³åÇø£¬»º³åÇø´óĞ¡
+//·µ»Ø£º»º³åÇøÊ¹ÓÃ´óĞ¡
 int UniToUTF8(char *unistr, char *utf8str, int size)
 {
     int u = 0, i = 0;
@@ -348,7 +347,7 @@ int UniToUTF8(char *unistr, char *utf8str, int size)
     return i;
 }
 
-// è½¬æ¢asciiå­—ç¬¦ä¸²ä¸ºunicodeå­—ç¬¦ä¸²
+// ×ª»»ascii×Ö·û´®Îªunicode×Ö·û´®
 int Asc2Uni(char *input, char *output, int32 outlen)
 {
     int i;
@@ -369,7 +368,7 @@ int Asc2Uni(char *input, char *output, int32 outlen)
     return (i * 2);
 }
 
-// è½¬æ¢unicodeå­—ç¬¦ä¸²ä¸ºasciiå­—ç¬¦ä¸²
+// ×ª»»unicode×Ö·û´®Îªascii×Ö·û´®
 int Uni2Asc(char *input, char *output,int outlen)
 {
     int32 i;
@@ -389,29 +388,29 @@ int Uni2Asc(char *input, char *output,int outlen)
 }
 
 
-//å°†utf8ç¼–ç è½¬æ¢ä¸ºgbï¼Œéœ€è¦mrc_free
+//½«utf8±àÂë×ª»»Îªgb£¬ĞèÒªfree
 char *utfToGb(char *text)
 {
 	char *gb_text;
- int len=mrc_strlen(text)*2+2;
- char *un_text=mrc_malloc(len);
+ int len=strlen(text)*2+2;
+ char *un_text=malloc(len);
  UTF8ToUni(text,un_text,len);
  gb_text=unToGb(un_text);
- mrc_free(un_text);
+ free(un_text);
  return gb_text;
 }
 
 
-//å°†gbè½¬utfï¼Œéœ€è¦mrc_free
+//½«gb×ªutf£¬ĞèÒªfree
 char *gbToUtf(char *text)
 {
  int len;
  char *un_text;
  char *utf_text;
- len=mrc_strlen(text)*2+2;
- utf_text=mrc_malloc(len);
+ len=strlen(text)*2+2;
+ utf_text=malloc(len);
  un_text=gbToUn(text);
  UniToUTF8(un_text,utf_text,len);
- mrc_free(un_text);
+ free(un_text);
  return utf_text;
 }

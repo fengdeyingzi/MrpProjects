@@ -1,0 +1,15 @@
+{
+    "files.encoding": "gbk",
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+    "[c]": {
+        "files.encoding": "gbk"
+    },
+    "[h]": {
+        "files.encoding": "gbk"
+    },
+    "files.associations": {
+        "mrc_graphics.h": "c"
+    }
+}

@@ -2,5 +2,15 @@
     "files.associations": {
         "mrc_base.h": "c",
         "mrc_network.h": "c"
+    },
+    "files.encoding": "utf8",
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+    "[c]": {
+        "files.encoding": "utf8"
+    },
+    "[h]": {
+        "files.encoding": "utf8"
     }
 }

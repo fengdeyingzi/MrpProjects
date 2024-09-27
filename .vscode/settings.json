@@ -23,5 +23,9 @@
         "momo.h": "c",
         "string.h": "c",
         "httpclient.h": "c"
-    }
+    },
+    "files.encoding": "utf8",
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
 }

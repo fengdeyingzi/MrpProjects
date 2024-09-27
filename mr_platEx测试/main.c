@@ -117,8 +117,10 @@ int32 mrc_init() {
 
 
 
+
 int32 mrc_event(int32 code, int32 param0, int32 param1) {
-  
+  int re = 0;
+  char temp[200];
   if (code == MR_KEY_RELEASE) {
     if (param0 == MR_KEY_DOWN) {
       mrc_clearScreen(24, 230, 30);
@@ -144,20 +146,32 @@ int32 mrc_event(int32 code, int32 param0, int32 param1) {
 
     } else if (param0 == MR_KEY_1) {
       ledSet(1);
+      drawInfo("背光已开");
     } else if (param0 == MR_KEY_2) {
       ledSet(0);
+      drawInfo("背光已关");
     } else if (param0 == MR_KEY_3) {  // socket
       getSmsCenter();
     } else if (param0 == MR_KEY_4) {
-      isTouchScreen();
+      re = isTouchScreen();
+      mrc_sprintf(temp, "是否触屏:%d", re);
+      drawInfo((char*)temp);
     } else if (param0 == MR_KEY_5) {  // send
-      getLanguage();
+      re = getLanguage();
+      mrc_sprintf(temp, "语言:%d", re);
+      drawInfo((char*)temp);
     } else if (param0 == MR_KEY_6) {  // recev
-      getTSDCardState();
+      re = getTSDCardState();
+      mrc_sprintf(temp, "T卡状态:%d", re);
+      drawInfo((char*)temp);
     } else if (param0 == MR_KEY_7) {
-      getModel();
+      re = getModel();
+      mrc_sprintf(temp, "情景模式:%d", re);
+      drawInfo((char*)temp);
     } else if (param0 == MR_KEY_8) {
-		setVolue(5);
+		re = setVolue(5);
+      mrc_sprintf(temp, "设置音量:%d", re);
+      drawInfo((char*)temp);
     } else if (param0 == MR_KEY_SOFTRIGHT) {
       mrc_exit();
     }

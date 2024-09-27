@@ -35,7 +35,7 @@ int32 net_init_type;
 
 int32 send_len = 0;
 // char *local_ip = "127.0.0.1";
-int32 socket_state;	 // socket×´Ì¬ 0 gethost 1 connect 2 send 3 recv 4 ok -1
+int32 socket_state;	 // socketçŠ¶æ€ 0 gethost 1 connect 2 send 3 recv 4 ok -1
 
 STRING_BUFFER *buffer_http;
 HTTP_ONPROGRESS lis_progress;
@@ -43,8 +43,8 @@ HTTP_ONSUCCESS lis_onsuccess;
 HTTP_ONERROR lis_onerror;
 int32 timer_http;
 
-int http_result;	   //ÓëÏß³ÌÍ¨ĞÅ
-int http_result_data;  //resultÄÚÈİ
+int http_result;	   //ä¸çº¿ç¨‹é€šä¿¡
+int http_result_data;  //resultå†…å®¹
 ARR_STATE *arr_websocket;
 
 static HTTP_WEBSOCKET* websocket;
@@ -117,7 +117,7 @@ websocket->onError(ws, error);
 
 }
 
-//¶ÁÈ¡2×Ö½Ú
+//è¯»å–2å­—èŠ‚
 static int readShort(char *data, int index) {
 	return ((data[index] & 0xff) << 8) | (data[index + 1] & 0xff);
 }
@@ -128,7 +128,7 @@ static long readLongLong(char *data, int index) {
 	return ((data[index + 4] & 0xff) << 24) | ((data[index + 5] & 0xff) << 16) | ((data[index + 6] & 0xff) << 8) | (data[index + 7] & 0xff);
 }
 
-//¶ÁÈ¡Ö¸¶¨³¤¶Èbyte ²¢ÔÚbyteºóÌí¼Ó\0 ĞèÒªÊÍ·ÅÄÚ´æ
+//è¯»å–æŒ‡å®šé•¿åº¦byte å¹¶åœ¨byteåæ·»åŠ \0 éœ€è¦é‡Šæ”¾å†…å­˜
 char *readBytes(char *data, int index, int len) {
 	char *readData = mrc_malloc(len + 2);
 	readData[len] = 0;
@@ -137,18 +137,18 @@ char *readBytes(char *data, int index, int len) {
 	return readData;
 }
 
-//¶ÁÈ¡Ö¡ ĞèÒªÊÍ·ÅÄÚ´æ
+//è¯»å–å¸§ éœ€è¦é‡Šæ”¾å†…å­˜
 char *readFrame(HTTP_WEBSOCKET *websocket) {
-	//1×Ö½Ú
-	int total_len = 0;	//Ö¡µÄ×Ü³¤¶È
+	//1å­—èŠ‚
+	int total_len = 0;	//å¸§çš„æ€»é•¿åº¦
 	int ptr = 0;
 	int FIN = 0;			   //1 bit
-	int RSV1, RSV2, RSV3 = 0;  //¹²3bit
+	int RSV1, RSV2, RSV3 = 0;  //å…±3bit
 	int opcode = 0;			   //4 bit
-	//2×Ö½Ú
+	//2å­—èŠ‚
 	int mask = 0;		   //1 bit
 	long payload_len = 0;  //7 bit | 7+16 bit | 7+64 bit
-	int MaskingKey = 0;	   //0 | 4 bytes ÑÚÂëÃÜÔ¿£¬ËùÓĞ´Ó¿Í»§¶Ë·¢ËÍµ½·şÎñ¶ËµÄÖ¡¶¼°üº¬Ò»¸ö 32bits µÄÑÚÂë£¨Èç¹ûmask±»ÉèÖÃ³É1£©£¬·ñÔòÎª0¡£Ò»µ©ÑÚÂë±»ÉèÖÃ£¬ËùÓĞ½ÓÊÕµ½µÄ payload data ¶¼±ØĞëÓë¸ÃÖµÒÔÒ»ÖÖËã·¨×öÒì»òÔËËãÀ´»ñÈ¡ÕæÊµÖµ¡£
+	int MaskingKey = 0;	   //0 | 4 bytes æ©ç å¯†é’¥ï¼Œæ‰€æœ‰ä»å®¢æˆ·ç«¯å‘é€åˆ°æœåŠ¡ç«¯çš„å¸§éƒ½åŒ…å«ä¸€ä¸ª 32bits çš„æ©ç ï¼ˆå¦‚æœmaskè¢«è®¾ç½®æˆ1ï¼‰ï¼Œå¦åˆ™ä¸º0ã€‚ä¸€æ—¦æ©ç è¢«è®¾ç½®ï¼Œæ‰€æœ‰æ¥æ”¶åˆ°çš„ payload data éƒ½å¿…é¡»ä¸è¯¥å€¼ä»¥ä¸€ç§ç®—æ³•åšå¼‚æˆ–è¿ç®—æ¥è·å–çœŸå®å€¼ã€‚
 	char *payload_data;
 	// char *extension_data;
 	int extension_len = 0;
@@ -166,17 +166,17 @@ char *readFrame(HTTP_WEBSOCKET *websocket) {
 	if (payload_len == 0x7e) {
 		if (websocket->buffer->len <= ptr + 2)
 			return NULL;
-		//½ÓÏÂÀ´µÄ2×Ö½Ú
+		//æ¥ä¸‹æ¥çš„2å­—èŠ‚
 		payload_len = readShort(data, 2);
 		ptr += 2;
 	} else if (payload_len == 0x7f) {
 		if (websocket->buffer->len <= ptr + 8)
 			return NULL;
-		//½ÓÏÂÀ´µÄ8×Ö½Ú
+		//æ¥ä¸‹æ¥çš„8å­—èŠ‚
 		payload_len = readLongLong(data, 2);
 		ptr += 8;
 	}
-	if (mask == 1) {  //´æÔÚÑÚÂë
+	if (mask == 1) {  //å­˜åœ¨æ©ç 
 		total_len = (int)(ptr + 4 + payload_len + extension_len);
 		if (websocket->buffer->len < total_len)
 			return NULL;
@@ -187,9 +187,9 @@ char *readFrame(HTTP_WEBSOCKET *websocket) {
 		if (websocket->buffer->len < total_len)
 			return NULL;
 	}
-	//¶ÁÈ¡Êı¾İ
+	//è¯»å–æ•°æ®
 	payload_data = readBytes(data, ptr, (int)payload_len);
-	buffer_clear(websocket->buffer);  //¶ÁÈ¡Ò»Ö¡³É¹¦ ¶ªÆúÖ¡
+	buffer_clear(websocket->buffer);  //è¯»å–ä¸€å¸§æˆåŠŸ ä¸¢å¼ƒå¸§
 
 	return payload_data;
 }
@@ -202,7 +202,7 @@ void print_ip(int32 ip) {
 	mrc_printf("ip:%d.%d.%d.%d\n", data[3], data[2], data[1], data[0]);
 }
 
-//Í¨¹ıurl»ñÈ¡host Ğèfree
+//é€šè¿‡urlè·å–host éœ€free
 char *getUrlHost(char *url) {
 	int len = mrc_strlen(url);
 	char *host = mrc_malloc(len);
@@ -254,7 +254,7 @@ out_host:
 	return NULL;
 }
 
-//Í¨¹ıurl»ñÈ¡Â·ÓÉ Ğèfree
+//é€šè¿‡urlè·å–è·¯ç”± éœ€free
 char *getUrlRoad(char *url) {
 	int len = mrc_strlen(url);
 	char *host = mrc_malloc(len);
@@ -315,7 +315,7 @@ out_road:
 	return NULL;
 }
 
-//Í¨¹ıurl»ñÈ¡port Ğèfree
+//é€šè¿‡urlè·å–port éœ€free
 int getUrlPort(char *url) {
 	int len = mrc_strlen(url);
 
@@ -395,7 +395,7 @@ int32 isNumber(char *host){
 }
 
 
-//»ñÈ¡ipµØÖ· ²¢»Øµ÷
+//è·å–ipåœ°å€ å¹¶å›è°ƒ
 int32 getHost(char *url, MR_GET_HOST_CB cb) {
 	int32 re = 0;
 	char *host = getUrlHost(url);
@@ -413,10 +413,10 @@ int32 getHost(char *url, MR_GET_HOST_CB cb) {
 
 		mrc_printf("getHost 2");
 		if (re == MR_FAILED) {
-			//   drawInfo("getHostByNameÊ§°Ü");
+			//   drawInfo("getHostByNameå¤±è´¥");
 			// lis_onerror(HTTP_ERROR_HOST);
 			websocket->onError((int32)websocket, HTTP_ERROR_HOST);
-		} else {  //Ö±½Ó»ñÈ¡ip
+		} else {  //ç›´æ¥è·å–ip
 			mrc_printf("getHost 3");
 			cb(re);
 		}
@@ -458,12 +458,12 @@ int32 http_ws_run(int32 ip) {
 		websocket->socket_state = SOCKET_STATE_CONNECT;
 		 ret = mrc_connect(websocket->socket, ip, websocket->port, MR_SOCKET_BLOCK);
 		if (ret == MR_WAITING) {
-			mrc_printf("Ó¦ÓÃĞèÒªÂÖÑ­");
+			mrc_printf("åº”ç”¨éœ€è¦è½®å¾ª");
 		} else if (ret == MR_SUCCESS) {
-			mrc_printf("Á¬½Ó³É¹¦");
+			mrc_printf("è¿æ¥æˆåŠŸ");
 			websocket->socket_state = SOCKET_STATE_CONNECT;
 		} else {
-			mrc_printf("Á¬½ÓÊ§°Ü");
+			mrc_printf("è¿æ¥å¤±è´¥");
 			websocket->socket_state = SOCKET_STATE_ERROR;
 			websocket->error = HTTP_ERROR_CONNECT;
 		}
@@ -505,9 +505,9 @@ int32 http_ws_run(int32 ip) {
 		if (temp_int >= 0) {
 			
 			for ( ii = 0; ii < temp_int; ii++) {
-				mrc_printf("¶ÁÈ¡Êı¾İ %d",temp_int);
+				mrc_printf("è¯»å–æ•°æ® %d",temp_int);
 				buffer_append(websocket->buffer, websocket->recv_buf[ii]);
-				//ÅĞ¶ÏheaderÊÇ·ñÍê³É
+				//åˆ¤æ–­headeræ˜¯å¦å®Œæˆ
 				if (!websocket->is_open) {
 					if (mrc_strstr(websocket->buffer->data, "\r\n\r\n")) {
 						mrc_printf("header ... %s",websocket->buffer->data);
@@ -522,7 +522,7 @@ int32 http_ws_run(int32 ip) {
 				} else {
 					char *msgData = readFrame(websocket);
 					if (msgData != NULL) {
-						mrc_printf("--------- ¶ÁÈ¡Ö¡³É¹¦ %s\n ", msgData);
+						mrc_printf("--------- è¯»å–å¸§æˆåŠŸ %s\n ", msgData);
 						send_result(RESULT_WS_ONMESSAGE, (int32)websocket, msgData, 0);
 						free(msgData);
 					}else{
@@ -541,7 +541,7 @@ int32 http_ws_run(int32 ip) {
 	 if(websocket->socket_state != SOCKET_STATE_ERROR){
 		mrc_timerStart(websocket->timer, 200, ip, http_ws_timer, FALSE); 
 	 }else{
-		 send_result(RESULT_WS_ONERROR, (int32)websocket, "socketÁ¬½ÓÊ§°Ü",websocket->error);
+		 send_result(RESULT_WS_ONERROR, (int32)websocket, "socketè¿æ¥å¤±è´¥",websocket->error);
 	 }
 	 
 
@@ -676,20 +676,20 @@ void http_ws_send(int32 ws, char *text) {
 		}
 	}
 
-	mrc_printf("----------- ·¢ËÍ %s", text);
+	mrc_printf("----------- å‘é€ %s", text);
 	// socket_w(sendData);
 	//  write_len = writesocket(websocket->socket, sendData, total_len, 0);
 	write_len = mrc_send(websocket->socket, sendData, total_len);
 	if (write_len != total_len) {
-		mrc_printf("write Î´Íê³É %d\n", write_len);
+		mrc_printf("write æœªå®Œæˆ %d\n", write_len);
 	}else {
-		mrc_printf("·¢ËÍÍê³É");
+		mrc_printf("å‘é€å®Œæˆ");
 	}
 
 	mrc_free(sendData);
 }
 
-//¹Ø±Õwebsocket
+//å…³é—­websocket
 void http_ws_exit(int32 ws) {
 	
 	HTTP_WEBSOCKET *websocket = (HTTP_WEBSOCKET *)ws;
@@ -697,7 +697,7 @@ void http_ws_exit(int32 ws) {
 		return;
 	websocket->socket_state = 0;
 	if (websocket->socket >= 0) {
-		mrc_printf("¹Ø±Õsocket %d\n", websocket->socket);
+		mrc_printf("å…³é—­socket %d\n", websocket->socket);
 		mrc_closeSocket(websocket->socket);
 		send_result(RESULT_WS_ONCLOSE, (int32)websocket, NULL, 0);
 		websocket->socket = -1;
