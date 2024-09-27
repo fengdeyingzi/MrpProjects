@@ -170,12 +170,13 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
     uint16 tempid;
     uint32 tempoffset;
     uint8 tempsw[6];
-    mrc_memcpy(&fontCount, uc3_buf + 12, sizeof(uint32));
+    fontCount = *(uint32*)(uc3_buf + 12);
+    // mrc_memcpy(&fontCount, uc3_buf + 12, sizeof(uint32));
 
     endPos = startPos + fontCount * 4;
     isAddBit = (fontw * fonth % 8) > 0;
 
-    fontCount = (fontCount & 0xFFFFFFFF); // Ensure it's properly interpreted
+    // fontCount = (fontCount & 0xFFFFFFFF); // Ensure it's properly interpreted
 
     // mrc_printf("ÎÄ×ÖÊıÁ¿: %u\n", fontCount);
 
