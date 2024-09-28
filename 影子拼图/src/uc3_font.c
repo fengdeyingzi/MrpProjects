@@ -9,7 +9,7 @@ extern int getUC3Width(int id);
 extern uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size);
 extern int getFontPixel(uint8 *buf, int n);
 
-uint16 tempfontindex;
+int tempfontindex;
 
 // ³õÊ¼»¯uc3×ÖÌå
 int32 uc3_init(void)
@@ -42,9 +42,9 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
         while (*ucptr)
         {
             code = *ucptr;
-            tempchar = getCharUC3((uint16)(code << 8 & 0xff00 | code >> 8), 16, 16, &out_size);
+            tempchar = getCharUC3((uint16)((code << 8) & 0xff00 | code >> 8), 16, 16, &out_size);
             drawBitmap(tempchar, ix, iy, r, g, b);
-            ix += getUC3Width((uint16)(code << 8 & 0xff00 | code >> 8));
+            ix += getUC3Width((uint16)((code << 8) & 0xff00 | code >> 8));
             ucptr++;
         }
     }
@@ -63,14 +63,14 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
         {
             uint16 code = *ucptr;
 
-            uint8 *tempchar = getCharUC3((uint16)(code << 8 & 0xff00 | code >> 8), 16, 16, &out_size);
+            uint8 *tempchar = getCharUC3((uint16)((code << 8) & 0xff00 | code >> 8), 16, 16, &out_size);
             // mrc_printf("draw %x\n",code);
             if (tempchar != NULL)
             {
                 drawBitmap(tempchar, ix, iy, r, g, b);
             }
 
-            ix += getUC3Width((uint16)(code << 8 & 0xff00 | code >> 8));
+            ix += getUC3Width((uint16)((code << 8) & 0xff00 | code >> 8));
             ucptr++;
             csize -= 2;
         }
@@ -196,9 +196,9 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
         if (tempid == id)
         {
 
-            tempoffset = *(uint32 *)(uc3_buf + i + 2);
-            // mrc_memcpy(&tempoffset, uc3_buf + i + 2, sizeof(uint32));
-            if (i > 600)
+            // tempoffset = *(uint32 *)(uc3_buf + i + 2);
+            mrc_memcpy(&tempoffset, uc3_buf + i + 2, sizeof(uint32));
+            if (i - startPos > 600)
             {
                 tempfontindex++;
                 if (tempfontindex >= 100)
@@ -224,7 +224,7 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
             }
         }
     }
-
+  
     // If not found, return an empty buffer
     *out_size = (fontw * fonth / 8) + (isAddBit ? 1 : 0);
 

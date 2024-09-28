@@ -12,7 +12,7 @@ void pintu_init(PuzzleGame *game, char *filename, int leve)
     game->emptyIndex = game->rows * game->columns - 1;
     game->image = readBitmapFromAssets(filename);
     loadImageParts(game);
-    shuffle(game);
+    // shuffle(game);
 }
 
 void loadImage(PuzzleGame *game)
@@ -44,7 +44,7 @@ void loadImageParts(PuzzleGame *game)
     }
 }
 
-void shuffle(PuzzleGame *game)
+void pintu_shuffle(PuzzleGame *game)
 {
     int i, j;
     int32 direction[4];
@@ -172,7 +172,7 @@ int32 pintu_event(PuzzleGame *game, int32 type, int32 p1, int32 p2)
         // 点击重新开始
         if (p1 == MR_KEY_SOFTRIGHT)
         {
-            shuffle(game);
+            pintu_shuffle(game);
             pintu_draw(game);
         }
     }
@@ -198,7 +198,7 @@ int32 pintu_event(PuzzleGame *game, int32 type, int32 p1, int32 p2)
         // 点击重新开始
         if (p1 >= SCRW - 68 && p1 <= SCRW && p2 >= SCRH - 18 && p2 <= SCRH)
         {
-            shuffle(game);
+            pintu_shuffle(game);
             pintu_draw(game);
         }
     }

@@ -3,9 +3,10 @@
 #include "pintu_menu.h"
 #include "uc3_font.h"
 #include "mrc_graphics.h"
+// #include <mr_helper.h>
 
 extern void switchWindow(int windex, int leve);
-
+extern void (*T_mr_drawBitmap)(uint16* bmp, int16 x, int16 y, uint16 w, uint16 h);
 void pmenu_init(PMENU *menu)
 {
     int i;
@@ -43,6 +44,7 @@ void pmenu_draw(PMENU *menu)
 {
     int32 textw;
     int32 i;
+    BITMAPINFO logoinfo;
     mrc_clearScreen(240, 240, 240);
     drawBitmap(menu->logobmp, (SCRW - 146) / 2, 30);
     // »æÖÆ¹â±ê
@@ -61,6 +63,8 @@ void pmenu_draw(PMENU *menu)
         }
     }
     mrc_refreshScreen(0, 0, SCRW, SCRH);
+    bitmapGetInfo(menu->logobmp, &logoinfo);
+    
 }
 
 void pmenu_event(PMENU *menu, int type, int p1, int p2)

@@ -23,7 +23,7 @@ typedef struct
 // º¯ÊýÉùÃ÷
 extern void pintu_init(PuzzleGame *game, char *filename, int leve);
 extern void loadImageParts(PuzzleGame *game);
-extern void shuffle(PuzzleGame *game);
+extern void pintu_shuffle(PuzzleGame *game);
 extern void movePiece(PuzzleGame *game, int index);
 extern int canMove(PuzzleGame *game, int index);
 extern void loadImage(PuzzleGame *game);

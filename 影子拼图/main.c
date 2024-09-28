@@ -21,11 +21,36 @@ int32 bmptemp[4];
 int32 timer_cd;
 int32 bx, by;
 int32 xv, yv;
-    PuzzleGame game;
-    PMENU menu;
+PuzzleGame game;
+PMENU menu;
 int32 current_window;
 
 extern void drawGame(void);
+
+int32 bufindex;
+uint16 *screenBuf;
+uint16 *tempbuf;
+
+// 测试屏幕缓存刷新
+void testScreenBuf(int32 data)
+{
+
+  bufindex++;
+
+  if (bufindex % 2 == 0)
+  {
+    mrc_setScreenSize(SCRW, SCRH);
+    w_setScreenBuffer(screenBuf);
+    ref(0, 0, SCRW, SCRH);
+  }
+  else
+  {
+    mrc_setScreenSize(220, 220);
+    w_setScreenBuffer(tempbuf);
+    ref(30, 30, 30, 30);
+  }
+}
+
 void timer_run(int32 id)
 {
   int rr = 0;
@@ -72,21 +97,22 @@ void timer_run(int32 id)
   return;
 }
 
-
-void switchWindow(int windex, int leve){
+void switchWindow(int windex, int leve)
+{
   char temp[100];
   current_window = windex;
   switch (windex)
   {
-    case 0:
-      pmenu_draw(&menu);
-      break;
-      case 1:
-      pintu_free(&game);
-      mrc_sprintf(temp, "image%d.bma", leve+3);
-      pintu_init(&game, temp, leve);
-      pintu_draw(&game);
-      break;
+  case 0:
+    pmenu_draw(&menu);
+    break;
+  case 1:
+    pintu_free(&game);
+    mrc_sprintf(temp, "image%d.bma", leve + 3);
+    pintu_init(&game, temp, leve);
+    pintu_shuffle(&game);
+    pintu_draw(&game);
+    break;
   }
 }
 void drawGame(void)
@@ -106,22 +132,20 @@ void drawGame(void)
   // width = uc3_getWidth(text_exit, 0);
   // uc3_drawText(text_exit, SCRW - width, SCRH - 16, 255, 255, 255, 0);
   // mrc_refreshScreen(0, 0, SCRW, SCRH);
-   switch (current_window)
+  switch (current_window)
   {
-    case 0:
-      pmenu_draw(&menu);
-      break;
-      case 1:
-      pintu_draw(&game);
-      break;
+  case 0:
+    pmenu_draw(&menu);
+    break;
+  case 1:
+
+    pintu_draw(&game);
+    break;
   }
 }
 
-    
+// 游戏的其他逻辑和循环可以在此处添加
 
-    // 游戏的其他逻辑和循环可以在此处添加
-
-    
 int32 mrc_init(void)
 {
   int i = 0;
@@ -153,6 +177,12 @@ int32 mrc_init(void)
   mrc_printf("图片宽度:%d 高度:%d\n", bitmapinfo.width, bitmapinfo.height);
   timer_cd = timercreate();
   // timerstart(timer_cd, 33, 0, timer_run, 1);
+  bufindex = 0;
+  screenBuf = w_getScreenBuffer();
+  tempbuf = (uint16 *)malloc(SCRW * SCRH * 2);
+  memset(tempbuf, 0, SCRW * SCRH * 2);
+  // timerstart(timer_cd, 20, 0, testScreenBuf, 1);
+
   // pintu_draw(&game);
 
   return 0;
@@ -160,17 +190,23 @@ int32 mrc_init(void)
 
 int32 mrc_event(int32 code, int32 param0, int32 param1)
 {
-  if(current_window == 0){
+  if (current_window == 0)
+  {
     pmenu_event(&menu, code, param0, param1);
-  }else{
+  }
+  else
+  {
     pintu_event(&game, code, param0, param1);
   }
-  
 
   return 0;
 }
 int32 mrc_pause() { return 0; }
-int32 mrc_resume() { return 0; }
+int32 mrc_resume()
+{
+  drawGame();
+  return 0;
+}
 int32 mrc_exitApp()
 {
   int i = 0;
