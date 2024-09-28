@@ -10,7 +10,11 @@ void pintu_init(PuzzleGame *game, char *filename, int leve)
     game->rows = 3 + leve;
     game->columns = 3 + leve;
     game->emptyIndex = game->rows * game->columns - 1;
+    if(filename != NULL)
     game->image = readBitmapFromAssets(filename);
+    else
+    game->image = 0;
+    if(game->image)
     loadImageParts(game);
     // shuffle(game);
 }
@@ -92,16 +96,23 @@ void pintu_draw(PuzzleGame *game)
     ClipImage tempImage;
     int32 itemw = 0;
     int i = 0;
+    int scrw = SCRW;
+    if(SCRH < SCRW){
+        scrw = SCRH;
+    }
     bitmapGetInfo(game->image, &bitmapInfo);
     mrc_clearScreen(240, 240, 240);
     // ªÊ÷∆ÕºøÈ
     for (i = 0; i < game->rows * game->columns; i++)
     {
         tempImage = game->imageParts[i];
-        itemw = bitmapInfo.width / game->columns;
+        itemw = scrw / game->columns;
         // mrc_printf("itemw = %d, ", itemw);
-        if (i != game->emptyIndex)
+        if (i != game->emptyIndex && SCRW == 240)
             drawBitmapEx(tempImage.image, i % game->columns * itemw, i / game->columns * itemw, tempImage.cw, tempImage.ch, tempImage.cx, tempImage.cy, tempImage.cw, tempImage.ch);
+            else if(i != game->emptyIndex){
+                drawBitmapEx(tempImage.image, i % game->columns * itemw, i / game->columns * itemw, itemw, itemw, tempImage.cx, tempImage.cy, tempImage.cw, tempImage.ch);
+            }
     }
 
     // ªÊ÷∆Àı¬‘Õº∆¨
@@ -158,6 +169,10 @@ int32 pintu_event(PuzzleGame *game, int32 type, int32 p1, int32 p2)
     int32 itemw = 0;
     int32 ix, iy;
     int32 iindex;
+    int scrw = SCRW;
+    if(SCRH < SCRW){
+        scrw = SCRH;
+    }
     mrc_printf("pintu_event: %d %d %d\n", type, p1, p2);
     if (type == MR_KEY_RELEASE)
     {
@@ -178,7 +193,7 @@ int32 pintu_event(PuzzleGame *game, int32 type, int32 p1, int32 p2)
     }
     if (type == MR_MOUSE_DOWN)
     {
-        itemw = SCRW / game->columns;
+        itemw = scrw / game->columns;
         ix = p1 / itemw;
         iy = p2 / itemw;
         iindex = iy * game->columns + ix;
@@ -221,7 +236,15 @@ int pintu_main(void)
 int32 pintu_free(PuzzleGame *game)
 {
     //  Õ∑≈ƒ⁄¥Ê
-    free(game->imageParts);
-    bitmapFree(game->image);
+    if(game->imageParts){
+         free(game->imageParts);
+         game->imageParts = NULL;
+    }
+   
+    if(game->image){
+        bitmapFree(game->image);
+        game->image = 0;
+    }
+    
     return 0;
 }

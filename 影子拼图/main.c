@@ -150,7 +150,7 @@ int32 mrc_init(void)
 {
   int i = 0;
   char temp[30];
-  BITMAPINFO bitmapinfo;
+  // BITMAPINFO bitmapinfo;
 
   mpc_init();
   current_window = 0;
@@ -161,26 +161,24 @@ int32 mrc_init(void)
   mrc_printf("mrc_inie ......");
   mrc_printf("uc3 init.....");
   uc3_init();
-  pintu_init(&game, "image3.bma", 0);
+  pintu_init(&game, NULL, 0);
   pmenu_init(&menu);
   sand(getuptime());
+  /*
   for (i = 0; i < 4; i++)
   {
     mrc_sprintf(temp, "000%d.bma", i);
     bmptemp[i] = readBitmapFromAssets(temp);
   }
   bmp_0 = bmptemp[0];
-
+  */
   drawGame();
 
-  bitmapGetInfo(bmp_0, &bitmapinfo);
-  mrc_printf("图片宽度:%d 高度:%d\n", bitmapinfo.width, bitmapinfo.height);
+  // bitmapGetInfo(bmp_0, &bitmapinfo);
+  // mrc_printf("图片宽度:%d 高度:%d\n", bitmapinfo.width, bitmapinfo.height);
   timer_cd = timercreate();
   // timerstart(timer_cd, 33, 0, timer_run, 1);
-  bufindex = 0;
-  screenBuf = w_getScreenBuffer();
-  tempbuf = (uint16 *)malloc(SCRW * SCRH * 2);
-  memset(tempbuf, 0, SCRW * SCRH * 2);
+  
   // timerstart(timer_cd, 20, 0, testScreenBuf, 1);
 
   // pintu_draw(&game);
