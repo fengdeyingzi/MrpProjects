@@ -26,6 +26,8 @@ BM_OR,         //SRC .OR. DST*   半透明效果
 #include <mrc_base.h>
 #endif
 
+
+
 typedef struct {
  uint16* bitmap;
  int width; //
@@ -33,6 +35,7 @@ typedef struct {
  int color_bit; //颜色位数 默认16
  int transcolor; //透明色 默认0xffff
  int mode; //绘制模式 默认BM_COPY
+ int32 buflen; //缓存区宽高
 } BITMAP_565;
 
 
@@ -44,6 +47,7 @@ void bmp_settranscolor(BITMAP_565* bmp, int color);
 void bmp_draw(BITMAP_565* bmp, int x,int y);
 void bmp_drawflip(BITMAP_565* bmp, int x,int y,int w,int h,int tx,int ty);
 void bmp_free(BITMAP_565* bmp);
+void* mr_malloc(int32 len);
 
 
 

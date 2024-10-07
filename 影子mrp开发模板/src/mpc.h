@@ -175,7 +175,15 @@ typedef struct {
     uint8            g;
     uint8            b;
 }colorst;
-
+#ifndef MAX
+    #define  MAX( x, y ) ( ((x) > (y)) ? (x) : (y) )
+#endif
+#ifndef MIN
+    #define  MIN( x, y ) ( ((x) < (y)) ? (x) : (y) )
+#endif
+#ifndef ABS
+    #define ABS(VAL) (((VAL)>0)?(VAL):(-(VAL)))
+#endif
 
 /********************************C¿âº¯Êý********************************/
 

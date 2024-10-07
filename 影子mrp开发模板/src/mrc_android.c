@@ -51,7 +51,12 @@ void *mrc_readFileFromAssets(char *filename, int32 *len){
 }
 
 void mrc_freeFileFromAssets(void *data,int32 len){
+
 	//mrc_freeFileData(data,len);
+	#ifdef C_RUN
 	mrc_free(data);
+	#else
+	mrc_freeFileData(data,len);
+	#endif
 }
 #endif

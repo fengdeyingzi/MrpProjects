@@ -3,6 +3,12 @@
 #include "xl_debug.h"
 #include "xl_bmp.h"
 
+void* mr_malloc(int32 len){
+  uint8 *buf = NULL;
+  buf = mrc_malloc(len-4);
+  return buf-4;
+}
+
 //构建一个bmp 参数：内存数据，宽度，高度，透明色(0表示不透明)
 BITMAP_565* bmp_create(uint16 *bitmap, int width, int height, int transcolor){
  BITMAP_565* bmp = mrc_malloc(sizeof(BITMAP_565));
@@ -48,6 +54,7 @@ BITMAP_565* bmp_read(void *buf, int len){
  memset(bmp,0,sizeof(BITMAP_565));
  bmp->color_bit = 16;
  bmp->mode = BM_COPY;
+ bmp->buflen = len;
 //  debug_log("检测文件头");
 //  debug_log("检测文件头 %c %c",*(bufc+1),*(bufc+2));
  //检测文件头
@@ -68,6 +75,7 @@ BITMAP_565* bmp_read(void *buf, int len){
    bmp->width = w;
    bmp->height = h;
    bmp->bitmap = (uint16*)mrc_malloc(w*h*2);
+   bmp->buflen = w*h*2;
    //复制位图数据
    
    for( iy=0;iy<bmp->height;iy++){
@@ -85,7 +93,9 @@ BITMAP_565* bmp_read(void *buf, int len){
    wsize = w*3;
    if(wsize%4!=0) wsize = wsize - wsize%4 + 4;
   //  debug_printf("申请内存\n");
-   bmp->bitmap = (uint16*)mrc_malloc(w*h*3);
+   bmp->bitmap = (uint16*)mr_malloc(w*h*2);
+   bmp->buflen = w*h*2;
+   
    //32转16位
     buf16 = (unsigned short*)mrc_malloc(bmp->width*bmp->height*2);
     buf24 = (bufc+ptr);
@@ -109,19 +119,6 @@ BITMAP_565* bmp_read(void *buf, int len){
    }
    mrc_free(buf16);
   }
- }else if(bufc[0] == 'M' && bufc[1] == 'A' && bufc[2] == 'P' && bufc[3] == '5'){
-   ptr = 4;
-   bmp->width = get_int(bufc, ptr);
-   ptr = 8;
-   bmp->height = get_int(bufc, ptr);
-   ptr = 12;
-   bmp->transcolor = get_short(bufc, ptr);
-   if(bmp->transcolor != 0){
-    bmp->mode = BM_TRANSPARENT;
-   }
-   ptr = 14;
-   bmp->bitmap = (uint16*)mrc_malloc(bmp->width*bmp->height*2);
-   mrc_memcpy(bmp->bitmap, bufc+ptr, bmp->width * bmp->height * 2);
  }
  else
  {
@@ -144,6 +141,7 @@ BITMAP_565* bma_read(void *buf, int len){
  memset(bmp,0,sizeof(BITMAP_565));
  bmp->color_bit = 16;
  bmp->mode = BM_COPY;
+ bmp->buflen = len;
  if(bufc[0] == 'M' && bufc[1] == 'A' && bufc[2] == 'P' && bufc[3] == '5'){
    ptr = 4;
    bmp->width = get_int(bufc, ptr);
@@ -170,7 +168,13 @@ BITMAP_565* bma_read(void *buf, int len){
 //设置透明色 argb
 void bmp_settranscolor(BITMAP_565* bmp, int color){
  bmp->transcolor = ((color>>8)&0xf800) | ((color>>5)&0x07e0) | ((color>>3)&0x1f);
- bmp->mode = BM_TRANSPARENT;
+ if(color != 0){
+  bmp->mode = BM_TRANSPARENT;
+ }
+ else{
+  bmp->mode = BM_COPY;
+ }
+ 
 }
 //显示bmp
 void bmp_draw(BITMAP_565* bmp, int x,int y){
@@ -184,6 +188,6 @@ void bmp_drawflip(BITMAP_565* bmp, int x,int y,int w,int h,int tx,int ty){
 }
 //bmp释放
 void bmp_free(BITMAP_565* bmp){
- mrc_free(bmp->bitmap);
+ mrc_freeFileData(bmp->bitmap, bmp->buflen);
  mrc_free(bmp);
 }
