@@ -46,26 +46,39 @@ BITMAP_565 *createBitmap565(int width, int height);
 extern int32 drawBitmap565Flip(BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy);
 //绘制bitmap
 extern void drawBitmap565(BITMAP_565 *b,int32 x,int32 y);
+void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y);
+//memcpy绘图优化
+extern int32 bitmapAutoMemcpy(BITMAP_565 *b);
+//扩展绘制bitmap
+void drawBitmap565Ex(BITMAP_565* bmp, int32 x,int32 y,int32 w,int32 h, int32 tx, int32 ty,int32 tw,int32 th);
+//绘制argb颜色值的bitmap
+void drawBitmap8888(BITMAP_565 *bmp, int32 x, int32 y);
 //释放bitmap
 extern int32 bitmap565Free(BITMAP_565 *b);
 //从mrp中读取bitmap
 extern BITMAP_565 *readBitmap565FromAssets(char *filename);
+void gl_drawColor(uint32 color);
+void gl_clearScreen(int32 r, int32 g, int32 b);
 // 画矩形
 void gl_drawRect(int32 x,int32 y,int32 w,int32 h,uint32 color);
 //画线
 void gl_drawLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color);
+//绘制三角形
+void gl_drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
 //绘制空心三角形
 void gl_drawHollowTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
 //画圆
 void gl_drawCir(int32 x,int32 y,int32 r,uint32 color);
+//绘制空心圆
+void gl_drawHollowCir(int x0,int y0,int r, uint32 color);
+//绘制旋转的矩形
+void gl_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color);
 //绘制旋转的空心矩形
-void mrc_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint8 r, uint8 g, uint8 b);
+void gl_drawRotatedHollowRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color);
 //绘制渐变矩形
 void drawShadeRect(int32 x, int32 y, int32 w, int32 h, uint32 colorA, uint32 colorB, int mode);
-//绘制三角形
-void gl_drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
-//扩展绘制bitmap
-void drawBitmap565Ex(BITMAP_565* bmp, int32 x,int32 y,int32 w,int32 h, int32 tx, int32 ty,int32 tw,int32 th);
+
+
 //将bitmap缩放,生成一个新的BITMAP
 BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height);
 //获取bitmap信息

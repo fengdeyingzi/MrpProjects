@@ -208,22 +208,17 @@ int32 mrc_resume()
 int32 mrc_exitApp()
 {
   int i = 0;
-  // timerstop(timer_cd);
-  mrc_printf("free timer\n");
+  timerstop(timer_cd);
   timerdel(timer_cd);
   // 释放内存
-  mrc_printf("free pintu\n");
   pintu_free(&game);
-  mrc_printf("free menu");
   pmenu_free(&menu);
-  mrc_printf("free uc3");
   // 释放字体
   uc3_free();
-  mrc_printf("free successfully");
-  // for (i = 0; i < 4; i++)
-  // {
-  //   bitmapFree(bmptemp[i]);
-  // }
+  for (i = 0; i < 4; i++)
+  {
+    bitmapFree(bmptemp[i]);
+  }
 
   return 0;
 }

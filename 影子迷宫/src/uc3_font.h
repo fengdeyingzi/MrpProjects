@@ -1,6 +1,8 @@
-#include <mrc_base.h>
+
 #ifndef UC3_FONT_H
 #define UC3_FONT_H
+
+#include <mrc_base.h>
 //³õÊ¼»¯uc3×ÖÌå
 int32 uc3_init(void);
 

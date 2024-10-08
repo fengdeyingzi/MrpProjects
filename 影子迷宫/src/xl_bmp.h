@@ -36,6 +36,8 @@ typedef struct {
  int transcolor; //透明色 默认0xffff
  int mode; //绘制模式 默认BM_COPY
  int32 buflen; //缓存区宽高
+ int32 *memcache; //memcpy绘图优化缓存 存放dst src count(共12字节)
+ int32 memlen; //memcpy绘图优化缓存
 } BITMAP_565;
 
 

@@ -139,10 +139,11 @@ BITMAP_565* bma_read(void *buf, int len){
 
  BITMAP_565* bmp = mrc_malloc(sizeof(BITMAP_565));
  memset(bmp,0,sizeof(BITMAP_565));
- bmp->color_bit = 16;
+ 
  bmp->mode = BM_COPY;
  bmp->buflen = len;
  if(bufc[0] == 'M' && bufc[1] == 'A' && bufc[2] == 'P' && bufc[3] == '5'){
+   bmp->color_bit = 16;
    ptr = 4;
    bmp->width = get_int(bufc, ptr);
    ptr = 8;
@@ -156,8 +157,27 @@ BITMAP_565* bma_read(void *buf, int len){
    mrc_memmove(bufc, bufc+ptr, bmp->width * bmp->height * 2);
    bmp->bitmap = (uint16*)bufc;
  }
+ else if(bufc[0] == 'M' && bufc[1] == 'A' && bufc[2] == 'P' && bufc[3] == '8'){
+  mrc_printf("read ................");
+   bmp->color_bit = 32;
+    ptr = 4;
+   bmp->width = get_int(bufc, ptr);
+   ptr = 8;
+   bmp->height = get_int(bufc, ptr);
+   ptr = 12;
+   bmp->transcolor = get_short(bufc, ptr);
+   if(bmp->transcolor != 0){
+    bmp->mode = BM_TRANSPARENT;
+   }
+   ptr = 14;
+   mrc_printf("read ................");
+   mrc_memmove(bufc, bufc+ptr, bmp->width * bmp->height * 4);
+   mrc_printf("read ................");
+   bmp->bitmap = (uint16*)bufc;
+ }
  else
  {
+  mrc_free(bmp);
 	//  debug_printf("²»ÊÇbmpÍ¼Æ¬");
   return NULL;
  }
@@ -188,6 +208,11 @@ void bmp_drawflip(BITMAP_565* bmp, int x,int y,int w,int h,int tx,int ty){
 }
 //bmpÊÍ·Å
 void bmp_free(BITMAP_565* bmp){
+  if(bmp->memlen>0){
+    mrc_free(bmp->memcache);
+    bmp->memlen = 0;
+  }
  mrc_freeFileData(bmp->bitmap, bmp->buflen);
+ bmp->bitmap = NULL;
  mrc_free(bmp);
 }
