@@ -362,9 +362,9 @@ void mpc_init(void);
 
 #define readFileFromAssets mrc_readFileFromAssets
 
-#define readBitmap(filename) ((int32)readBitmap565(filename))
-#define drawBitmapFlip(buf,  x,  y,  w,  h,  sx,  sy) drawBitmap565Flip((BITMAP_565 *)buf, x,y,w,h,sx,sy)
-#define bitmapFree(buf) bitmap565Free((BITMAP_565 *)buf)
+// #define readBitmap(filename) ((int32)readBitmap565(filename))
+// #define drawBitmapFlip(buf,  x,  y,  w,  h,  sx,  sy) drawBitmap565Flip((BITMAP_565 *)buf, x,y,w,h,sx,sy)
+// #define bitmapFree(buf) bitmap565Free((BITMAP_565 *)buf)
 #define readBitmapFromAssets(filename) ((int32)readBitmap565FromAssets(filename))
 #define drawRect gl_drawRect
 #define drawCir gl_drawCir

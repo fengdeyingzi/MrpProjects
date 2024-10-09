@@ -95,7 +95,7 @@ void logoc(int32 data) {
     int32 tt;
     int32 i;
     char temp[100];
-    mrc_printf("logoc");
+    
     rotation+=10;
     alpha+=2;
     if(alpha>255) alpha=0;
@@ -105,9 +105,11 @@ void logoc(int32 data) {
     for(i=0;i<100;i++){
         // mrc_clearScreen(32, 238, 240);
         // gl_clearScreen(32, 255, 255);
-        drawBitmap565(logo, 10, logoy);
+        // drawBitmap(logo2, 10, logoy);
+        // drawBitmapEx(logo, 10, logoy, 60, 60, 0,0, 30, 30);
+        drawBitmap(logo2, 100, logoy);
     }
-    drawTime = getuptime()-tt;
+    
     
     // cls(255, 255, 255);
     // mrc_printf("cls\n");
@@ -116,9 +118,7 @@ void logoc(int32 data) {
     // drawBitmap565Rotate(logo, SCRW/2, SCRH/2, 5, logo2->height/2, rotation);
     // mrc_printf("cls2\n");
     // drawBitmapAlpha(logo, SCRW/2-logo->width/2, SCRH/2-logo->height/2, alpha);
-    mrc_printf("draw start");
     
-    mrc_printf("draw end");
     // drawBitmapAlpha(logo2, SCRW/2-logo2->width/2, SCRH/2-logo2->height/2 - 100, alpha);
     // mrc_printf("cl3s\n");
     // ref(0, 0, SCRW, SCRH);
@@ -126,9 +126,9 @@ void logoc(int32 data) {
     // gl_drawTriangle(0, 0, 30, 100, 100, 20, 0x00ff00 | (alpha<<24));
     // gl_drawTriangle(0, 30, 30, 130, 100, 50, 0x00ff00 | (alpha<<24));
     // for(i=0;i<1;i++)
-    drawBitmapAlpha(logo2, logox, logoy, alpha);
-    drawBitmapAlpha(logo, logox-32, logoy, alpha);
-    mrc_printf("alpha success");
+    // drawBitmapAlpha(logo2, logox, logoy, alpha);
+    // drawBitmapAlpha(logo, logox-32, logoy, alpha);
+    
     // gl_drawHollowTriangle(0, 0, 30, 100, 100, 20, 0xff000000);
     // gl_drawHollowTriangle(0, 30, 30, 130, 100, 50, 0xff000000);
     // gl_drawRotatedRect(30, 30, 50, 50,24,24, rotation, 0x00f000 | (alpha<<24));
@@ -140,6 +140,9 @@ void logoc(int32 data) {
     
     
     logoy++;
+    logox++;
+    logoy++;
+    logox++;
     // mrc_drawRotatedRect(SCRW/2, SCRH/2, 50, 50, 25, 25, rotation, 255,0,0);
     // mrc_printf("cls4\n");
     
@@ -154,8 +157,9 @@ void logoc(int32 data) {
     
     // gl_drawTriangle(0,0, 100,20, 10, 100, 0x00ff00 | (alpha<<24));
     // gl_drawTriangle(0,100, 100,120, 10, 200, 0x00ff00 | (alpha<<24));
-    
+    drawTime = getuptime()-tt;
     mrc_sprintf(temp, "Time: %d ms", drawTime);
+    
     uc3_drawTextHor(temp, 1, 1, 255, 0, 255, 0);
     ref(0, 0, SCRW, SCRH);
 }
@@ -168,8 +172,8 @@ int32 mrc_init(void) {
     mpc_init();
     uc3_init();
     sound_test = soundLoad("birds_fly.mp3");
-    logox = 50;
-    logoy = -1;
+    logox = -22;
+    logoy = -40;
     player.x = 1;
     player.y = 1; // 起点
     CELL_SIZE = SCRW/MAZE_WIDTH;
@@ -177,18 +181,18 @@ int32 mrc_init(void) {
     maze[1][1] = 1; // 起点
     generateMaze(1, 1); // 生成迷宫
     drawGame();
-    mrc_printf("11111111111");
-    logo = readBitmap565FromAssets("test1.bma");
-    re = bitmapAutoMemcpy(logo);
-    mrc_printf("memcpy auto success");
-    mrc_printf("11111111111");
-    logo2 = readBitmap565FromAssets("logo2.bma");
-    mrc_printf("11111111111");
+
+    logo = readBitmap565FromAssets("0001.bma");
+    // re = bitmapAutoMemcpy(logo);
+
+    logo2 = readBitmap565FromAssets("logo.bma");
+    drawBitmap565Old(logo2, logo, 10, 0, 30, 30, 10, 10);
+
     timer = timercreate();
-    mrc_printf("11111111111");
+
     logoc(0);
-    mrc_printf("11111111111");
-    timerstart(timer, 1000, 0, logoc, 1); // 1s 后开始计时]
+
+    timerstart(timer, 50, 0, logoc, 1); // 1s 后开始计时]
     
     return 0;
 }
@@ -237,8 +241,8 @@ int32 mrc_exitApp() {
     timerdel(timer);
     soundFree(sound_test);
     uc3_free();
-    bitmap565Free(logo);
-    bitmap565Free(logo2);
+    bitmapFree(logo);
+    bitmapFree(logo2);
     return 0;
 }
 

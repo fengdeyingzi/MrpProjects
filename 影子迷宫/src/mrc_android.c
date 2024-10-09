@@ -15,7 +15,7 @@ char *assets_dir;
 }
 
 #ifdef C_RUN
-void *mrc_readFileFromAssets(char *filename, int32 *len){
+void *mrc_readFileFromAssets(const char *filename, int32 *len){
  int32 f = 0;
  char path[300];
  void *buf = NULL;
@@ -39,7 +39,7 @@ void mrc_freeFileFromAssets(void *data,int32 len){
 
 #else
 
-void *mrc_readFileFromAssets(char *filename, int32 *len){
+void *mrc_readFileFromAssets(const char *filename, int32 *len){
 	uint8 *buf = NULL;
 	int32 re = 0;
  re = mrc_readFileFromMrpEx(NULL,(const char*)filename,&buf,len,0);

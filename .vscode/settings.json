@@ -22,9 +22,10 @@
         "system_error": "c",
         "momo.h": "c",
         "string.h": "c",
-        "httpclient.h": "c"
+        "httpclient.h": "c",
+        "textview.h": "c"
     },
-    "files.encoding": "utf8",
+    "files.encoding": "gbk",
     "[bat]": {
         "files.encoding": "gbk"
     },

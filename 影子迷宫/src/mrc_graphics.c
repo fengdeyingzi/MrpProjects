@@ -58,7 +58,7 @@ BITMAP_565 *createBitmapFromScreen()
   return bmp;
 }
 
-BITMAP_565 *readBitmap565FromAssets(char *filename)
+BITMAP_565 *readBitmap565FromAssets(const char *filename)
 {
   int32 len = 0;
   void *buf;
@@ -89,7 +89,7 @@ BITMAP_565 *readBitmap565FromAssets(char *filename)
   return re;
 }
 
-BITMAP_565 *readBitmap565(char *filename)
+BITMAP_565 *readBitmap(char *filename)
 {
   int32 f;
   void *buf;
@@ -124,10 +124,16 @@ BITMAP_565 *readBitmap565(char *filename)
   }
   return re;
 }
-int32 drawBitmap565Flip(BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
+
+int32 drawBitmapFlip(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
 {
-  bmp_drawflip(buf, x, y, w, h, sx, sy);
-  return 0;
+  if(bmp->color_bit == 16){
+    return mrc_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)w,(uint16)h, (uint16)bmp->mode, (int16)sx,(int16)sy,(uint16)bmp->transcolor);
+  }else if(bmp->color_bit == 32){
+    return gl_bitmapShowExTrans8888((uint32*)bmp->bitmap, (int16)x, (int16)y, (int16)bmp->width, (int16)w, (int16)h, (int16)sx, (int16)sy);
+  }
+  
+  return MR_FAILED;
 }
 
 void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y)
@@ -1178,51 +1184,79 @@ void gl_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height,
 */
 void drawBitmap565Old(BITMAP_565 *di, BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
 {
-  int32 j;
-  int32 i;
+    int32 j;
+    int32 i;
 
-  // 检查目标位图的边界
-  if (x < 0 || y < 0 || w <= 0 || h <= 0 || sx < 0 || sy < 0 ||
-      sx + w > buf->width || sy + h > buf->height)
-  {
-    mrc_printf("drawBitmap565Old error\n");
-    return; // 无效参数，直接返回
-  }
-  if (x + w > di->width)
-  {
-    w = di->width - x;
-  }
-  if (y + h > di->height)
-  {
-    h = di->height - y;
-  }
-  // 进行像素拷贝
-  for (j = 0; j < h; ++j)
-  {
-    if (buf->mode == BM_TRANSPARENT)
+    // 处理目标坐标超出边界的情况
+    if (x < 0)
     {
-      for (i = 0; i < w; ++i)
-      {
-        int32 src_x = sx + i;
-        int32 src_y = sy + j;
-        uint16 color = buf->bitmap[src_y * buf->width + src_x]; // 从buf中获取颜色
+        w += x; // 对宽度进行调整
+        sx -= x; // 左移源图片的起始x坐标
+        x = 0; // 设置目标x为0
+    }
+    if (y < 0)
+    {
+        h += y; // 对高度进行调整
+        sy -= y; // 上移源图片的起始y坐标
+        y = 0; // 设置目标y为0
+    }
+    if (x + w > di->width)
+    {
+        w = di->width - x; // 确保宽度不超出目标位图
+    }
+    if (y + h > di->height)
+    {
+        h = di->height - y; // 确保高度不超出目标位图
+    }
 
-        // 仅当颜色不等于透明色时，才进行绘制
+    // 处理源图片超出边界的情况
+    if (sx < 0)
+    {
+        w += sx; // 对宽度进行调整
+        sx = 0; // 设置源图片的起始坐标为0
+    }
+    if (sy < 0)
+    {
+        h += sy; // 对高度进行调整
+        sy = 0; // 设置源图片的起始坐标为0
+    }
+    if (sx + w > buf->width)
+    {
+        w = buf->width - sx; // 确保宽度不超出源位图
+    }
+    if (sy + h > buf->height)
+    {
+        h = buf->height - sy; // 确保高度不超出源位图
+    }
 
-        if (color != buf->transcolor)
+    // 进行像素拷贝
+    for (j = 0; j < h; ++j)
+    {
+        if (buf->mode == BM_TRANSPARENT)
         {
-          int32 dest_x = x + i;
-          int32 dest_y = y + j;
-          mrc_printf("...");
-          di->bitmap[dest_y * di->width + dest_x] = color; // 绘制到目标位图
+            for (i = 0; i < w; ++i)
+            {
+                int32 src_x = sx + i;
+                int32 src_y = sy + j;
+                uint16 color = buf->bitmap[src_y * buf->width + src_x]; // 从buf中获取颜色
+
+                // 仅当颜色不等于透明色时，才进行绘制
+                if (color != buf->transcolor)
+                {
+                    int32 dest_x = x + i;
+                    int32 dest_y = y + j;
+                    di->bitmap[dest_y * di->width + dest_x] = color; // 绘制到目标位图
+                }
+            }
         }
-      }
+        else
+        {
+            // 如果不需要透明处理，直接使用内存复制
+            mrc_memcpy(di->bitmap + (y + j) * di->width + x, 
+                        buf->bitmap + (sy + j) * buf->width + sx, 
+                        w * 2);
+        }
     }
-    else
-    {
-      mrc_memcpy(di->bitmap, buf->bitmap, w * 2);
-    }
-  }
 }
 
 /*
@@ -1410,7 +1444,7 @@ void drawBitmapEx(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 tx,
   }
 }
 
-int32 bitmap565Free(BITMAP_565 *b)
+int32 bitmapFree(BITMAP_565 *b)
 {
   bmp_free(b);
   return 0;
@@ -1666,6 +1700,21 @@ void gl_drawRect(int32 x, int32 y, int32 w, int32 h, uint32 color)
       }
     }
   }
+}
+
+//绘制空心矩形
+void gl_drawHollowRect(int x, int y, int width, int height, uint32 color){
+  int ix, iy;
+  uint16 *buffer = w_getScreenBuffer();
+  int32 maxX, maxY;
+  maxX = MIN(SCRW, x + width);
+  maxY = MIN(SCRH, y + height);
+  x = MAX(0, x);
+  y = MAX(0, y);
+  gl_drawLine(x, y, x + width - 1, y, color);
+  gl_drawLine(x, y + height - 1, x + width - 1, y + height - 1, color);
+  gl_drawLine(x, y, x, y + height - 1, color);
+  gl_drawLine(x + width - 1, y, x + width - 1, y + height - 1, color);
 }
 
 void gl_drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
@@ -2302,7 +2351,7 @@ int32 bitmap565getInfo(BITMAP_565 *bmp, BITMAPINFO *info)
   mrc_memset(info, 0, sizeof(BITMAPINFO));
   info->width = bmp->width;
   info->height = bmp->height;
-  info->format = 16;
+  info->format = bmp->color_bit;
   info->ptr = bmp->bitmap;
   return 0;
 }

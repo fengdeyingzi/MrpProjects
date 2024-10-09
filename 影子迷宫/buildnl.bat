@@ -1,4 +1,4 @@
-mrpbuilder -t build -Isrc -Iassets -ItPNG -i nao.c pintu_menu.c assets/ src/ -gzip -fast -o ghtcs.mrp ^
+mrpbuilder -t build -Isrc -Iassets -ItPNG -i nao.c assets/ src/ -gzip -fast -o ghtcs.mrp ^
 -appid 90001 ^
 -version 1000 ^
 -scrw 240 ^
