@@ -3,7 +3,7 @@
 uint8 *uc3_buf = NULL;
 int32 uc3_buf_len = 0;
 
-extern void drawBitmap(
+extern void drawBitmapBit(
     uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b);
   extern  void drawBitmapRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, int type);
 extern int getUC3Width(int id);
@@ -53,7 +53,7 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
         {
             code = *ucptr;
             tempchar = getCharUC3((uint16)((code << 8) & 0xff00 | code >> 8), 16, 16, &out_size);
-            drawBitmap(tempchar, ix, iy, r, g, b);
+            drawBitmapBit(tempchar, ix, iy, r, g, b);
             ix += getUC3Width((uint16)((code << 8) & 0xff00 | code >> 8));
             ucptr++;
         }
@@ -77,7 +77,7 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
             // mrc_printf("draw %x\n",code);
             if (tempchar != NULL)
             {
-                drawBitmap(tempchar, ix, iy, r, g, b);
+                drawBitmapBit(tempchar, ix, iy, r, g, b);
             }
 
             ix += getUC3Width((uint16)((code << 8) & 0xff00 | code >> 8));
@@ -243,7 +243,7 @@ void drawBitmapRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, int 
 // 绘制二进制位图数据
 // x,y 绘制在屏幕上的坐标点
 // r,g,b 绘制的颜色
-void drawBitmap(
+void drawBitmapBit(
     uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b)
 {
     int n = 0;

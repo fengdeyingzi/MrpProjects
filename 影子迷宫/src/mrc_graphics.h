@@ -50,7 +50,7 @@ void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y);
 //memcpy绘图优化
 extern int32 bitmapAutoMemcpy(BITMAP_565 *b);
 //扩展绘制bitmap
-void drawBitmap565Ex(BITMAP_565* bmp, int32 x,int32 y,int32 w,int32 h, int32 tx, int32 ty,int32 tw,int32 th);
+void drawBitmapEx(BITMAP_565* bmp, int32 x,int32 y,int32 w,int32 h, int32 tx, int32 ty,int32 tw,int32 th);
 //绘制argb颜色值的bitmap
 void drawBitmap8888(BITMAP_565 *bmp, int32 x, int32 y);
 //释放bitmap

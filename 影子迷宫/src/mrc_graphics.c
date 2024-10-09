@@ -68,6 +68,8 @@ BITMAP_565 *readBitmap565FromAssets(char *filename)
   //  debug_printf("开始读取文件");
 
   buf = mrc_readFileFromAssets(filename, &len);
+  if (buf == NULL)
+    return NULL;
   head = (char *)buf;
   if (len > 0)
   {
@@ -128,34 +130,189 @@ int32 drawBitmap565Flip(BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int
   return 0;
 }
 
-void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y){
-  //判断位数
-  if(bmp->color_bit == 16){
+void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y)
+{
+  // 判断位数
+  if (bmp->color_bit == 16)
+  {
     drawBitmap565(bmp, x, y);
-  }else if(bmp->color_bit == 24){
+  }
+  else if (bmp->color_bit == 32)
+  {
     drawBitmap8888(bmp, x, y);
   }
 }
 
+/*
+    将p缓冲中的图片(rgb565格式)，从缓冲中的图片的(sx, sy)
+    开始的宽高为w, h的区域，绘制到(x, y)开始的屏幕缓冲中。
+
+输入:
+i                  图片缓冲序号
+x,y              屏幕位置
+rop              选择如下：
+   BM_COPY,       //DST = SRC*      覆盖
+   BM_TRANSPARENT,//透明色不显示
+
+sx,sy              源图片的起始位置
+w,h             欲加载图片的宽高
+transcolor 透明色
+
+返回:
+      MR_SUCCESS     成功
+      MR_FAILED         失败
+*/
+int gl_bitmapShowExTrans(uint16 *p,
+                         int16 x,
+                         int16 y,
+                         int16 mw,
+                         int16 w,
+                         int16 h,
+                         uint16 rop,
+                         int16 sx,
+                         int16 sy,
+                         uint16 transcolor)
+{
+  // 定义局部变量
+  int16 i, j;                                 // 用于循环迭代
+  uint16 *screenBuffer = w_getScreenBuffer(); // 获取屏幕缓冲区
+  uint16 pixelColor;                          // 当前处理的像素颜色
+
+  // 计算绘制区域实际边界
+  int16 startX = (x < 0) ? 0 : x;             // 截取开始绘制的X边界
+  int16 startY = (y < 0) ? 0 : y;             // 截取开始绘制的Y边界
+  int16 endX = (x + w > SCRW) ? SCRW : x + w; // 截取结束绘制的X边界
+  int16 endY = (y + h > SCRH) ? SCRH : y + h; // 截取结束绘制的Y边界
+
+  // 计算源图片在绘制区域中的对应位置
+  int16 sourceX = (startX - x) + sx; // 映射源图像X坐标
+  int16 sourceY = (startY - y) + sy; // 映射源图像Y坐标
+  int32 sindex, pindex;
+  // 检查输入参数的有效性
+  if (p == NULL || screenBuffer == NULL || w <= 0 || h <= 0 ||
+      sx < 0 || sy < 0 || sx + w > mw)
+  {
+    return MR_FAILED; // 参数无效，返回失败
+  }
+  switch (rop)
+  {
+  case BM_COPY:
+    sourceX = sx; // 重置源图像的X坐标
+    for (i = startY; i < endY; i++)
+    {
+      // 计算源图像的有效位移
+      pindex = (sourceY * mw + sourceX);
+      // 计算目标屏幕中的位置
+      sindex = (i * SCRW + startX);
+      memcpy(screenBuffer + sindex, p + pindex, (endX - startX) * 2);
+      sourceY++; // 移动到源图像的下一个行
+    }
+    break;
+  case BM_TRANSPARENT:
+    // 遍历要绘制的区域
+    for (i = startY; i < endY; i++)
+    {
+      pindex = (sourceY * mw + sourceX);
+      sindex = (i * SCRW);
+      for (j = startX; j < endX; j++)
+      {
+        // 计算源图像的有效位移
+
+        pixelColor = p[pindex]; // 获取当前像素颜色
+
+        // 判断是否为透明色
+        if (pixelColor != transcolor)
+        {
+          screenBuffer[sindex] = pixelColor;
+        }
+        sindex++;
+        pindex++;
+      }
+      sourceX = sx; // 重置源图像的X坐标
+      sourceY++;    // 移动到源图像的下一个行
+    }
+  }
+
+  return MR_SUCCESS; // 成功完成绘制
+}
+
+int gl_bitmapShowExTrans8888(uint32 *p,
+                             int16 x,
+                             int16 y,
+                             int16 mw,
+                             int16 w,
+                             int16 h,
+                             int16 sx,
+                             int16 sy)
+{
+  // 定义局部变量
+  int16 i, j;                                 // 用于循环迭代
+  uint16 *screenBuffer = w_getScreenBuffer(); // 获取屏幕缓冲区
+  uint16 pixelColor;                          // 当前处理的像素颜色
+  uint32 pixel;                               // 当前处理的32位像素
+  uint32 alpha;
+
+  // 计算绘制区域实际边界
+  int16 startX = (x < 0) ? 0 : x;             // 截取开始绘制的X边界
+  int16 startY = (y < 0) ? 0 : y;             // 截取开始绘制的Y边界
+  int16 endX = (x + w > SCRW) ? SCRW : x + w; // 截取结束绘制的X边界
+  int16 endY = (y + h > SCRH) ? SCRH : y + h; // 截取结束绘制的Y边界
+
+  // 计算源图片在绘制区域中的对应位置
+  int16 sourceX = (startX - x) + sx; // 映射源图像X坐标
+  int16 sourceY = (startY - y) + sy; // 映射源图像Y坐标
+
+  // 检查输入参数的有效性
+  if (p == NULL || screenBuffer == NULL || w <= 0 || h <= 0 ||
+      sx < 0 || sy < 0 || sx + w > mw)
+  {
+    return MR_FAILED; // 参数无效，返回失败
+  }
+  // 遍历要绘制的区域
+  for (i = startY; i < endY; i++)
+  {
+    for (j = startX; j < endX; j++)
+    {
+      pixel = p[(sourceY * mw + sourceX)]; // 从图像缓冲区获取当前32位像素
+      alpha = pixel >> 24;
+      if (alpha != 0) // 判断是否为透明色
+      {
+        pixelColor = blendColor888(screenBuffer[i * SCRW + j], pixel); // B
+
+        screenBuffer[i * SCRW + j] = pixelColor; // 写入屏幕缓冲区
+      }
+      sourceX++; // 移动到源图像的下一个像素
+    }
+    sourceX = sx; // 重置源图像的X坐标
+    sourceY++;    // 移动到源图像的下一个行
+  }
+
+  return MR_SUCCESS; // 成功完成绘制
+}
+
 void drawBitmap565(BITMAP_565 *bmp, int32 x, int32 y)
 {
-  int i;
-  int32 screenIndex;
-  uint16 *buffer;
+  // int i;
+  // int32 screenIndex;
+  // uint16 *buffer;
   // int by;
-  if(bmp->memlen>0 && x>0 && y>0 && bmp->width+x < SCRW && bmp->height+y < SCRH){
-    buffer = w_getScreenBuffer();
-    screenIndex = y*SCRW+x;
-    for(i=0; i<bmp->memlen;i+=12){
-      // mrc_printf("inde %d %d", i/3, bmp->memlen);
-      // mrc_printf("memcpy %d %d %d ", screenIndex + bmp->memcache[i/4], bmp->memcache[i/4+1], bmp->memcache[i/4+2]);
-      //屏幕点位置 图片点位置 复制长度
-      mrc_memcpy(buffer+ screenIndex + bmp->memcache[i>>2], bmp->bitmap+bmp->memcache[(i>>2)+1], bmp->memcache[(i>>2)+2]);
-    }
-  }else{
-    mrc_bitmapShowExTrans(bmp->bitmap, (int16)x,(int16)y, (uint16)bmp->width, (uint16)bmp->width,(uint16)bmp->height, (uint16)bmp->mode, 0,0,(uint16)bmp->transcolor);
-  }
-  
+  // if (bmp->memlen > 0 && x > 0 && y > 0 && bmp->width + x < SCRW && bmp->height + y < SCRH)
+  // {
+  //   buffer = w_getScreenBuffer();
+  //   screenIndex = y * SCRW + x;
+  //   for (i = 0; i < bmp->memlen; i += 12)
+  //   {
+  //     // mrc_printf("inde %d %d", i/3, bmp->memlen);
+  //     // mrc_printf("memcpy %d %d %d ", screenIndex + bmp->memcache[i/4], bmp->memcache[i/4+1], bmp->memcache[i/4+2]);
+  //     // 屏幕点位置 图片点位置 复制长度
+  //     mrc_memcpy(buffer + screenIndex + bmp->memcache[i >> 2], bmp->bitmap + bmp->memcache[(i >> 2) + 1], bmp->memcache[(i >> 2) + 2]);
+  //   }
+  // }
+  // else
+  // {
+  gl_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)bmp->width, (uint16)bmp->height, (uint16)bmp->mode, 0, 0, (uint16)bmp->transcolor);
+  // }
+
   // bmp_draw(bmp, x, y);
 }
 
@@ -165,7 +322,7 @@ int32 bitmapAutoMemcpy(BITMAP_565 *b)
   int32 mem_count = 0;
   int32 ix, iy;
   int32 m_start = -1, m_end = 0;
-  int32 bx,by;
+  int32 bx, by;
   int32 screenIndex;
 
   if (b->mode == BM_TRANSPARENT)
@@ -177,9 +334,10 @@ int32 bitmapAutoMemcpy(BITMAP_565 *b)
       {
         if (b->bitmap[iy * b->width + ix] != b->transcolor)
         {
-          if(ix == b->width-1 && m_start>=0){
-              goto COUNT_ADD;
-            }
+          if (ix == b->width - 1 && m_start >= 0)
+          {
+            goto COUNT_ADD;
+          }
           if (m_start < 0)
           {
             m_start = iy * b->width + ix;
@@ -189,7 +347,7 @@ int32 bitmapAutoMemcpy(BITMAP_565 *b)
         {
           if (m_start >= 0)
           {
-            COUNT_ADD:
+          COUNT_ADD:
             m_end = iy * b->width + ix;
             mem_count++;
           }
@@ -200,8 +358,8 @@ int32 bitmapAutoMemcpy(BITMAP_565 *b)
     // 如果mem_count数量小于图片面积/10,则进行优化
     if (mem_count < b->width * b->height / 10)
     {
-      b->memcache = mrc_malloc(mem_count * sizeof(int32)*3);
-      b->memlen = mem_count * sizeof(int32)*3;
+      b->memcache = mrc_malloc(mem_count * sizeof(int32) * 3);
+      b->memlen = mem_count * sizeof(int32) * 3;
       mrc_printf("mem_count: %d\n", mem_count);
       mem_count = 0;
       for (iy = 0; iy < b->height; iy++)
@@ -211,7 +369,8 @@ int32 bitmapAutoMemcpy(BITMAP_565 *b)
         {
           if (b->bitmap[iy * b->width + ix] != b->transcolor)
           {
-            if(ix == b->width-1 && m_start>=0){
+            if (ix == b->width - 1 && m_start >= 0)
+            {
               goto MEM_SET;
             }
             if (m_start < 0)
@@ -223,15 +382,15 @@ int32 bitmapAutoMemcpy(BITMAP_565 *b)
           {
             if (m_start >= 0)
             {
-              MEM_SET:
+            MEM_SET:
               m_end = iy * b->width + ix;
               by = m_start / b->width;
               bx = m_start % b->width;
               screenIndex = SCRW * by + bx;
-              b->memcache[mem_count*3] = screenIndex;
-              b->memcache[mem_count*3+1] = m_start;
-              b->memcache[mem_count*3+2] = (m_end-m_start)*sizeof(uint16);
-              mrc_printf("%d %d %d", screenIndex, m_start, m_end-m_start);
+              b->memcache[mem_count * 3] = screenIndex;
+              b->memcache[mem_count * 3 + 1] = m_start;
+              b->memcache[mem_count * 3 + 2] = (m_end - m_start) * sizeof(uint16);
+              mrc_printf("%d %d %d", screenIndex, m_start, m_end - m_start);
               mem_count++;
             }
             m_start = -1;
@@ -295,36 +454,46 @@ void drawBitmapAlpha(BITMAP_565 *b, int32 x, int32 y, int32 alpha)
   int32 j, i;
   uint16 color;
   int32 targetX, targetY;
-  int32 minX, minY;
-  int32 maxX, maxY;
+  int32 minX, minY, maxX, maxY;
   uint16 *buffer = w_getScreenBuffer();
   uint32 *buf32;
   uint32 color32;
   int32 alpha32;
+  int32 startX, startY;
+
   // 限制 alpha 的范围在 0 到 255 之间
   if (alpha < 0)
     alpha = 0;
   if (alpha > 255)
     alpha = 255;
-  minX = MAX(0, x);
-  minY = MAX(0, y);
+
   if (b == NULL)
     return;
+
+  // 计算有效绘制区域
+  minX = MAX(0, x);
+  minY = MAX(0, y);
   maxX = MIN(SCRW, x + b->width);
   maxY = MIN(SCRH, y + b->height);
-  if (x < 0 || y < 0 || x + b->width > SCRW || y + b->height > SCRH)
-    return;
+
+  // 决定遍历的起始和结束坐标
+  startX = MIN(x, 0) + b->width + x;
+  startY = MIN(y, 0) + b->height + y;
+
+  if (maxX <= minX || maxY <= minY)
+    return; // 没有有效的绘制区域
+
   if (b->color_bit == 16)
   {
     // 遍历位图的每个像素
     if (b->mode == BM_TRANSPARENT)
     {
-      for (j = 0; j < b->height; j++)
+      for (j = minY; j < maxY; j++)
       {
-        for (i = 0; i < b->width; i++)
+        for (i = minX; i < maxX; i++)
         {
           // 计算当前像素的位图的索引
-          color = b->bitmap[j * b->width + i];
+          color = b->bitmap[(j - y) * b->width + (i - x)];
 
           // 如果是透明色，则跳过该像素
           if (color == b->transcolor)
@@ -333,24 +502,24 @@ void drawBitmapAlpha(BITMAP_565 *b, int32 x, int32 y, int32 alpha)
           }
 
           // 计算目标点的位置
-          targetX = x + i;
-          targetY = y + j;
+          targetX = i;
+          targetY = j;
           *(buffer + SCRW * targetY + targetX) = blendColor(*(buffer + SCRW * targetY + targetX), color, alpha);
         }
       }
     }
     else
     {
-      for (j = 0; j < b->height; j++)
+      for (j = minY; j < maxY; j++)
       {
-        for (i = 0; i < b->width; i++)
+        for (i = minX; i < maxX; i++)
         {
           // 计算当前像素的位图的索引
-          color = b->bitmap[j * b->width + i];
+          color = b->bitmap[(j - y) * b->width + (i - x)];
 
           // 计算目标点的位置
-          targetX = x + i;
-          targetY = y + j;
+          targetX = i;
+          targetY = j;
           *(buffer + SCRW * targetY + targetX) = blendColor(*(buffer + SCRW * targetY + targetX), color, alpha);
         }
       }
@@ -359,18 +528,18 @@ void drawBitmapAlpha(BITMAP_565 *b, int32 x, int32 y, int32 alpha)
   else if (b->color_bit == 32)
   {
     buf32 = (uint32 *)(b->bitmap);
-    for (j = 0; j < b->height; j++)
+    for (j = minY; j < maxY; j++)
     {
-      for (i = 0; i < b->width; i++)
+      for (i = minX; i < maxX; i++)
       {
         // 计算当前像素的位图的索引
-        color32 = buf32[j * b->width + i];
+        color32 = buf32[(j - y) * b->width + (i - x)];
         if ((color32 >> 24) != 0)
         {
           alpha32 = ((color32 >> 24) * alpha) >> 8;
           // 计算目标点的位置
-          targetX = x + i;
-          targetY = y + j;
+          targetX = i;
+          targetY = j;
           buffer[SCRW * targetY + targetX] = blendColor888(buffer[SCRW * targetY + targetX], (color32 & 0xffffff) | (alpha32 << 24));
         }
       }
@@ -968,7 +1137,6 @@ void gl_drawRotatedHollowRect(int16 centerX, int16 centerY, int16 width, int16 h
 
 void gl_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color)
 {
-  int16 x1, y1, x2, y2;
   float radian = angle * M_PI / 180.0; // 将角度转换为弧度
   float cosR = cos(radian);
   float sinR = sin(radian);
@@ -1068,6 +1236,8 @@ BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height)
   int32 y_ratio;
   int32 src_x, src_y;
   int32 x, y;
+  uint32 *bitmap32;
+  uint32 *bitmap32_new;
   // 变量声明
   BITMAP_565 *new_bmp = (BITMAP_565 *)malloc(sizeof(BITMAP_565)); // 分配内存用于新位图
   memset(new_bmp, 0, sizeof(BITMAP_565));
@@ -1083,11 +1253,27 @@ BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height)
   new_bmp->mode = bmp->mode;             // 默认模式（这里用0代替BM_COPY）
 
   // 分配内存用于新位图数据
-  new_bmp->bitmap = (uint16 *)malloc(width * height * sizeof(uint16));
+  if (bmp->color_bit == 16)
+  {
+    new_bmp->bitmap = (uint16 *)mr_malloc(width * height * sizeof(uint16));
+    new_bmp->buflen = width * height * sizeof(uint16);
+  }
+  else if (bmp->color_bit == 32)
+  {
+    new_bmp->bitmap = (uint16 *)mr_malloc(width * height * sizeof(uint32));
+    new_bmp->buflen = width * height * sizeof(uint32);
+  }
+  else
+  {
+    mrc_printf("Unsupported color depth %d\n", bmp->color_bit);
+    return NULL;
+  }
+
   if (!new_bmp->bitmap)
   {
     free(new_bmp); // 释放已分配的内存
-    return NULL;   // 分配失败
+    mrc_printf("Failed to allocate memory for new bitmap\n");
+    return NULL; // 分配失败
   }
 
   // 进行缩放（简单的最近邻插值）
@@ -1100,7 +1286,19 @@ BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height)
     {
       src_x = (x * x_ratio) >> 16; // 使用位移运算获取源图x坐标
       src_y = (y * y_ratio) >> 16; // 使用位移运算获取源图y坐标
-      new_bmp->bitmap[y * width + x] = bmp->bitmap[src_y * bmp->width + src_x];
+      if (src_x >= 0 && src_y >= 0 && src_x < bmp->width && src_y < bmp->height)
+      {
+        if (bmp->color_bit == 16)
+        {
+          new_bmp->bitmap[y * width + x] = bmp->bitmap[src_y * bmp->width + src_x];
+        }
+        else if (bmp->color_bit == 32)
+        {
+          bitmap32 = (uint32 *)bmp->bitmap;
+          bitmap32_new = (uint32 *)new_bmp->bitmap;
+          bitmap32_new[y * width + x] = bitmap32[src_y * bmp->width + src_x];
+        }
+      }
     }
   }
 
@@ -1113,25 +1311,100 @@ x 绘制到屏幕上的x坐标
 y 绘制到屏幕上的y坐标
 w 绘制宽度 h 绘制高度 tx ty tw th 裁剪区域
 */
-void drawBitmap565Ex(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 tx, int32 ty, int32 tw, int32 th)
+void drawBitmapEx(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 tx, int32 ty, int32 tw, int32 th)
 {
   int px, py; // 屏幕区域坐标(相对)
   int32 pindex;
+  uint16 *screenBuffer;
+  int32 temp;
+  uint32 *bitmap32;
+
   if (w == tw && h == th)
   {
-    mrc_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)tw, (uint16)th, (uint16)bmp->mode, tx, ty, (uint16)bmp->transcolor);
+    if (bmp->color_bit == 16)
+    {
+      gl_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)tw, (uint16)th, (uint16)bmp->mode, tx, ty, (uint16)bmp->transcolor);
+    }
+    else if (bmp->color_bit == 32)
+    {
+      gl_bitmapShowExTrans8888((uint32 *)bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)tw, (uint16)th, tx, ty);
+    }
   }
   else
   {
-    // 根据屏幕坐标计算出图片上的点
-    for (px = 0; px < w; px++)
+    if (x + w > SCRW)
     {
-      for (py = 0; py < h; py++)
+      temp = w;
+      w = SCRW - x;
+      tw = tw * w / temp;
+    }
+    if (y + h > SCRH)
+    {
+      temp = h;
+      h = SCRH - y;
+      th = th * h / temp;
+    }
+    if (tx + tw > bmp->width || ty + th > bmp->height)
+    {
+      mrc_printf("drawBitmapEx error, tw or th err");
+      return;
+    }
+    if (bmp->color_bit == 16)
+    {
+      screenBuffer = w_getScreenBuffer();
+      switch (bmp->mode)
       {
-        pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
-        if (pindex < bmp->width * bmp->height)
-          mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
-        //*(getscrbuf() + (SCRW*(x+py)+(px+x))) = *(bmp->bitmap + bmp->width * (tx+py*th/h) + (ty+px*tw/w));
+      case BM_COPY:
+        // 根据屏幕坐标计算出图片上的点
+        for (px = 0; px < w; px++)
+        {
+          for (py = 0; py < h; py++)
+          {
+            pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
+            if (pindex >= 0 && pindex < bmp->width * bmp->height && py + y >= 0 && px + x >= 0)
+            {
+              // mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
+              screenBuffer[SCRW * (py + y) + px + x] = bmp->bitmap[pindex];
+            }
+          }
+        }
+        break;
+      case BM_TRANSPARENT:
+        // 根据屏幕坐标计算出图片上的点
+        for (px = 0; px < w; px++)
+        {
+          for (py = 0; py < h; py++)
+          {
+            pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
+            if (pindex >= 0 && pindex < bmp->width * bmp->height && py + y >= 0 && px + x >= 0)
+            {
+              // mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
+              if (bmp->bitmap[pindex] != bmp->transcolor)
+                screenBuffer[SCRW * (py + y) + px + x] = bmp->bitmap[pindex];
+            }
+          }
+        }
+      default:
+        break;
+      }
+    }
+    else if (bmp->color_bit == 32)
+    {
+      screenBuffer = w_getScreenBuffer();
+      bitmap32 = (uint32 *)bmp->bitmap;
+      // 根据屏幕坐标计算出图片上的点
+      for (px = 0; px < w; px++)
+      {
+        for (py = 0; py < h; py++)
+        {
+          pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
+          if (pindex >= 0 && pindex < bmp->width * bmp->height && py + y >= 0 && px + x >= 0)
+          {
+            // mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
+            if (bitmap32[pindex] >> 24 != 0)
+              screenBuffer[SCRW * (py + y) + px + x] = blendColor888(screenBuffer[SCRW * (py + y) + px + x], bitmap32[pindex]);
+          }
+        }
       }
     }
   }
@@ -1144,7 +1417,7 @@ int32 bitmap565Free(BITMAP_565 *b)
 }
 
 // 获取两点之间的长度 的平方
-static int gl_getLineSize(int x, int y, int x2, int y2)
+int gl_getLineSize(int x, int y, int x2, int y2)
 {
   return (x2 - x) * (x2 - x) + (y2 - y) * (y2 - y);
 }
@@ -1450,8 +1723,8 @@ void gl_drawHLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color)
   uint16 *buffer = w_getScreenBuffer();
   int32 minX;
   int32 maxX;
-  uint16 upsrccolor;
-  uint16 upcolor;
+  uint16 upsrccolor = 0;
+  uint16 upcolor = blendColor888(upsrccolor, color);
   if (x1 < x2)
   {
     minX = MIN(MAX(0, x1), SCRW);
