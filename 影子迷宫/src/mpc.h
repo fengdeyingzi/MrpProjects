@@ -311,6 +311,8 @@ int32 mrc_runMrp(char* mrp_name,char* file_name,char* parameter);
 #define getparentpath mrc_GetParentPath
 
 #define sand mrc_sand
+#define srand mrc_sand
+#define time(x) mrc_getUptime()
 #define rand mrc_rand
 extern int32 mrc_sendSms(char* pNumber, char*pContent, int32 flags);
 #define sms mrc_sendSms
