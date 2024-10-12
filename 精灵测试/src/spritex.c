@@ -437,7 +437,7 @@ SpriteX *createSpriteXCopy(SpriteX *spx)
 
 int16 swap_int16(int16 val)
 {
-    return (val << 8) | (val >> 8);
+    return ((val << 8)&0xff00) | ((val >> 8)&0xff);
 }
 int32 swap_int32(int32 val)
 {
@@ -578,9 +578,9 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
             spx->tileData[i] = malloc(4 * sizeof(short));
             for (j = 0; j < 4; j++)
             {
-                spx->tileData[i][j] = readShort(buffer, buffer_pos+2*j);
+                spx->tileData[i][j] = readShort(buffer, buffer_pos);
+                buffer_pos+=2;
             }
-            buffer_pos += 8;
            mrc_printf("Tile %d: x=%d, y=%d, width=%d, height=%d\n", i, spx->tileData[i][0], spx->tileData[i][1], spx->tileData[i][2], spx->tileData[i][3]);
         }
     }
@@ -1693,10 +1693,10 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
 
                     
                     
-                    if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
-                    {
+                    // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
+                    // {
                         drawRegion(g, spx->tiles[tileIndex], tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
-                    }
+                    // }
                 }
                 else
                 {
@@ -1818,10 +1818,10 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                         dh = th;
                     }
 
-                    if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
-                    {
+                    // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
+                    // {
                         drawRegion(g, spx->tiles[tileIndex], tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
-                    }
+                    // }
                 }
                 else
                 {
@@ -1893,10 +1893,10 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                         dh = th;
                     }
 
-                    if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
-                    {
+                    // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
+                    // {
                         drawRegion(g, spx->image, tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
-                    }
+                    // }
                 }
                 offset += 4;
             }
@@ -1908,9 +1908,12 @@ void paintCurrent(SpriteX *spx, BITMAP_565 *g)
 {
     paint(spx, g, spx->x, spx->y);
 }
-
+static int32 lastTime;
 void drawRegion(BITMAP_565 *g, BITMAP_565 *src, int x_src, int y_src, int width, int height, int transform, int x_dest, int y_dest, int anchor)
 {
+    
+    // mrc_printf("%d drawRegion x_src=%d y_src=%d width=%d height=%d transform=%d x_dest=%d y_dest=%d anchor=%d",(getuptime()-lastTime),  x_src, y_src, width, height, transform, x_dest, y_dest, anchor);
+    lastTime = getuptime();
     drawBitmapRegion(src, x_src, y_src, width, height, transform, x_dest, y_dest, anchor);
 }
 

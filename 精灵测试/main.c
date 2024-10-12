@@ -49,13 +49,20 @@ int32 mrc_init()
 //
 void drawGame(void)
 {
+    int32 dd;
+    int i;
     cls(240, 240, 240);
     uc3_drawText("精灵测试,按数字0-9切换动作", 10, 10, 20, 20, 20, 0);
     setPosition(spx, SCRW / 2, SCRH / 2);
     
-
+    dd = getuptime();
+    
     paint(spx, spx->image, SCRW / 2, SCRH / 2);
+    paint(spx, spx->image, SCRW / 2, SCRH / 2+100);
+    paint(spx, spx->image, SCRW / 2, SCRH / 2-100);
+    
     update(spx, getuptime());
+    mrc_printf("time = %d", getuptime() - dd);
     ref(0, 0, SCRW, SCRH);
 }
 

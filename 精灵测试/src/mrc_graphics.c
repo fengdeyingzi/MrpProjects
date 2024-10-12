@@ -154,6 +154,7 @@ void drawBitmapRegion(BITMAP_565 *src, int x_src, int y_src, int width, int heig
   uint16 pixelColor;
   int16 startX, startY, endX, endY;
   int16 i,j;
+  uint32 bpos,spos;
     if (src == NULL || src->bitmap == NULL || width <= 0 || height <= 0 ||
         x_src < 0 || y_src < 0 || x_src + width > src->width || y_src + height > src->height) {
         return; // 无效参数处理
@@ -186,17 +187,23 @@ void drawBitmapRegion(BITMAP_565 *src, int x_src, int y_src, int width, int heig
     // 根据绘制模式执行绘制
     if (src->mode == BM_COPY) {
         for ( i = startY; i < endY; i++) {
-            for ( j = startX; j < endX; j++) {
-                pixelColor = src->bitmap[((sourceY + (i - startY)) * src->width) + (sourceX + (j - startX))];
-                screenBuffer[i * SCRW + j] = pixelColor; // 直接绘制
-            }
+            bpos = ((sourceY + (i - startY)) * src->width) + (sourceX + ( - startX));
+            spos = (i * SCRW);
+            mrc_memcpy(&screenBuffer[spos+startX], &src->bitmap[bpos+startX], (endX - startX)*2);
+            // for ( j = startX; j < endX; j++) {
+            //     pixelColor = src->bitmap[bpos+j];
+            //     screenBuffer[spos+j] = pixelColor; // 直接绘制
+            // }
         }
     } else if (src->mode == BM_TRANSPARENT) {
+      
         for ( i = startY; i < endY; i++) {
+            bpos = ((sourceY + (i - startY)) * src->width) + (sourceX + ( - startX));
+            spos = (i * SCRW);
             for ( j = startX; j < endX; j++) {
-                pixelColor = src->bitmap[((sourceY + (i - startY)) * src->width) + (sourceX + (j - startX))];
+                pixelColor = src->bitmap[bpos+j];
                 if (pixelColor != src->transcolor) { // 判断是否为透明色
-                    screenBuffer[i * SCRW + j] = pixelColor; // 绘制非透明像素
+                    screenBuffer[spos+j] = pixelColor; // 绘制非透明像素
                 }
             }
         }
