@@ -50,29 +50,32 @@
 SpriteX *spxManager = NULL;
 int spxManagerSize = 0;
 
-
-char* my_strdup(const char *s) {
+char *my_strdup(const char *s)
+{
     // 计算字符串的长度
     int length = 0;
     char *copy;
     int i;
-    if (s == NULL) {
+    if (s == NULL)
+    {
         return NULL; // 如果输入指针为空，返回NULL
     }
-  
-    
-    while (s[length] != '\0') {
+
+    while (s[length] != '\0')
+    {
         length++;
     }
 
     // 为新字符串分配内存
     copy = (char *)malloc((length + 1) * sizeof(char)); // +1 为了存储 '\0'
-    if (copy == NULL) {
+    if (copy == NULL)
+    {
         return NULL; // 如果内存分配失败，返回NULL
     }
 
     // 复制字符串内容
-    for ( i = 0; i < length; i++) {
+    for (i = 0; i < length; i++)
+    {
         copy[i] = s[i];
     }
 
@@ -82,11 +85,14 @@ char* my_strdup(const char *s) {
     return copy; // 返回指向新字符串的指针
 }
 
-//判断是否已经释放
-int isInFreeImgs(int32 *freeImgs, int count, void *image) {
+// 判断是否已经释放
+int isInFreeImgs(int32 *freeImgs, int count, void *image)
+{
     int i;
-    for ( i = 0; i < count; i++) {
-        if (freeImgs[i] == (int32)image) {
+    for (i = 0; i < count; i++)
+    {
+        if (freeImgs[i] == (int32)image)
+        {
             return TRUE;
         }
     }
@@ -98,30 +104,91 @@ void removeAllSpx(void)
     int i, j;
     SpriteX *tempSpx;
     int32 *freeImgs = malloc(spxManagerSize * sizeof(int32)); // 数组记录释放的图像地址
-    int freeCount = 0; // 记录当前已释放图像的数量
+    int freeCount = 0;                                        // 记录当前已释放图像的数量
     memset(freeImgs, 0, spxManagerSize * sizeof(int32));
     mrc_printf("spxManagerSize %d", spxManagerSize);
     for (i = 0; i < spxManagerSize; ++i)
     {
-        
+
         tempSpx = spxManager + i;
-        free(tempSpx->imageName);
-        free(tempSpx->spxName);
+        if (tempSpx->imageName != NULL)
+        {
+            free(tempSpx->imageName);
+            tempSpx->imageName = NULL;
+        }
+        if (tempSpx->spxName != NULL)
+        {
+            free(tempSpx->spxName);
+            tempSpx->spxName = NULL;
+        }
 
         // 检查是否已经释放过该image
-        if (!isInFreeImgs(freeImgs, freeCount, tempSpx->image)) {
+        if (!isInFreeImgs(freeImgs, freeCount, tempSpx->image))
+        {
             mrc_printf("free image");
             bitmapFree(tempSpx->image);
             // 记录已释放的image地址
-            if (freeCount < spxManagerSize) {
+            if (freeCount < spxManagerSize)
+            {
                 freeImgs[freeCount++] = (int32)tempSpx->image;
             }
         }
 
-        for (j = 0; j < tempSpx->actionCount; j++) {
+        for (j = 0; j < tempSpx->actionCount; j++)
+        {
             mrc_printf("free action %d", j);
             releaseAction(tempSpx, j);
         }
+        // 释放 actionData
+        if (tempSpx->actionData != NULL)
+        {
+            for (i = 0; i < tempSpx->actionCount; i++)
+            {
+                free(tempSpx->actionData[i]); // 先释放每个动作的数据
+            }
+            free(tempSpx->actionData); // 然后释放动作指针数组
+        }
+
+        // 释放 frameData
+        if (tempSpx->frameData != NULL)
+        {
+            for (i = 0; i < tempSpx->frameCount; i++)
+            {
+                free(tempSpx->frameData[i]); // 先释放每帧的数据
+            }
+            free(tempSpx->frameData); // 然后释放帧指针数组
+        }
+
+        // 释放 tileData
+
+        if (tempSpx->tileMode)
+        {
+            for (i = 0; i < tempSpx->tileCount; i++)
+            {
+                 if (!isInFreeImgs(freeImgs, freeCount, tempSpx->tiles[i])){
+                    bitmapFree(tempSpx->tiles[i]);
+                    // 记录已释放的image地址
+                    if (freeCount < spxManagerSize)
+                    {
+                        freeImgs[freeCount++] = (int32)tempSpx->tiles[i];
+                    }
+                 }
+                
+            }
+        }
+        else
+        {
+            if (tempSpx->tileData != NULL)
+            {
+                for (i = 0; i < tempSpx->tileCount; i++)
+                {
+                    free(tempSpx->tileData[i]); // 先释放每个瓦片的数据
+                }
+                free(tempSpx->tileData); // 然后释放瓦片指针数组
+            }
+        }
+        if (tempSpx->tileData != NULL)
+            free(tempSpx->tileUseCounter);
     }
 
     for (i = 0; i < spxManagerSize; ++i)
@@ -139,25 +206,27 @@ void addSpxToManage(SpriteX *spx)
     int i;
     // 为 spxManager 申请新的内存
     SpriteX *newManager = malloc((spxManagerSize + 1) * sizeof(SpriteX *));
-    
+
     // 检查内存是否分配成功
-    if (newManager == NULL) {
+    if (newManager == NULL)
+    {
         // 处理内存分配失败的情况
         return; // 或者进行其他错误处理
     }
 
     // 复制原有的内容到新数组中
-    for ( i = 0; i < spxManagerSize; i++) {
+    for (i = 0; i < spxManagerSize; i++)
+    {
         newManager[i] = spxManager[i];
     }
 
     // 将新的精灵加入到新的管理数组中
     newManager[spxManagerSize] = *spx;
-    
+
     // 更新 spxManager
-    free(spxManager); // 释放原有的内存
+    free(spxManager);        // 释放原有的内存
     spxManager = newManager; // 指向新的内存
-    
+
     // 增加管理的精灵计数
     spxManagerSize++;
 }
@@ -349,6 +418,7 @@ SpriteX *createSpriteX(const char *spxName, BITMAP_565 *image)
 {
     SpriteX *spx = malloc(sizeof(SpriteX));
     memset(spx, 0, sizeof(SpriteX));
+    spx->spxName = my_strdup(spxName);
     loadSpx(spx, spxName, image, TRUE);
     return spx;
 }
@@ -357,6 +427,7 @@ SpriteX *createSpriteXWithTiles(const char *spxName, BITMAP_565 **tiles, int til
 {
     SpriteX *spx = malloc(sizeof(SpriteX));
     memset(spx, 0, sizeof(SpriteX));
+    spx->spxName = my_strdup(spxName);
     loadSpx(spx, spxName, NULL, TRUE);
     spx->tiles = tiles;
     spx->tileMode = TRUE;
@@ -364,19 +435,21 @@ SpriteX *createSpriteXWithTiles(const char *spxName, BITMAP_565 **tiles, int til
 
     // 使用 malloc 和 memset 替代 calloc
     spx->tileUseCounter = malloc(tileCount * sizeof(int));
-    if (spx->tileUseCounter != NULL) {
+    if (spx->tileUseCounter != NULL)
+    {
         memset(spx->tileUseCounter, 0, tileCount * sizeof(int));
     }
     return spx;
 }
 
-SpriteX *createSpriteXFromAssets(const char *spxName, const char *imageName){
+SpriteX *createSpriteXFromAssets(const char *spxName, const char *imageName)
+{
     SpriteX *spx = malloc(sizeof(SpriteX));
     memset(spx, 0, sizeof(SpriteX));
     spx->spxName = my_strdup(spxName);
     spx->imageName = my_strdup(imageName);
     spx->tileMode = FALSE;
-    
+
     spx->image = readBitmap565FromAssets(imageName);
     mrc_printf("imageName = %s %p\n", imageName, spx->image);
     loadSpx(spx, spxName, spx->image, TRUE);
@@ -390,8 +463,8 @@ SpriteX *createSpriteXWithImageName(const char *spxName, const char *imageName)
     spx->spxName = my_strdup(spxName);
     spx->imageName = my_strdup(imageName);
     spx->tileMode = FALSE;
-    
-    spx->image = readBitmap((char*)imageName);
+
+    spx->image = readBitmap((char *)imageName);
     mrc_printf("imageName = %s %p\n", imageName, spx->image);
     loadSpx(spx, spxName, spx->image, FALSE);
     return spx;
@@ -405,6 +478,7 @@ SpriteX *createSpriteXCopy(SpriteX *spx)
     newSpx->actionCount = spx->actionCount;
     newSpx->frameCount = spx->frameCount;
     newSpx->tileCount = spx->tileCount;
+    newSpx->tileMode = spx->tileMode;
     newSpx->actionData = malloc(spx->actionCount * sizeof(short *));
     newSpx->frameData = malloc(spx->frameCount * sizeof(short *));
     newSpx->tileData = malloc(spx->tileCount * sizeof(short *));
@@ -418,11 +492,22 @@ SpriteX *createSpriteXCopy(SpriteX *spx)
         newSpx->frameData[i] = malloc(spx->frameData[i][0] * sizeof(short));
         memcpy(newSpx->frameData[i], spx->frameData[i], spx->frameData[i][0] * sizeof(short));
     }
-    for (i = 0; i < spx->tileCount; i++)
+    if (spx->tileMode)
     {
-        newSpx->tileData[i] = malloc(4 * sizeof(short));
-        memcpy(newSpx->tileData[i], spx->tileData[i], 4 * sizeof(short));
+        for (i = 0; i < spx->tileCount; i++)
+        {
+            newSpx->tiles[i] = spx->tiles[i];
+        }
     }
+    else
+    {
+        for (i = 0; i < spx->tileCount; i++)
+        {
+            newSpx->tileData[i] = malloc(4 * sizeof(short));
+            memcpy(newSpx->tileData[i], spx->tileData[i], 4 * sizeof(short));
+        }
+    }
+
     newSpx->actionIndex = spx->actionIndex;
     newSpx->sequenceIndex = spx->sequenceIndex;
     newSpx->image = spx->image;
@@ -437,7 +522,7 @@ SpriteX *createSpriteXCopy(SpriteX *spx)
 
 int16 swap_int16(int16 val)
 {
-    return ((val << 8)&0xff00) | ((val >> 8)&0xff);
+    return ((val << 8) & 0xff00) | ((val >> 8) & 0xff);
 }
 int32 swap_int32(int32 val)
 {
@@ -500,31 +585,33 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
     int offset;
     uint32 temp_file_size;
     // FILE *file;
-    
-    if(isAssets){
+
+    if (isAssets)
+    {
         buffer = readFileFromAssets(spxName, &file_size);
-    }else{
+    }
+    else
+    {
         buffer = mrc_readAll(spxName, &temp_file_size);
         file_size = (int32)temp_file_size;
-//        file = fopen(spxName, "rb");
-//     if (!file)
-//     {
-//         mrc_printf("Failed to open file: %s\n", spxName);
-//         return;
-//     }
+        //        file = fopen(spxName, "rb");
+        //     if (!file)
+        //     {
+        //         mrc_printf("Failed to open file: %s\n", spxName);
+        //         return;
+        //     }
 
-//     // Get file size
-//     fseek(file, 0, SEEK_END);
-//     file_size = mrc_getLen(spxName);
-//     fseek(file, 0, SEEK_SET);
-//    mrc_printf("File size: %zu\n", file_size); // 输出文件大小
+        //     // Get file size
+        //     fseek(file, 0, SEEK_END);
+        //     file_size = mrc_getLen(spxName);
+        //     fseek(file, 0, SEEK_SET);
+        //    mrc_printf("File size: %zu\n", file_size); // 输出文件大小
 
-//     // Read file into buffer
-//     buffer = malloc(file_size);
-//     fread(buffer, 1, file_size, file);
-//     fclose(file);
+        //     // Read file into buffer
+        //     buffer = malloc(file_size);
+        //     fread(buffer, 1, file_size, file);
+        //     fclose(file);
     }
-    
 
     // Initialize buffer position
     buffer_pos = 0;
@@ -532,7 +619,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
     // Check SPX format
     header = readInt(buffer, buffer_pos);
     buffer_pos += sizeof(uint32);
-   mrc_printf("SPX Header: %d\n", header); // 输出SPX头部
+    mrc_printf("SPX Header: %d\n", header); // 输出SPX头部
     if (header != SPX_HEADER)
     {
         mrc_printf("Invalid SpriteX format\n");
@@ -542,7 +629,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
 
     version = readByte(buffer, buffer_pos);
     buffer_pos += sizeof(uint8);
-   mrc_printf("SPX Version: %d\n", version); // 输出SPX版本
+    mrc_printf("SPX Version: %d\n", version); // 输出SPX版本
     if (version != SPX_VERSION)
     {
         mrc_printf("Version no matching\n");
@@ -552,7 +639,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
 
     byteSequence = readByte(buffer, buffer_pos);
     buffer_pos += sizeof(uint8);
-   mrc_printf("Byte Sequence: %d\n", byteSequence); // 输出字节序列
+    mrc_printf("Byte Sequence: %d\n", byteSequence); // 输出字节序列
     if ((byteSequence & 1) != SPX_BYTE_SEQUENCE_JAVA)
     {
         mrc_printf("Byte sequence error\n");
@@ -568,7 +655,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
     // Read tile count
     spx->tileCount = readInt(buffer, buffer_pos);
     buffer_pos += sizeof(uint32);
-   mrc_printf("Tile Count: %d\n", spx->tileCount); // 输出瓦片数量
+    mrc_printf("Tile Count: %d\n", spx->tileCount); // 输出瓦片数量
 
     if (!spx->tileMode)
     {
@@ -579,36 +666,36 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
             for (j = 0; j < 4; j++)
             {
                 spx->tileData[i][j] = readShort(buffer, buffer_pos);
-                buffer_pos+=2;
+                buffer_pos += 2;
             }
-           mrc_printf("Tile %d: x=%d, y=%d, width=%d, height=%d\n", i, spx->tileData[i][0], spx->tileData[i][1], spx->tileData[i][2], spx->tileData[i][3]);
+            mrc_printf("Tile %d: x=%d, y=%d, width=%d, height=%d\n", i, spx->tileData[i][0], spx->tileData[i][1], spx->tileData[i][2], spx->tileData[i][3]);
         }
     }
 
     // Read frame count
     spx->frameCount = readInt(buffer, buffer_pos);
     buffer_pos += sizeof(uint32);
-   mrc_printf("Frame Count: %d\n", spx->frameCount); // 输出帧数量
+    mrc_printf("Frame Count: %d\n", spx->frameCount); // 输出帧数量
     spx->frameData = malloc(spx->frameCount * sizeof(short *));
     memset(spx->frameData, 0, spx->frameCount * sizeof(short *));
     for (i = 0; i < spx->frameCount; i++)
     {
         frameTileCount = readInt(buffer, buffer_pos);
         buffer_pos += sizeof(uint32);
-       mrc_printf("Tile Count: %d\n", frameTileCount);
+        mrc_printf("Tile Count: %d\n", frameTileCount);
         collisionCount = readInt(buffer, buffer_pos);
         buffer_pos += sizeof(uint32);
-       mrc_printf("Collision Count: %d\n", collisionCount);
+        mrc_printf("Collision Count: %d\n", collisionCount);
         referencePointCount = readInt(buffer, buffer_pos);
         buffer_pos += sizeof(uint32);
-       mrc_printf("Reference Point Count: %d\n", referencePointCount);
+        mrc_printf("Reference Point Count: %d\n", referencePointCount);
         length = FRAME_HEADER_SIZE + frameTileCount * 4 + collisionCount * 4 + referencePointCount * 2;
         spx->frameData[i] = malloc(length * sizeof(short));
         spx->frameData[i][0] = length;
         spx->frameData[i][FRAME_TILE_COUNT_BIT] = frameTileCount;
         spx->frameData[i][FRAME_COLLISION_COUNT_BIT] = collisionCount;
         spx->frameData[i][FRAME_REFERENCE_POINT_COUNT_BIT] = referencePointCount;
-       mrc_printf("Frame %d: length=%d, frameTileCount=%d, collisionCount=%d, referencePointCount=%d\n", i, length, frameTileCount, collisionCount, referencePointCount);
+        mrc_printf("Frame %d: length=%d, frameTileCount=%d, collisionCount=%d, referencePointCount=%d\n", i, length, frameTileCount, collisionCount, referencePointCount);
         // for (int j = FRAME_TOP_POS_BIT; j <= FRAME_RIGHT_POS_BIT; j++) {
         //     spx->frameData[i][j] = readShort(buffer, buffer_pos);
         //     buffer_pos += sizeof(uint16);
@@ -625,11 +712,11 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
         // Read frame right pos
         spx->frameData[i][FRAME_RIGHT_POS_BIT] = readShort(buffer, buffer_pos);
         buffer_pos += 2;
-        //xldebug
+        // xldebug
         mrc_printf("Frame %d: left=%d, right=%d\n", i, spx->frameData[i][FRAME_LEFT_POS_BIT], spx->frameData[i][FRAME_RIGHT_POS_BIT]);
         mrc_printf("Frame %d: top=%d, bottom=%d\n", i, spx->frameData[i][FRAME_TOP_POS_BIT], spx->frameData[i][FRAME_BOTTOM_POS_BIT]);
-        
-         offset = FRAME_HEADER_SIZE;
+
+        offset = FRAME_HEADER_SIZE;
         for (j = 0; j < frameTileCount; j++)
         {
             for (k = 0; k < 4; k++)
@@ -637,7 +724,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
                 spx->frameData[i][offset + k] = readShort(buffer, buffer_pos);
                 buffer_pos += sizeof(uint16);
             }
-           mrc_printf("read frameTitleCount = %d %d %d %d\n", spx->frameData[i][0 + offset], spx->frameData[i][1 + offset], spx->frameData[i][2 + offset], spx->frameData[i][3 + offset]);
+            mrc_printf("read frameTitleCount = %d %d %d %d\n", spx->frameData[i][0 + offset], spx->frameData[i][1 + offset], spx->frameData[i][2 + offset], spx->frameData[i][3 + offset]);
             offset += 4;
         }
         for (j = 0; j < collisionCount; j++)
@@ -647,7 +734,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
                 spx->frameData[i][offset + k] = readShort(buffer, buffer_pos);
                 buffer_pos += sizeof(uint16);
             }
-           mrc_printf("read frameTitleCount = %d %d %d %d\n", spx->frameData[i][0 + offset], spx->frameData[i][1 + offset], spx->frameData[i][2 + offset], spx->frameData[i][3 + offset]);
+            mrc_printf("read frameTitleCount = %d %d %d %d\n", spx->frameData[i][0 + offset], spx->frameData[i][1 + offset], spx->frameData[i][2 + offset], spx->frameData[i][3 + offset]);
             offset += 4;
         }
         for (j = 0; j < referencePointCount; j++)
@@ -657,7 +744,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
                 spx->frameData[i][offset + k] = readShort(buffer, buffer_pos);
                 buffer_pos += sizeof(uint16);
             }
-           mrc_printf("read collisionCount = %d %d\n", spx->frameData[i][0 + offset], spx->frameData[i][1 + offset]);
+            mrc_printf("read collisionCount = %d %d\n", spx->frameData[i][0 + offset], spx->frameData[i][1 + offset]);
             offset += 2;
         }
     }
@@ -665,8 +752,8 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
     // Read action count
     spx->actionCount = readInt(buffer, buffer_pos);
     buffer_pos += sizeof(uint32);
-   mrc_printf("Action Count: %d\n", spx->actionCount); // 输出动作数量
-   mrc_printf("pos = %d\n", buffer_pos);
+    mrc_printf("Action Count: %d\n", spx->actionCount); // 输出动作数量
+    mrc_printf("pos = %d\n", buffer_pos);
     spx->actionData = malloc(spx->actionCount * sizeof(short *));
     for (i = 0; i < spx->actionCount; i++)
     {
@@ -675,7 +762,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
         buffer_pos += sizeof(uint32);
         delay = readByte(buffer, buffer_pos);
         buffer_pos += sizeof(uint8);
-       mrc_printf("Action %d: sequenceLength=%d, delay=%d\n", i, sequenceLength, delay);
+        mrc_printf("Action %d: sequenceLength=%d, delay=%d\n", i, sequenceLength, delay);
         length = 0;
         if (delay == 1)
         {
@@ -685,16 +772,16 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
         {
             length = ACTION_HEADER_SIZE + sequenceLength;
         }
-       mrc_printf("read %d bytes", length);
+        mrc_printf("read %d bytes", length);
         spx->actionData[i] = malloc(length * sizeof(short));
         spx->actionData[i][0] = length;
         spx->actionData[i][ACTION_SEQUENCE_LENGTH_BIT] = sequenceLength;
         spx->actionData[i][ACTION_SEQUENCE_DELAY_BIT] = delay;
         spx->actionData[i][ACTION_TRANSFORM_BIT] = readShort(buffer, buffer_pos);
         buffer_pos += 4;
-       mrc_printf("readAction %d %d %d %d %d %d\n", i, spx->actionData[i][0], spx->actionData[i][1], spx->actionData[i][2], spx->actionData[i][3], spx->actionData[i][4]);
-         offset = ACTION_HEADER_SIZE;
-       mrc_printf("delay = %d\n", delay);
+        mrc_printf("readAction %d %d %d %d %d %d\n", i, spx->actionData[i][0], spx->actionData[i][1], spx->actionData[i][2], spx->actionData[i][3], spx->actionData[i][4]);
+        offset = ACTION_HEADER_SIZE;
+        mrc_printf("delay = %d\n", delay);
         if (delay == 1)
         {
             for (j = 0; j < sequenceLength; j++)
@@ -715,7 +802,7 @@ void loadSpx(SpriteX *spx, const char *spxName, BITMAP_565 *image, int isAssets)
                 offset += 1;
             }
         }
-       mrc_printf("pos = %d\n", buffer_pos);
+        mrc_printf("pos = %d\n", buffer_pos);
     }
 
     // Set image
@@ -782,7 +869,7 @@ void saveSpx(SpriteX *spx, const char *spxName)
             writeShort(file, spx->frameData[i][j]);
         }
 
-         offset = FRAME_HEADER_SIZE;
+        offset = FRAME_HEADER_SIZE;
         for (j = 0; j < frameTileCount; j++)
         {
             for (k = 0; k < 4; k++)
@@ -862,7 +949,8 @@ void initAction(SpriteX *spx, int nAction)
     }
 
     tileUse = malloc(spx->tileCount * sizeof(int));
-    if (tileUse != NULL) {
+    if (tileUse != NULL)
+    {
         memset(tileUse, 0, spx->tileCount * sizeof(int)); // 初始化内存为0
     }
     sequenceLength = spx->actionData[nAction][ACTION_SEQUENCE_LENGTH_BIT];
@@ -876,7 +964,7 @@ void initAction(SpriteX *spx, int nAction)
             frameTileCount = spx->frameData[frame][FRAME_TILE_COUNT_BIT];
             frameDataOffset = FRAME_HEADER_SIZE;
 
-            for ( j = 0; j < frameTileCount; ++j)
+            for (j = 0; j < frameTileCount; ++j)
             {
                 tile = spx->frameData[frame][frameDataOffset];
                 frameDataOffset += 4;
@@ -936,9 +1024,10 @@ void releaseAction(SpriteX *spx, int nAction)
     }
 
     tileUse = malloc(spx->tileCount * sizeof(int));
-    if (tileUse != NULL) {
+    if (tileUse != NULL)
+    {
         mrc_memset(tileUse, 0, spx->tileCount * sizeof(int));
-    } 
+    }
 
     sequenceLength = spx->actionData[nAction][ACTION_SEQUENCE_LENGTH_BIT];
     isDelay = spx->actionData[nAction][ACTION_SEQUENCE_DELAY_BIT];
@@ -1133,10 +1222,10 @@ void setAction(SpriteX *spx, int actionIndex)
     }
     if (actionIndex < 0 || actionIndex >= spx->actionCount)
     {
-        
+
         return;
     }
-    
+
     spx->actionIndex = actionIndex;
     spx->sequenceIndex = 0;
     spx->firstUpdate = FALSE;
@@ -1236,7 +1325,7 @@ void update(SpriteX *spx, int32 time)
             spx->firstUpdate = TRUE;
             spx->lastTime = time;
         }
-         dms = getDelayTime(spx);
+        dms = getDelayTime(spx);
         if ((time - spx->lastTime) >= dms)
         {
             nextFrame(spx);
@@ -1250,7 +1339,7 @@ void update(SpriteX *spx, int32 time)
             spx->firstUpdate = TRUE;
             spx->lastTime = time;
         }
-         dms = spx->delay;
+        dms = spx->delay;
         if ((time - spx->lastTime) >= dms)
         {
             nextFrame(spx);
@@ -1637,15 +1726,12 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
     int tileCount;
     int cx;
     int cy;
-    
-   
 
     if (g == NULL)
     {
         mrc_printf("NullPointerException\n");
         return;
     }
-    
 
     if (spx->visible)
     {
@@ -1658,15 +1744,13 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
         clipHeight = g->height;
 
         actionTransform = getTransform(spx);
-        
-        
+
         if (actionTransform == TRANS_NONE)
         {
             frameIndex = getSequenceFrameCurrent(spx);
             tileCount = spx->frameData[frameIndex][FRAME_TILE_COUNT_BIT];
             offset = FRAME_HEADER_SIZE; // tile data offset
-            
-            
+
             for (i = 0; i < tileCount; i++)
             {
                 if (spx->tileMode)
@@ -1679,7 +1763,7 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                     ty = 0;
                     tw = spx->tiles[tileIndex]->width;
                     th = spx->tiles[tileIndex]->height;
-                    
+
                     if ((transform & INVERTED_AXES) != 0)
                     {
                         dw = th;
@@ -1691,11 +1775,9 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                         dh = th;
                     }
 
-                    
-                    
                     // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
                     // {
-                        drawRegion(g, spx->tiles[tileIndex], tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
+                    drawRegion(g, spx->tiles[tileIndex], tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
                     // }
                 }
                 else
@@ -1706,15 +1788,10 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                     transform = spx->frameData[frameIndex][3 + offset];
                     tx = spx->tileData[tileIndex][0];
                     ty = spx->tileData[tileIndex][1];
-                    //xldebug
-                    
+                    // xldebug
+
                     tw = spx->tileData[tileIndex][2];
                     th = spx->tileData[tileIndex][3];
-                    
-              
-                    
-                    
-                    
 
                     if ((transform & INVERTED_AXES) != 0)
                     {
@@ -1727,11 +1804,9 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                         dh = th;
                     }
 
-                   
-
                     // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
                     // {
-                        drawRegion(g, spx->image, tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
+                    drawRegion(g, spx->image, tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
                     // }
                 }
                 offset += 4;
@@ -1742,7 +1817,6 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
             frameIndex = getSequenceFrameCurrent(spx);
             tileCount = spx->frameData[frameIndex][FRAME_TILE_COUNT_BIT];
             offset = FRAME_HEADER_SIZE; // tile data offset
-            
 
             for (i = 0; i < tileCount; i++)
             {
@@ -1772,7 +1846,6 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                     cy = y - dy;
                     // finally transform
                     transform = getTransformTable(transform, actionTransform);
-                    
 
                     // adjust coordinate
                     switch (actionTransform)
@@ -1820,7 +1893,7 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
 
                     // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
                     // {
-                        drawRegion(g, spx->tiles[tileIndex], tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
+                    drawRegion(g, spx->tiles[tileIndex], tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
                     // }
                 }
                 else
@@ -1848,7 +1921,6 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
                     cx = x - dx;
                     cy = y - dy;
                     transform = getTransformTable(transform, actionTransform);
-                    
 
                     switch (actionTransform)
                     {
@@ -1895,14 +1967,13 @@ void paint(SpriteX *spx, BITMAP_565 *g, int x, int y)
 
                     // if (intersectRect(dx, dy, dw, dh, clipX, clipY, clipWidth, clipHeight))
                     // {
-                        drawRegion(g, spx->image, tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
+                    drawRegion(g, spx->image, tx, ty, tw, th, transform, dx, dy, GRAPHICS_TOP | GRAPHICS_LEFT);
                     // }
                 }
                 offset += 4;
             }
         }
     }
-    
 }
 void paintCurrent(SpriteX *spx, BITMAP_565 *g)
 {
@@ -1911,18 +1982,8 @@ void paintCurrent(SpriteX *spx, BITMAP_565 *g)
 static int32 lastTime;
 void drawRegion(BITMAP_565 *g, BITMAP_565 *src, int x_src, int y_src, int width, int height, int transform, int x_dest, int y_dest, int anchor)
 {
-    
+
     // mrc_printf("%d drawRegion x_src=%d y_src=%d width=%d height=%d transform=%d x_dest=%d y_dest=%d anchor=%d",(getuptime()-lastTime),  x_src, y_src, width, height, transform, x_dest, y_dest, anchor);
     lastTime = getuptime();
     drawBitmapRegion(src, x_src, y_src, width, height, transform, x_dest, y_dest, anchor);
 }
-
-
-
-
-
-
-
-
-
-

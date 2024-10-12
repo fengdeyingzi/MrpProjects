@@ -70,7 +70,7 @@ typedef struct {
     BITMAP_565* image;
     BITMAP_565** tiles;
     int* tileUseCounter;
-    int tileMode;
+    int tileMode; //是否启用多图模式
     char* spxFileName;
     char* spxFileExt;
     int delay;
