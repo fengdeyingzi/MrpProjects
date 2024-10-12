@@ -205,7 +205,7 @@ void addSpxToManage(SpriteX *spx)
 {
     int i;
     // 为 spxManager 申请新的内存
-    SpriteX *newManager = malloc((spxManagerSize + 1) * sizeof(SpriteX *));
+    SpriteX *newManager = malloc((spxManagerSize + 1) * sizeof(SpriteX));
 
     // 检查内存是否分配成功
     if (newManager == NULL)
@@ -1225,7 +1225,6 @@ void setAction(SpriteX *spx, int actionIndex)
 
         return;
     }
-
     spx->actionIndex = actionIndex;
     spx->sequenceIndex = 0;
     spx->firstUpdate = FALSE;

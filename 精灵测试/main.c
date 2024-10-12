@@ -12,6 +12,8 @@
 typedef int bool;
 SpriteX *spx;
 int32 timer;
+int transform;
+BITMAP_565 *bitmap;
 
 // 函数声明
 void drawGame(void);
@@ -32,9 +34,13 @@ int32 mrc_init()
 {
 
     mpc_init();
+    
     uc3_init();
 
     spx = createSpriteXFromAssets("a.sprite", "a.bma");
+    bitmap = spx->image;
+    transform = TRANS_NONE;
+    
     addSpxToManage(spx);
     setVisible(spx, 1);
     update(spx, 100);
@@ -43,6 +49,7 @@ int32 mrc_init()
     timer = timercreate();
     mrc_timerStart(timer, 50, 1, logoc, 1);
     mrc_event(LOGO_EVENT, 0, 0);
+    
     return 0;
 }
 
@@ -56,18 +63,33 @@ void drawGame(void)
     setPosition(spx, SCRW / 2, SCRH / 2);
     
     dd = getuptime();
-    
+
     paint(spx, spx->image, SCRW / 2, SCRH / 2);
     paint(spx, spx->image, SCRW / 2, SCRH / 2+100);
     paint(spx, spx->image, SCRW / 2, SCRH / 2-100);
-    
+    // drawBitmapRegion(bitmap, 0, 0, 100, 30, transform, SCRW/2, SCRW/2,GRAPHICS_LEFT|GRAPHICS_TOP);
     update(spx, getuptime());
+    
     mrc_printf("time = %d", getuptime() - dd);
+
     ref(0, 0, SCRW, SCRH);
+
+
 }
 
 int32 mrc_event(int32 code, int32 param0, int32 param1)
 {
+    
+    int cur_action = 0;
+    if(code == MS_UP){
+        cur_action = spx->actionIndex;
+        cur_action++;
+        if(cur_action >= spx->actionCount){
+            cur_action = 0;
+        }
+        setAction(spx, cur_action);
+        
+    }
     if (code == KY_UP)
     { // 检测是否有按键被按下
         switch (param0)
@@ -75,32 +97,41 @@ int32 mrc_event(int32 code, int32 param0, int32 param1)
         case _0:
             setAction(spx, 0);
             mrc_printf("setAction 0");
+            transform = TRANS_NONE;
             break;
         case _1:
             setAction(spx, 1);
             mrc_printf("setAction 1");
+            transform = TRANS_ROT90;
             break;
         case _2:
             setAction(spx, 2);
             mrc_printf("setAction 2");
+            transform = TRANS_ROT180;
             break;
         case _3:
             setAction(spx, 3);
             mrc_printf("setAction 3");
+            transform = TRANS_ROT270;
             break;
         case _4:
             setAction(spx, 4);
             mrc_printf("setAction 4");
+            transform = TRANS_MIRROR;
             break;
         case _5:
             setAction(spx, 5);
             mrc_printf("setAction 5");
+            transform = TRANS_MIRROR_ROT90;
             break;
         case _6:
             setAction(spx, 6);
             mrc_printf("setAction 6");
+            transform = TRANS_MIRROR_ROT180;
             break;
-
+        case _7:
+        transform = TRANS_MIRROR_ROT270;
+        break;
         case _SRIGHT: // Quit game
             mrc_exit();
         }
