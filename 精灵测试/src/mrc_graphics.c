@@ -149,12 +149,12 @@ void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y)
   }
 }
 void drawBitmapRegion(BITMAP_565 *src, int x_src, int y_src, int width, int height, int transform, int x_dest, int y_dest, int anchor) {
-  int16 sourceX, sourceY;
-  uint16 *screenBuffer;
-  uint16 pixelColor;
-  int16 startX, startY, endX, endY;
-  int16 i,j;
-  uint32 bpos,spos;
+    int16 sourceX, sourceY;
+    uint16 *screenBuffer;
+    uint16 pixelColor;
+    int16 startX, startY, endX, endY;
+    uint32 bpos, spos;
+
     if (src == NULL || src->bitmap == NULL || width <= 0 || height <= 0 ||
         x_src < 0 || y_src < 0 || x_src + width > src->width || y_src + height > src->height) {
         return; // 无效参数处理
@@ -181,32 +181,17 @@ void drawBitmapRegion(BITMAP_565 *src, int x_src, int y_src, int width, int heig
     startY = (startY < 0) ? 0 : startY;
 
     // 计算源图像在绘制区域中的对应位置
-     sourceX = x_src;
-     sourceY = y_src;
+    sourceX = x_src;
+    sourceY = y_src;
 
     // 根据绘制模式执行绘制
-    if (src->mode == BM_COPY) {
-        for ( i = startY; i < endY; i++) {
-            bpos = ((sourceY + (i - startY)) * src->width) + (sourceX + ( - startX));
-            spos = (i * SCRW);
-            mrc_memcpy(&screenBuffer[spos+startX], &src->bitmap[bpos+startX], (endX - startX)*2);
-            // for ( j = startX; j < endX; j++) {
-            //     pixelColor = src->bitmap[bpos+j];
-            //     screenBuffer[spos+j] = pixelColor; // 直接绘制
-            // }
-        }
-    } else if (src->mode == BM_TRANSPARENT) {
-      
-        for ( i = startY; i < endY; i++) {
-            bpos = ((sourceY + (i - startY)) * src->width) + (sourceX + ( - startX));
-            spos = (i * SCRW);
-            for ( j = startX; j < endX; j++) {
-                pixelColor = src->bitmap[bpos+j];
-                if (pixelColor != src->transcolor) { // 判断是否为透明色
-                    screenBuffer[spos+j] = pixelColor; // 绘制非透明像素
-                }
-            }
-        }
+    if (src->mode == BM_COPY || src->mode == BM_TRANSPARENT) {
+        // 调用mrc_bitmapShowFlip函数进行变换绘制
+        int16 transcolor = src->transcolor; // 透明色
+        int16 rop = (src->mode == BM_TRANSPARENT) ? BM_TRANSPARENT : BM_COPY;
+
+        // 调用mrc_bitmapShowFlip执行绘制，传入转换参数
+        mrc_bitmapShowFlip(src->bitmap, startX, startY, src->width, width, height, rop | transform, sourceX, sourceY, transcolor);
     }
 }
 /*
