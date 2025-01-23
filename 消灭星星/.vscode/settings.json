@@ -1,0 +1,37 @@
+{
+    "files.associations": {
+        "mrc_base.h": "c",
+        "mrc_exb.h": "c",
+        "mrc_win.h": "c",
+        "mrc_text.h": "c",
+        "mrc_menu.h": "c",
+        "mrc_aux.h": "c",
+        "game.h": "c",
+        "array": "c",
+        "iterator": "c",
+        "ostream": "c",
+        "vector": "c",
+        "xstring": "c",
+        "mrc_tpng.h": "c",
+        "chrono": "c",
+        "mape.h": "c",
+        "mrc_object.h": "c",
+        "mrc_spritex.h": "c",
+        "mrc_file.h": "c",
+        "list.h": "c",
+        "win_score.h": "c",
+        "mrc_tool.h": "c",
+        "win_game.h": "c",
+        "mrc_http.h": "c",
+        "xutility": "c",
+        "star.h": "c",
+        "makefile.mpr":"mpr"
+    },
+    "files.encoding": "gbk",
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+    "[mpr]": {
+        "files.encoding": "gbk"
+    }
+}
