@@ -37,7 +37,7 @@ int32 mrc_init()
     
     uc3_init();
 
-    spx = createSpriteXFromAssets("a.sprite", "a.bma");
+    spx = createSpriteXFromAssets("gugu.sprite", "gugu.bma");
     bitmap = spx->image;
     transform = TRANS_NONE;
     
