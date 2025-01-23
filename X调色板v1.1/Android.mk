@@ -1,0 +1,8 @@
+LOCAL_MODULE    := c
+LOCAL_SRC_FILES := main.c
+
+
+SCREEN:=SCREEN_ORIENTATION_PORTRAIT
+versionName:=1.1
+PACKAGE:=com.xl.xgui
+APP_NAME:=XGUI
