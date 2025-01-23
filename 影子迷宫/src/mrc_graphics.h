@@ -86,7 +86,7 @@ BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height);
 // 获取bitmap信息
 int32 bitmap565getInfo(BITMAP_565 *bmp, BITMAPINFO *info);
 // 图片旋转绘制
-void drawBitmap565Rotate(BITMAP_565 *b, int32 scrx, int32 scry, int32 bx, int32 by, int32 r);
+void drawBitmapRotate(BITMAP_565 *b, int32 scrx, int32 scry, int32 bx, int32 by, int32 r);
 // 将buf图片指定区域绘制到di中
 void drawBitmap565Old(BITMAP_565 *di, BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy);
 // 保存bitmap到文件

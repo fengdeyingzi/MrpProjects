@@ -884,7 +884,7 @@ scrx scry 绘制到屏幕上的中心位置
 bx by 图片旋转中心
 
 */
-void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, int32 by, int32 r)
+void drawBitmapRotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, int32 by, int32 r)
 {
   int32 x, y;
   int32 newX, newY;
@@ -892,7 +892,7 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
   // uint16 color11, color12, color21, color22;
   // double dx, dy;
   uint16 color;
-
+  uint32 color32;
   float radian = r * M_PI / 180.0; // 将角度转换为弧度
   float cosR = cos(radian);
   float sinR = sin(radian);
@@ -904,6 +904,7 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
   // 计算矩形的四个顶点
   int16 vertices[4][2]; // 先声明不初始化
   uint16 *screenBuffer = w_getScreenBuffer();
+  uint32 bitmap32;
 
   // 计算对角线的长度
   // int32 diagonal = (int)sqrt(b->width * b->width + b->height * b->height);
@@ -960,7 +961,8 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
   mrc_printf("minX = %d, minY = %d, maxX = %d, maxY = %d", minX, minY, maxX, maxY);
   // mrc_drawRect(minX, minY, maxX-minX, maxY-minY, 240, 20, 20);
   // 遍历屏幕的每一个像素
-  if (b->mode == BM_TRANSPARENT)
+  if(b->color_bit == 16){
+    if (b->mode == BM_TRANSPARENT)
   {
     for (y = minY; y < maxY; y++)
     {
@@ -1044,6 +1046,34 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
       }
     }
   }
+  
+  }else if(b->color_bit == 32){
+    bitmap32 = (uint32*)b->bitmap;
+     for (y = minY; y < maxY; y++)
+    {
+      for (x = minX; x < maxX; x++)
+      {
+        // 计算旋转后的坐标
+        newX = (int32)(bx + (x - centerX) * cosR + (y - centerY) * sinR);
+        newY = (int32)(by - (x - centerX) * sinR + (y - centerY) * cosR);
+
+        // 检查坐标是否在图片范围内
+        if (newX >= 0 && newX < b->width && newY >= 0 && newY < b->height)
+        {
+          // 使用双线性插值计算颜色值
+          x1 = newX;
+          y1 = newY;
+          
+          color32 = bitmap32[y1 * b->width + x1];
+          // 将颜色写入屏幕缓冲区
+          screenBuffer[y * SCRW + x] = blendColor888(screenBuffer[y * SCRW + x], color32);
+        }
+      }
+    }
+
+  }
+  
+  
   // 绘制旋转后的矩形
   for (i = 1; i < 4; i++)
   {
