@@ -334,6 +334,8 @@ int32 mrc_pause() { return 0; }
 int32 mrc_resume() { return 0; }
 int32 mrc_exitApp() {
 	http_exit();
+	list_free(list_shop);
+	list_free(list_mrp);
 	return 0;
 }
 

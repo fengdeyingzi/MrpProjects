@@ -4,6 +4,7 @@
 #include <mrc_types.h>
 #include <mrc_base.h>
 #include "xl_coding.h"
+#include "mrpinfo.h"
 
 //创建控件
 void *list_create(int x, int y, int w, int h) {
@@ -186,6 +187,8 @@ void list_find_txt(ListView *view, char *file)	//搜索文件到文本，参数�
 	int32 ret = 0;
 	char *temp = mrc_malloc(255);
 	int list_n = 0;
+	Config* config;
+	config = mrc_malloc(sizeof(Config));
 
 	f = findstart(file, temp, 72);
 	mrc_printf("findstart %s", temp);
@@ -206,7 +209,11 @@ void list_find_txt(ListView *view, char *file)	//搜索文件到文本，参数�
 			endfile = mrc_strrchr(temp,'.');
 			if(endfile != NULL)
 			if(mrc_strcmp(endfile,".mrp") == 0 || mrc_strcmp(endfile,".MRP") == 0){
-				list_add(view, temp);
+				if(readMrpInfo(temp, config) == MR_SUCCESS){
+					if(config->flag & 0x01){
+						list_add(view, temp);
+					}
+				}
 			}
 			
 
@@ -214,6 +221,7 @@ void list_find_txt(ListView *view, char *file)	//搜索文件到文本，参数�
 		}
 	}
 	findstop(f);
+	mrc_free(config);
 	mrc_free(temp);
 }
 //判断点(x,y)是否在矩形区域(rectx,recty,rectw,recth)内
