@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRP文件编辑器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+<script src="dist/mrpEditor.bundle.js"></script>
+
+
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2980b9;
+            --text-color: #333;
+            --light-bg: #f5f5f5;
+            --border-color: #ddd;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            color: var(--text-color);
+            line-height: 1.6;
+            background-color: var(--light-bg);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        /* 顶部菜单栏 */
+        .menu-bar {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .menu-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        
+        .menu-items {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .menu-item {
+            color: white;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+            cursor: pointer;
+        }
+        
+        .menu-item:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* 文件信息区域 - 优化为可折叠面板 */
+        .file-info {
+            background-color: white;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+        
+        .file-info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .file-info-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .file-info-title i {
+            margin-right: 8px;
+            transition: transform 0.3s;
+        }
+        
+        .file-info.collapsed .file-info-title i {
+            transform: rotate(-90deg);
+        }
+        
+        .file-info-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .edit-btn, .toggle-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .edit-btn:hover, .toggle-btn:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .toggle-btn {
+            background-color: #95a5a6;
+        }
+        
+        .toggle-btn:hover {
+            background-color: #7f8c8d;
+        }
+        
+        /* 折叠状态下的基本信息 */
+        .basic-info {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .basic-info-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .basic-info-label {
+            font-weight: bold;
+            color: #666;
+            margin-right: 5px;
+        }
+        
+        .basic-info-value {
+            padding: 4px 8px;
+            background-color: var(--light-bg);
+            border-radius: 4px;
+        }
+        
+        /* 展开后的详细信息 */
+        .file-info-details {
+            display: none;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .file-info.collapsed .file-info-details {
+            display: none;
+        }
+        
+        .file-info:not(.collapsed) .file-info-details {
+            display: block;
+        }
+        
+        .file-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        
+        .info-item {
+            margin-bottom: 10px;
+        }
+        
+        .info-label {
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .info-value {
+            padding: 8px;
+            background-color: var(--light-bg);
+            border-radius: 4px;
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+        
+        /* 文件列表区域 */
+        .file-list {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .file-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .file-list-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .add-file-btn {
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .add-file-btn:hover {
+            background-color: #27ae60;
+        }
+        
+        .file-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .file-table th {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+        
+        .file-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.9rem;
+        }
+        
+        .file-table tr:hover {
+            background-color: rgba(52, 152, 219, 0.1);
+        }
+        
+        .file-icon {
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+        
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .action-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            transition: color 0.3s;
+            font-size: 0.9rem;
+        }
+        
+        .action-btn:hover {
+            color: var(--primary-color);
+        }
+        
+        .delete-btn:hover {
+            color: var(--danger-color);
+        }
+        
+        /* 编辑模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+        }
+        
+        .btn-secondary {
+            background-color: #95a5a6;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #7f8c8d;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .menu-items {
+                display: none;
+                position: absolute;
+                top: 60px;
+                right: 20px;
+                background-color: var(--primary-color);
+                flex-direction: column;
+                padding: 10px;
+                border-radius: 4px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                z-index: 100;
+            }
+            
+            .menu-items.show {
+                display: flex;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+            }
+            
+            .file-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .file-info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .basic-info {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
+
+        /* Toast 样式 */
+.toast-container {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+}
+
+.toast {
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    max-width: 80%;
+    text-align: center;
+    font-size: 14px;
+}
+
+.toast.show {
+    opacity: 1;
+}
+
+    </style>
+</head>
+<body>
+    <!-- 顶部菜单栏 -->
+    <div class="menu-bar">
+        <div class="menu-title">MRP文件编辑器</div>
+        <button class="mobile-menu-btn" id="mobileMenuBtn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="menu-items" id="menuItems">
+            <a class="menu-item" id="openFileBtn">
+                <i class="fas fa-folder-open"></i> 打开文件
+            </a>
+            <a class="menu-item" id="saveFileBtn">
+                <i class="fas fa-save"></i> 保存文件
+            </a>
+            <a class="menu-item" id="insertFileBtn">
+                <i class="fas fa-plus"></i> 插入文件项
+            </a>
+            <a class="menu-item" id="helpBtn">
+                <i class="fas fa-question-circle"></i> 帮助
+            </a>
+            <a class="menu-item" id="aboutBtn">
+                <i class="fas fa-info-circle"></i> 关于
+            </a>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- 文件基本信息区域 - 优化为可折叠面板 -->
+        <div class="file-info collapsed" id="fileInfoPanel">
+            <div class="file-info-header" id="fileInfoHeader">
+                <div class="file-info-title">
+                    <i class="fas fa-chevron-down"></i>
+                    <span>MRP文件基本信息</span>
+                </div>
+                <div class="file-info-actions">
+                    <button class="edit-btn" id="editInfoBtn">
+                        <i class="fas fa-edit"></i> 修改
+                    </button>
+                    <button class="toggle-btn" id="toggleInfoBtn" style="display: none;">
+                        <i class="fas fa-chevron-down"></i> 展开
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 折叠状态下显示的基本信息 -->
+            <div class="basic-info">
+                <div class="basic-info-item">
+                    <span class="basic-info-label">显示名:</span>
+                    <span class="basic-info-value" id="basicDisplayName"></span>
+                </div>
+                <div class="basic-info-item">
+                    <span class="basic-info-label">版本:</span>
+                    <span class="basic-info-value" id="basicVersion">1.0.0</span>
+                </div>
+                <div class="basic-info-item">
+                    <span class="basic-info-label">作者:</span>
+                    <span class="basic-info-value" id="basicAuthStr"></span>
+                </div>
+                <div class="basic-info-item">
+                    <span class="basic-info-label">文件数:</span>
+                    <span class="basic-info-value" id="basicFileCount">0</span>
+                </div>
+            </div>
+            
+            <!-- 展开后的详细信息 -->
+            <div class="file-info-details">
+                <div class="file-info-grid">
+                    <div class="info-item">
+                        <div class="info-label">文件名</div>
+                        <div class="info-value" id="fileName">snake.mrp</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">AppID</div>
+                        <div class="info-value" id="appid">123456</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">构建版本</div>
+                        <div class="info-value" id="builderVersion">10002</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">供应商</div>
+                        <div class="info-value" id="vendor"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">描述</div>
+                        <div class="info-value" id="desc"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">屏幕尺寸</div>
+                        <div class="info-value" id="screenSize">240x320</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">平台</div>
+                        <div class="info-value" id="plat">MTK</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">文件大小</div>
+                        <div class="info-value" id="fileSize">256 KB</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 文件列表区域 -->
+        <div class="file-list">
+            <div class="file-list-header">
+                <div class="file-list-title">文件列表</div>
+                <button class="add-file-btn" id="addFileBtn">
+                    <i class="fas fa-plus"></i> 添加文件
+                </button>
+            </div>
+            <table class="file-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>文件名</th>
+                        <th>偏移量</th>
+                        <th>长度</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="fileListBody">
+                    
+                    
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- 编辑文件信息模态框 -->
+    <div class="modal" id="editInfoModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">编辑MRP文件信息</div>
+                <button class="close-btn" id="closeEditModal">&times;</button>
+            </div>
+            <form id="editInfoForm">
+                <div class="form-group">
+                    <label class="form-label" for="editDisplayName">显示名称</label>
+                    <input type="text" class="form-input" id="editDisplayName" value="">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editFileName">文件名</label>
+                    <input type="text" class="form-input" id="editFileName" value="snake.mrp">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editAuthStr">授权字符串</label>
+                    <input type="text" class="form-input" id="editAuthStr" value="">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editAppid">AppID</label>
+                    <input type="text" class="form-input" id="editAppid" value="123456">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editVersion">版本</label>
+                    <input type="text" class="form-input" id="editVersion" value="1.0.0">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editBuilderVersion">构建版本</label>
+                    <input type="text" class="form-input" id="editBuilderVersion" value="10002">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editVendor">供应商</label>
+                    <input type="text" class="form-input" id="editVendor" value="">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editDesc">描述</label>
+                    <textarea class="form-input" id="editDesc" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editScreenWidth">屏幕宽度</label>
+                    <input type="number" class="form-input" id="editScreenWidth" value="240">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editScreenHeight">屏幕高度</label>
+                    <input type="number" class="form-input" id="editScreenHeight" value="320">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editPlat">平台</label>
+                    <select class="form-input" id="editPlat">
+                        <option value="1" selected>MTK</option>
+                        <option value="2">展讯</option>
+                        <option value="3">其它</option>
+                    </select>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEditBtn">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 添加文件模态框 -->
+    <div class="modal" id="addFileModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">添加文件到MRP</div>
+                <button class="close-btn" id="closeAddModal">&times;</button>
+            </div>
+            <form id="addFileForm">
+                <div class="form-group">
+                    <label class="form-label" for="newFileName">文件名</label>
+                    <input type="text" class="form-input" id="newFileName" placeholder="例如: images/icon.png">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="newFileContent">文件内容</label>
+                    <input type="file" class="form-input" id="newFileContent">
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelAddBtn">取消</button>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 关于模态框 -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">关于MRP文件编辑器</div>
+                <button class="close-btn" id="closeAboutModal">&times;</button>
+            </div>
+            <div style="padding: 20px;">
+                <p><strong>MRP文件编辑器 v1.0.0</strong></p>
+                <p>一个用于编辑MRP应用文件的工具，支持查看和修改MRP文件的基本信息和内部文件列表。</p>
+                <p style="margin-top: 20px;">© 2025 风的影子 制作</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-primary" id="closeAboutBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+   
+</body>
+</html>
