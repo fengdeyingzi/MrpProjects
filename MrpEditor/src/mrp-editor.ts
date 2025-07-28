@@ -1,6 +1,8 @@
 // mrp-editor.ts
 import * as pako from 'pako';
 import * as GBK from 'gbk.js';
+import { encodeBase64, decodeBase64 } from "./base64";
+import { MrpInfo } from "./mrpinfo";
 
 
 function padStart(str: string, targetLength: number, padString: string = ' '): string {
@@ -8,15 +10,15 @@ function padStart(str: string, targetLength: number, padString: string = ' '): s
     if (str.length >= targetLength) {
         return str;
     }
-    
+
     padString = padString || ' ';
     const padLength = targetLength - str.length;
     let padding = '';
-    
+
     while (padding.length < padLength) {
         padding += padString;
     }
-    
+
     return padding.slice(0, padLength) + str;
 }
 
@@ -50,384 +52,14 @@ class FileItem {
         public filenameLen: number,
         public fileOffset: number,
         public fileLen: number
-    ) {}
+    ) { }
 
     toString(): string {
         return `文件: ${this.filename} (偏移: ${this.fileOffset}, 长度: ${this.fileLen})`;
     }
 }
 
-// MRP 文件信息类
-class MrpInfo {
-    // 原始 MRP 文件数据
-    data: Uint8Array;
 
-    // 文件基本信息
-    path: string = "";
-    magic: string = "MRPG";
-
-    // 文件结构信息
-    fileStart: number = 0;
-    mrpTotalLen: number = 0;
-    mrpHeaderSize: number = 0;
-
-    // 应用信息
-    fileName: string = "";
-    displayName: string = "";
-    authStr: string = "";
-    appid: number = 0;
-    version: number = 0;
-    flag: number = 3;
-    builderVersion: number = 10002;
-    crc32: number = 0;
-    vendor: string = "";
-    desc: string = "";
-
-    // 其他信息
-    appidBE: number = 0;
-    versionBE: number = 0;
-    reserve2: number = 0;
-    screenWidth: number = 0;
-    screenHeight: number = 0;
-    plat: number = 1;
-    reserve3: number[] = new Array(31).fill(0);
-
-    // 文件列表
-    files: FileItem[] = [];
-
-    constructor(data: Uint8Array) {
-        this.data = data;
-        this._parseHeader();
-        this._parseFileList();
-    }
-
-    // 工厂方法
-    static fromBytes(data: Uint8Array): MrpInfo {
-        return new MrpInfo(data);
-    }
-
-    // 插入新文件到 MRP 中
-    insert(filename: string, fileData: Uint8Array): void {
-        // 检查文件名是否已存在
-        if (this.files.some(file => file.filename === filename)) {
-            throw new Error(`文件已存在: ${filename}`);
-        }
-
-        // 创建新的文件项
-        const newFileLen = fileData.length;
-        const filenameBytes = GBK.encode(filename);
-        const filenameBytesWithNull = new Uint8Array(filenameBytes.length + 1);
-        filenameBytesWithNull.set(filenameBytes);
-        filenameBytesWithNull[filenameBytes.length] = 0;
-        
-        const filenameLen = filenameBytesWithNull.length;
-        const newFileOffset = this.data.length + 4 + filenameLen + 4 + 4 + 4;
-        
-        console.log(`newfileoffset=${newFileOffset}, datalen=${this.data.length}`);
-        const newFileItem = new FileItem(filename, filenameLen, 0, fileData.length);
-
-        console.log(`.............. 插入文件名长度 ${filenameLen}`);
-
-        // 插入文件列表数据
-        const newEntry = new Uint8Array(4 + filenameLen + 4 + 4 + 4);
-        const view = new DataView(newEntry.buffer);
-        view.setInt32(0, filenameLen, true);
-        newEntry.set(filenameBytesWithNull, 4);
-        view.setInt32(4 + filenameLen, newFileOffset, true);
-        view.setInt32(4 + filenameLen + 4, newFileLen, true);
-        // 保留字段已经是0
-
-        this.data = ListUtil.insertIntoUint8Array(
-            this.data,
-            this.fileStart + 8,
-            newEntry
-        );
-
-        console.log("11");
-        // 更新文件起始位置
-        this.fileStart += 4 + filenameLen + 4 + 4 + 4;
-
-        // 写入文件数据
-        if (newFileOffset !== this.data.length) {
-            console.log(`文件位置不相等：${newFileOffset} ${this.data.length}`);
-        }
-        console.log("22");
-        this.data = ListUtil.insertIntoUint8Array(this.data, newFileOffset, fileData);
-
-        // 更新总长度
-        this.mrpTotalLen += 4 + filenameLen + 4 + 4 + 4;
-        this.mrpTotalLen += newFileItem.filenameLen + 1 + 4 * 2 + newFileItem.fileLen;
-        console.log("33");
-        // 写入data
-        this._setInt(4, this.fileStart);
-        this._setInt(8, this.mrpTotalLen);
-
-        // 更新文件列表
-        newFileItem.fileOffset = newFileOffset;
-        this.files.push(newFileItem);
-    }
-
-    // 从 MRP 中删除文件
-    remove(filename: string): void {
-        const fileIndex = this.files.findIndex(file => file.filename === filename);
-        if (fileIndex === -1) {
-            throw new Error(`文件不存在: ${filename}`);
-        }
-
-        const file = this.files[fileIndex];
-
-        // 删除文件数据
-        this.data = ListUtil.removeRange(this.data, file.fileOffset, file.fileLen);
-
-        // 更新文件列表区域
-        const listStart = this.mrpHeaderSize;
-        const listEnd = this.fileStart + 8;
-        let offset = listStart;
-
-        while (offset < listEnd) {
-            const tempOffset = offset;
-            const fileNameLen = this._readInt(offset);
-            offset += 4;
-            const currentFilename = this._readGBKString(offset);
-            offset += fileNameLen;
-            const fileOffset = this._readInt(offset);
-            offset += 4;
-            const fileLen = this._readInt(offset);
-            offset += 4;
-            offset += 4; // 跳过保留字段
-            
-            if (currentFilename === filename) {
-                // 找到要删除的文件，更新数据
-                this.data = ListUtil.deleteFromUint8Array(
-                    this.data,
-                    tempOffset,
-                    fileNameLen + 4 + 4 + 4 + 4
-                );
-                break;
-            }
-        }
-
-        // 更新文件起始位置
-        this.fileStart -= (file.filenameLen + 4 + 4 + 4);
-
-        // 更新总长度
-        this.mrpTotalLen -= (file.filenameLen + 4 + 4 + 4 + file.fileLen);
-
-        // 写入更新后的数据
-        this._setInt(4, this.fileStart);
-        this._setInt(8, this.mrpTotalLen);
-
-        // 更新文件列表
-        this.files.splice(fileIndex, 1);
-    }
-
-    // 替换指定文件数据
-    replace(filename: string, newData: Uint8Array): void {
-        this.remove(filename);
-        this.insert(filename, newData);
-    }
-
-    // 解析 MRP 文件头
-    private _parseHeader(): void {
-        this.fileStart = this._readInt(4);
-        this.mrpTotalLen = this._readInt(8);
-        this.mrpHeaderSize = this._readInt(12);
-        this.fileName = this._readGBKString(16)!;
-        this.displayName = this._readGBKString(28)!;
-        this.authStr = this._readGBKString(52)!;
-        this.appid = this._readInt(68);
-        this.version = this._readInt(72);
-        this.flag = this._readInt(76);
-        this.builderVersion = this._readInt(80);
-        this.crc32 = this._readInt(84);
-        this.vendor = this._readGBKString(88)!;
-        this.desc = this._readGBKString(128)!;
-        this.appidBE = this._readBigInt(192);
-        this.versionBE = this._readBigInt(196);
-        this.reserve2 = this._readInt(200);
-        this.screenWidth = this._readInt(204);
-        this.screenHeight = this._readInt(206);
-        this.plat = this.data[208];
-    }
-
-    // 写入 MRP 文件头
-    writeHeader(): void {
-        this._setInt(4, this.fileStart);
-        this._setInt(8, this.mrpTotalLen);
-        this._setInt(12, this.mrpHeaderSize);
-        this._setGBKString(16, this.fileName, 12);
-        this._setGBKString(28, this.displayName, 24);
-        this._setGBKString(52, this.authStr, 16);
-        this._setInt(68, this.appid);
-        this._setInt(72, this.version);
-        this._setInt(76, this.flag);
-        this._setInt(80, this.builderVersion);
-        this._setInt(84, this.crc32);
-        this._setGBKString(88, this.vendor, 40);
-        this._setGBKString(128, this.desc, 64);
-        this._setBigInt(192, this.appidBE);
-        this._setBigInt(196, this.versionBE);
-        this._setInt(200, this.reserve2);
-        this._setInt(204, this.screenWidth);
-        this._setInt(206, this.screenHeight);
-        this.data[208] = this.plat;
-    }
-
-    // 解析文件列表
-    private _parseFileList(): void {
-        this.files = [];
-        const listStart = this.mrpHeaderSize;
-        const listEnd = this.fileStart + 8;
-        let offset = listStart;
-
-        while (offset < listEnd) {
-            const fileNameLen = this._readInt(offset);
-            offset += 4;
-
-            const filename = this._readGBKString(offset);
-            offset += fileNameLen;
-            console.log(`read .... ${filename} ${offset}`);
-            const fileOffset = this._readInt(offset);
-            offset += 4;
-
-            const fileLen = this._readInt(offset);
-            offset += 4;
-
-            offset += 4; // 跳过保留字段
-
-            if (filename) {
-                this.files.push(new FileItem(filename, fileNameLen, fileOffset, fileLen));
-            }
-            console.log(`offset=${offset} fileStart=${this.fileStart}`);
-        }
-    }
-
-    // 解包 MRP 文件到内存中的文件映射
-    unpackToMemory(): Map<string, Uint8Array> {
-        const result = new Map<string, Uint8Array>();
-
-        for (const file of this.files) {
-            const fileData = this.getFileData(file.filename);
-            if (!fileData) continue;
-
-            if (this._isGzip(fileData)) {
-                try {
-                    const decompressed = pako.ungzip(fileData);
-                    result.set(file.filename, decompressed);
-                } catch (e) {
-                    console.log(`解压 GZIP 失败: ${file.filename} - ${e}`);
-                }
-            } else {
-                result.set(file.filename, fileData);
-            }
-        }
-
-        return result;
-    }
-
-    // 获取指定文件的数据
-    getFileData(filename: string): Uint8Array | null {
-        const file = this.files.find(f => f.filename === filename);
-        if (!file) {
-            throw new Error(`文件不存在: ${filename}`);
-        }
-
-        try {
-            return this.data.subarray(file.fileOffset, file.fileOffset + file.fileLen);
-        } catch (e) {
-            console.log(`读取文件数据失败: ${filename} - ${e}`);
-            return null;
-        }
-    }
-
-    // 辅助方法：读取小端序整数
-    private _readInt(offset: number): number {
-        return this.data[offset] |
-            (this.data[offset + 1] << 8) |
-            (this.data[offset + 2] << 16) |
-            (this.data[offset + 3] << 24);
-    }
-
-    private _setInt(offset: number, value: number): void {
-        this.data[offset] = value & 0xFF;
-        this.data[offset + 1] = (value >> 8) & 0xFF;
-        this.data[offset + 2] = (value >> 16) & 0xFF;
-        this.data[offset + 3] = (value >> 24) & 0xFF;
-    }
-
-    // 辅助方法：读取大端序整数
-    private _readBigInt(offset: number): number {
-        return this.data[offset + 3] |
-            (this.data[offset + 2] << 8) |
-            (this.data[offset + 1] << 16) |
-            (this.data[offset] << 24);
-    }
-
-    private _setBigInt(offset: number, value: number): void {
-        this.data[offset] = (value >> 24) & 0xFF;
-        this.data[offset + 1] = (value >> 16) & 0xFF;
-        this.data[offset + 2] = (value >> 8) & 0xFF;
-        this.data[offset + 3] = value & 0xFF;
-    }
-
-    // 辅助方法：读取 GBK 字符串
-    private _readGBKString(offset: number): string | null {
-        let len = 0;
-        for (let i = offset; i < this.data.length; i++) {
-            if (this.data[i] !== 0) {
-                len++;
-            } else {
-                break;
-            }
-        }
-
-        try {
-            return GBK.decode(this.data.subarray(offset, offset + len));
-        } catch (e) {
-            console.log(`解码字符串失败: ${e} ${this.data.subarray(offset, offset + len)}`);
-            return null;
-        }
-    }
-
-    // 辅助方法：设置 GBK 字符串
-    private _setGBKString(offset: number, value: string, maxLen: number): void {
-        const bytes = GBK.encode(value);
-        if (bytes.length > maxLen) {
-            throw new Error(`GBK 字符串长度超过限制: ${value}`);
-        }
-
-        this.data.set(bytes, offset);
-        // 填充剩余部分为 0
-        for (let i = offset + bytes.length; i < offset + maxLen; i++) {
-            this.data[i] = 0;
-        }
-    }
-
-    // 辅助方法：检查是否为 GZIP 文件
-    private _isGzip(data: Uint8Array): boolean {
-        return data.length >= 3 &&
-            data[0] === 0x1f &&
-            data[1] === 0x8b &&
-            data[2] === 0x08;
-    }
-
-    toString(): string {
-        return `
-MRP 文件信息:
-  文件名: ${this.fileName}
-  显示名: ${this.displayName}
-  供应商: ${this.vendor}
-  描述: ${this.desc}
-  AppID: ${this.appid} (BE: ${this.appidBE})
-  版本: ${this.version} (BE: ${this.versionBE})
-  构建版本: ${this.builderVersion}
-  屏幕尺寸: ${this.screenWidth}x${this.screenHeight}
-  平台: ${this.plat}
-  文件数: ${this.files.length}
-  数据大小: ${this.data.length} 字节
-`;
-    }
-}
 
 // UI 控制器类
 class MrpEditorUI {
@@ -440,20 +72,21 @@ class MrpEditorUI {
     }
 
     private showToast(message: string, duration: number = 3000): void {
+        console.log("toast:" + message);
         const toastContainer = document.getElementById('toastContainer');
         if (!toastContainer) return;
-        
+
         const toast = document.createElement('div');
         toast.className = 'toast';
         toast.textContent = message;
         toastContainer.appendChild(toast);
-        
+
         // 触发重绘
         void toast.offsetWidth;
-        
+
         // 显示 toast
         toast.classList.add('show');
-        
+
         // 自动消失
         setTimeout(() => {
             toast.classList.remove('show');
@@ -483,16 +116,16 @@ class MrpEditorUI {
             const menuItems = document.getElementById('menuItems');
             if (menuItems) menuItems.classList.toggle('show');
         });
-// 为所有菜单项添加点击后关闭菜单的逻辑
-    const menuItems = document.querySelectorAll('.menu-item');
-    menuItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const menu = document.getElementById('menuItems');
-            if (menu && window.innerWidth <= 768) { // 只在移动端关闭
-                menu.classList.remove('show');
-            }
+        // 为所有菜单项添加点击后关闭菜单的逻辑
+        const menuItems = document.querySelectorAll('.menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const menu = document.getElementById('menuItems');
+                if (menu && window.innerWidth <= 768) { // 只在移动端关闭
+                    menu.classList.remove('show');
+                }
+            });
         });
-    });
         // 切换基本信息面板折叠状态
         const fileInfoHeader = document.getElementById('fileInfoHeader');
         const toggleInfoBtn = document.getElementById('toggleInfoBtn');
@@ -501,7 +134,7 @@ class MrpEditorUI {
         if (fileInfoHeader && toggleInfoBtn && fileInfoPanel) {
             const togglePanel = () => {
                 fileInfoPanel.classList.toggle('collapsed');
-                
+
                 if (fileInfoPanel.classList.contains('collapsed')) {
                     toggleInfoBtn.innerHTML = '<i class="fas fa-chevron-down"></i> 展开';
                 } else {
@@ -519,7 +152,7 @@ class MrpEditorUI {
         // 编辑文件信息按钮
         document.getElementById('editInfoBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            if(!this.mrpInfo){
+            if (!this.mrpInfo) {
                 this.showToast('请先打开一个MRP文件！');
                 return;
             }
@@ -538,7 +171,7 @@ class MrpEditorUI {
 
         // 添加文件按钮
         document.getElementById('addFileBtn')?.addEventListener('click', () => {
-            if(!this.mrpInfo){
+            if (!this.mrpInfo) {
                 this.showToast('请先打开一个MRP文件！');
                 return;
             }
@@ -558,9 +191,41 @@ class MrpEditorUI {
         // 删除文件按钮事件委托
         document.getElementById('fileListBody')?.addEventListener('click', (e) => {
             const target = e.target as HTMLElement;
+            const row = target.closest('tr');
+            if (!row || !this.mrpInfo) return;
+
+            // 获取文件名
+            const filename = row.querySelector('td:nth-child(2)')?.textContent?.trim();
+            if (!filename) return;
+
+            // 处理删除按钮
             if (target.classList.contains('delete-btn') || target.closest('.delete-btn')) {
                 e.stopPropagation();
                 this.deleteFile(target);
+                return;
+            }
+
+            // 处理导出按钮
+            if (target.classList.contains('export-btn') || target.closest('.export-btn')) {
+                e.stopPropagation();
+                try {
+                    const fileData = this.mrpInfo.getFileData(filename);
+                    if (fileData) {
+                        this.exportFile(filename, fileData);
+                    } else {
+                        this.showToast('获取文件数据失败');
+                    }
+                } catch (error) {
+                    this.showToast(`导出文件失败: ${error}`);
+                }
+                return;
+            }
+
+            // 处理查看按钮
+            if (target.classList.contains('view-btn') || target.closest('.view-btn')) {
+                e.stopPropagation();
+                this.viewFile(filename);
+                return;
             }
         });
 
@@ -580,7 +245,7 @@ class MrpEditorUI {
 
         // 保存文件按钮
         document.getElementById('saveFileBtn')?.addEventListener('click', () => {
-            if(!this.mrpInfo){
+            if (!this.mrpInfo) {
                 this.showToast('请先打开一个MRP文件！');
                 return;
             }
@@ -595,6 +260,75 @@ class MrpEditorUI {
         // 帮助按钮
         document.getElementById('helpBtn')?.addEventListener('click', () => {
             alert('帮助文档将在实际应用中提供');
+        });
+        let that = this;
+
+
+        window.addEventListener('pageshow', function (event) {
+            console.log("用户点击返回。。。。");
+            // 检查是否是从缓存中恢复的页面（即返回操作）
+
+            console.log('用户通过返回按钮回到此页');
+            let mrpFileName = localStorage.getItem("mrpfilename");
+            let mrpFile = localStorage.getItem("mrpfile");
+            if (mrpFileName && mrpFile) {
+                let mrpFileData = decodeBase64(mrpFile!);
+                that.currentFile = new File([mrpFileData], mrpFileName, { type: 'application/octet-stream' });
+                try {
+                    this.localStorage.removeItem('mrpfile');
+                    this.localStorage.removeItem('mrpfilename');
+                    that.mrpInfo = MrpInfo.fromBytes(mrpFileData);
+
+                    // 更新 UI
+                    that.updateFileInfoUI();
+                    that.updateFileListUI();
+                    that.updateBasicInfoUI();
+
+                    that.showToast('文件加载成功！');
+                } catch (error) {
+                    alert(`文件解析失败: ${error}`);
+                }
+
+            }
+            let rcfileData = localStorage.getItem('rcfile');
+            let rcfilename = localStorage.getItem('rcfilename');
+            if (rcfilename && rcfileData) {
+
+
+
+                try {
+
+
+
+                    this.localStorage.removeItem('rcfile');
+                    this.localStorage.removeItem('rcfilename');
+
+                    const fileData = decodeBase64(rcfileData!);
+                    if (that.mrpInfo) {
+                        that.mrpInfo.insert(rcfilename, fileData);
+
+                        // 更新 UI
+                        that.updateFileInfoUI();
+                        that.updateFileListUI();
+                        that.updateBasicInfoUI();
+
+                        //that.showToast('文件加载成功！');
+                        that.showToast("" + rcfilename + "已更新");
+                    }
+
+                } catch (error) {
+                    alert(`文件解析失败: ${error}`);
+                }
+
+
+
+
+
+            }
+
+
+
+
         });
     }
 
@@ -661,22 +395,22 @@ class MrpEditorUI {
 
     private addFile(): void {
         if (!this.mrpInfo) {
-        this.showToast('请先打开一个MRP文件！');
-        this.hideAddFileModal();
-        return;
-    }
+            this.showToast('请先打开一个MRP文件！');
+            this.hideAddFileModal();
+            return;
+        }
 
         const fileNameInput = document.getElementById('newFileName') as HTMLInputElement;
         const fileInput = document.getElementById('newFileContent') as HTMLInputElement;
 
         // 自动填充文件名逻辑
-    if (fileInput.files && fileInput.files.length > 0 && !fileNameInput.value.trim()) {
-        const file = fileInput.files[0];
-        fileNameInput.value = file.name;
-        
-    }
+        if (fileInput.files && fileInput.files.length > 0 && !fileNameInput.value.trim()) {
+            const file = fileInput.files[0];
+            fileNameInput.value = file.name;
+
+        }
         const fileName = fileNameInput.value.trim();
-        
+
         if (!fileName) {
             alert('请输入文件名！');
             return;
@@ -694,15 +428,15 @@ class MrpEditorUI {
             try {
                 const fileData = new Uint8Array(e.target?.result as ArrayBuffer);
                 this.mrpInfo?.insert(fileName, fileData);
-                
+
                 // 更新 UI
                 this.updateFileListUI();
                 this.updateBasicInfoUI();
-                
+
                 this.hideAddFileModal();
                 fileNameInput.value = '';
                 fileInput.value = '';
-                
+
                 this.showToast('文件已添加到MRP中！');
             } catch (error) {
                 alert(`添加文件失败: ${error}`);
@@ -711,6 +445,121 @@ class MrpEditorUI {
 
         reader.readAsArrayBuffer(file);
     }
+
+    private viewFile(filename: string): void {
+        if (!this.mrpInfo) return;
+
+        try {
+            let fileData = this.mrpInfo.getFileData(filename);
+            if (!fileData) {
+                this.showToast('无法获取文件内容');
+                return;
+            }
+            if (this.mrpInfo._isGzip(fileData)) {
+                fileData = pako.ungzip(fileData);
+            }
+
+            // 检查是否是文本文件
+            const textExtensions = ['txt', 'ini', 'conf', 'js', 'json', 'xml', 'html', 'css'];
+            const musicExtensions = ['mp3', 'wav', 'ogg', 'flac'];
+            const ext = filename.split('.').pop()?.toLowerCase();
+
+            if (ext && textExtensions.includes(ext)) {
+                // 尝试解码为文本
+                try {
+                    let content: string;
+                    if (this.mrpInfo._isGzip(fileData)) {
+                        const decompressed = pako.ungzip(fileData);
+                        content = GBK.decode(decompressed);
+                    } else {
+                        content = GBK.decode(fileData);
+                    }
+
+                    // 显示文件内容（可以扩展为模态框显示）
+                    console.log(`文件 ${filename} 内容:`, content);
+                    alert(`文件 ${filename} 内容:\n\n${content}`);
+                    this.showToast(`已查看文件 ${filename} 内容（查看控制台）`);
+                } catch (e) {
+                    this.showToast('无法解码文件内容');
+                }
+            }
+            else if (ext && musicExtensions.includes(ext)) {
+                // 尝试播放音频文件
+                const audio = new Audio(URL.createObjectURL(new Blob([fileData])));
+                audio.controls = true;
+                audio.play();
+                document.body.appendChild(audio);
+                this.showToast(`已播放音频文件 ${filename}`);
+            }
+            else if (ext == 'rc') {
+                const base64Data = encodeBase64(fileData!);
+                localStorage.setItem('rcfile', base64Data);
+                localStorage.setItem('rcfilename', filename);
+                localStorage.setItem("mrpfile", encodeBase64(this.mrpInfo.data));
+                localStorage.setItem("mrpfilename", this.currentFile!.name);
+                window.location.href = "../RcEditor/"
+            }
+            else if (ext === 'bin') {
+                // 二进制文件，直接显示十六进制内容
+                const hexContent = Array.from(fileData).map(byte => byte.toString(16).padStart(2, '0')).join(' ');
+                console.log(`文件 ${filename} 十六进制内容:`, hexContent);
+                alert(`文件 ${filename} 十六进制内容:\n\n${hexContent}`);
+                this.showToast(`已查看文件 ${filename} 十六进制内容（查看控制台）`);
+            }
+            else {
+                this.showToast('此文件类型不支持预览');
+            }
+        } catch (error) {
+            this.showToast(`查看文件失败: ${error}`);
+        }
+    }
+
+
+    private exportFile(filename: string, fileData: Uint8Array): void {
+        try {
+            let dataToExport = fileData;
+            let exportFilename = filename;
+
+            // 检查是否是 GZIP 文件
+            if (this.mrpInfo?._isGzip(fileData)) {
+                try {
+                    dataToExport = pako.ungzip(fileData);
+                    // 如果原始文件名有 .gz 后缀，去掉它
+                    if (filename.toLowerCase().endsWith('.gz')) {
+                        exportFilename = filename.slice(0, -3);
+                    }
+                    this.showToast('已自动解压 GZIP 文件');
+                } catch (e) {
+                    this.showToast('GZIP 解压失败，导出原始文件');
+                }
+            }
+
+            // 获取文件扩展名
+            const ext = exportFilename.split('.').pop()?.toLowerCase() || 'bin';
+
+            // 创建 blob 对象
+            const blob = new Blob([dataToExport], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+
+            // 创建下载链接
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = exportFilename;
+            document.body.appendChild(a);
+            a.click();
+
+            // 清理
+            setTimeout(() => {
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+
+            this.showToast(`文件 ${exportFilename} 导出成功`);
+        } catch (error) {
+            this.showToast(`导出文件失败: ${error}`);
+        }
+    }
+
 
     private deleteFile(target: HTMLElement): void {
         if (!this.mrpInfo) return;
@@ -724,14 +573,18 @@ class MrpEditorUI {
         if (confirm(`确定要删除文件 "${fileName}" 吗？`)) {
             try {
                 this.mrpInfo.remove(fileName);
-                
+
                 // 更新 UI
                 this.updateFileListUI();
                 this.updateBasicInfoUI();
-                
+
                 this.showToast('文件已删除！');
             } catch (error) {
                 alert(`删除文件失败: ${error}`);
+                if (error instanceof Error) {
+                    console.error(error.message);
+                    console.error('错误堆栈:', error.stack); // 包含文件名和行号
+                }
             }
         }
     }
@@ -762,12 +615,12 @@ class MrpEditorUI {
                 try {
                     const fileData = new Uint8Array(e.target?.result as ArrayBuffer);
                     this.mrpInfo = MrpInfo.fromBytes(fileData);
-                    
+
                     // 更新 UI
                     this.updateFileInfoUI();
                     this.updateFileListUI();
                     this.updateBasicInfoUI();
-                    
+
                     this.showToast('文件加载成功！');
                 } catch (error) {
                     alert(`文件解析失败: ${error}`);
@@ -788,7 +641,7 @@ class MrpEditorUI {
 
         const blob = new Blob([this.mrpInfo.data], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
-        
+
         const a = document.createElement('a');
         a.href = url;
         a.download = this.currentFile.name || 'modified.mrp';
@@ -796,7 +649,7 @@ class MrpEditorUI {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        
+
         alert('文件保存成功！');
     }
 
@@ -815,7 +668,7 @@ class MrpEditorUI {
         document.getElementById('vendor')!.textContent = this.mrpInfo.vendor;
         document.getElementById('desc')!.textContent = this.mrpInfo.desc;
         document.getElementById('screenSize')!.textContent = `${this.mrpInfo.screenWidth}x${this.mrpInfo.screenHeight}`;
-        
+
         let platText = '未知';
         switch (this.mrpInfo.plat) {
             case 1: platText = 'MTK'; break;
@@ -823,7 +676,7 @@ class MrpEditorUI {
             case 3: platText = '其它'; break;
         }
         document.getElementById('plat')!.textContent = platText;
-        
+
         const fileSizeKB = (this.mrpInfo.data.length / 1024).toFixed(1);
         document.getElementById('fileSize')!.textContent = `${fileSizeKB} KB`;
     }
@@ -846,7 +699,7 @@ class MrpEditorUI {
         // 添加新内容
         this.mrpInfo.files.forEach((file, index) => {
             const row = document.createElement('tr');
-            
+
             // 获取文件图标类
             let fileIconClass = 'fa-file';
             const ext = file.filename.split('.').pop()?.toLowerCase();
@@ -883,29 +736,31 @@ class MrpEditorUI {
             }
 
             const fileSizeKB = (file.fileLen / 1024).toFixed(1);
-            // const offsetHex = `0x${file.fileOffset.toString(16).toUpperCase().(8, '0')}`;
-            const offsetHex = `0x${padStart(file.fileOffset.toString(16).toUpperCase(), 8, '0')}`;
+            const offsetHex = `0x${file.fileOffset.toString(16).toUpperCase().padStart(8, '0')}`;
 
             row.innerHTML = `
-                <td>${index + 1}</td>
-                <td><i class="fas ${fileIconClass} file-icon"></i> ${file.filename}</td>
-                <td>${offsetHex}</td>
-                <td>${fileSizeKB} KB</td>
-                <td>
-                    <div class="file-actions">
-                        <button class="action-btn" title="查看"><i class="fas fa-eye"></i></button>
-                        <button class="action-btn" title="导出"><i class="fas fa-download"></i></button>
-                        <button class="action-btn delete-btn" title="删除"><i class="fas fa-trash"></i></button>
-                    </div>
-                </td>
-            `;
+            <td>${index + 1}</td>
+            <td><i class="fas ${fileIconClass} file-icon"></i> ${file.filename}</td>
+            <td>${offsetHex}</td>
+            <td>${fileSizeKB} KB</td>
+            <td>
+                <div class="file-actions">
+                    <button class="action-btn view-btn" title="查看"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn export-btn" title="导出"><i class="fas fa-download"></i></button>
+                    <button class="action-btn delete-btn" title="删除"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        `;
 
             fileListBody.appendChild(row);
         });
     }
+
 }
 
 // 初始化应用
 document.addEventListener('DOMContentLoaded', () => {
     new MrpEditorUI();
 });
+
+

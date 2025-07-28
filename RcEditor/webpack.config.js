@@ -5,7 +5,7 @@ module.exports = {
     minimize: false  // 完全禁用压缩
   },
   entry: {
-    mrpEditor: './src/mrp-editor.ts'
+    RcEditor: './src/rc-editor.ts'
   },
   module: {
     rules: [
