@@ -499,6 +499,14 @@ class MrpEditorUI {
                 localStorage.setItem("mrpfilename", this.currentFile!.name);
                 window.location.href = "../RcEditor/"
             }
+            else if(ext == 'bmp' || ext == 'bma'){
+                const base64Data = encodeBase64(fileData!);
+                localStorage.setItem('bmpfilename', filename);
+                localStorage.setItem('bmpfiledata', base64Data);
+                localStorage.setItem("mrpfile", encodeBase64(this.mrpInfo.data));
+                localStorage.setItem("mrpfilename", this.currentFile!.name);
+                window.location.href = "../BmaViewer/"
+            }
             else if (ext === 'bin') {
                 // 二进制文件，直接显示十六进制内容
                 const hexContent = Array.from(fileData).map(byte => byte.toString(16).padStart(2, '0')).join(' ');

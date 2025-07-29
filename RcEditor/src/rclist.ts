@@ -70,7 +70,10 @@ class RcList {
                 console.log("信息:", (r2 * 256 + r1), rcInt[i]);
             }
         }
-
+        // 判断是否为gbk编码
+        if(rc[rc.length-1] == 0 && rc[rc.length-2]!=0){
+            this.rcStrCode = RcList.GB2312;
+        }
         const endPtr = this.findEndPointer(rcInt);
         console.log("信息: endptr", endPtr);
 
@@ -93,6 +96,7 @@ class RcList {
         return rcInt.length;
     }
 
+    // 计算条目数量
     private calculateItemCount(rcInt: number[], endPtr: number): number {
         let math = 1;
         let rOffset = 0;
@@ -118,6 +122,7 @@ class RcList {
 
     private parseRcItems(rc: Uint8Array, rcInt: number[], itemCount: number): void {
         this.texts = [];
+        
         for (let i = 0; i < itemCount; i++) {
             const temp = new Uint8Array(rc.length);
             this.wstrcpy(temp, rc, rcInt[i] + itemCount * 2);
