@@ -3,6 +3,8 @@ import * as pako from 'pako';
 import * as GBK from 'gbk.js';
 import { encodeBase64, decodeBase64 } from "./base64";
 import { MrpInfo } from "./mrpinfo";
+import { Player } from './player';
+
 
 
 function padStart(str: string, targetLength: number, padString: string = ' '): string {
@@ -65,6 +67,7 @@ class FileItem {
 class MrpEditorUI {
     private mrpInfo: MrpInfo | null = null;
     private currentFile: File | null = null;
+    private player: Player | null = null;
 
     constructor() {
         this.initEventListeners();
@@ -461,7 +464,7 @@ class MrpEditorUI {
 
             // 检查是否是文本文件
             const textExtensions = ['txt', 'ini', 'conf', 'js', 'json', 'xml', 'html', 'css'];
-            const musicExtensions = ['mp3', 'wav', 'ogg', 'flac'];
+            const musicExtensions = ['mp3', 'wav', 'ogg', 'flac', 'mid'];
             const ext = filename.split('.').pop()?.toLowerCase();
 
             if (ext && textExtensions.includes(ext)) {
@@ -485,10 +488,15 @@ class MrpEditorUI {
             }
             else if (ext && musicExtensions.includes(ext)) {
                 // 尝试播放音频文件
-                const audio = new Audio(URL.createObjectURL(new Blob([fileData])));
-                audio.controls = true;
-                audio.play();
-                document.body.appendChild(audio);
+                // const audio = new Audio(URL.createObjectURL(new Blob([fileData])));
+                // audio.controls = true;
+                // audio.play();
+                // document.body.appendChild(audio);
+                if(!this.player){
+                    this.player = new Player();
+                }
+                this.player.setData(fileData, filename);
+                this.player.play();
                 this.showToast(`已播放音频文件 ${filename}`);
             }
             else if (ext == 'rc') {
@@ -518,7 +526,12 @@ class MrpEditorUI {
                 this.showToast('此文件类型不支持预览');
             }
         } catch (error) {
-            this.showToast(`查看文件失败: ${error}`);
+            this.showToast(`查看文件失败11: ${error}`);
+            // 打印堆栈信息
+            if (error instanceof Error) {
+                console.error(error.message);
+                console.error('错误堆栈:', error.stack); // 包含文件名和行号
+            }
         }
     }
 

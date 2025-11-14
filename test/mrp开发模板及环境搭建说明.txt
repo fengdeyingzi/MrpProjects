@@ -1,0 +1,29 @@
+mrp开发模板及环境搭建说明：
+
+1. 下载安装ads1.2，并安装license
+    ads1.2(安装说明在 crack 目录下) http://sohehe4.ysepan.com/
+    关于ads1.2安装进度卡在100%的解决办法：https://blog.csdn.net/weixin_62558159/article/details/137431218
+
+2. 下载mrpbuilderx，并配置环境变量
+    影子博客【mrpbuilder 自己实现的编译工具】 http://i.yzjlb.net/?p=1473&r=2
+
+3. 下载vscode，安装c/c++扩展
+
+4. 按ctrl+shift+b运行项目，或者自己配置快捷键f5代替
+
+5. 看到一个黑底小弹窗。
+    显示文字“哈喽沃德”则表示成功运行。
+    显示白屏说明代码有误。按ctrl+J，点击终端，看看控制台编译为什么报错
+
+
+目录说明：
+
+/.vscode            vscode配置文件父目录
+/include            mrc头文件目录
+/run                电脑端vmrp模拟器
+/src                程序父目录
+/src/main.c         主程序文件
+run.bat             用mrpbuilder编译生成mrp，并放入电脑端vmrp模拟器中运行的脚本，详见 http://i.yzjlb.net/?p=1473&r=2
+
+
+by 火烧云 2024-8-17 win10

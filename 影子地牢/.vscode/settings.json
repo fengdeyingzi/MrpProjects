@@ -1,0 +1,30 @@
+{
+    "files.encoding": "gbk",
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+    "[c]": {
+        "files.encoding": "gbk"
+    },
+    "[h]": {
+        "files.encoding": "gbk"
+    },
+    "files.associations": {
+        "mrc_graphics.h": "c",
+        "pintu.h": "c",
+        "pintu_menu.h": "c",
+        "uc3_font.h": "c",
+        "mrc_base.h": "c",
+        "time.h": "c",
+        "array": "c",
+        "string": "c",
+        "string_view": "c",
+        "string_buffer.h": "c",
+        "mpc.h": "c",
+        "xl_bmp.h": "c",
+        "spritex.h": "c",
+        "initializer_list": "c",
+        "utility": "c",
+        "mrc_sound.h": "c"
+    }
+}

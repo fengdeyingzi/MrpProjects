@@ -33,12 +33,18 @@
             line-height: 1.6;
             overflow-x: hidden;
             touch-action: manipulation;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 10px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
         }
 
         header {
@@ -147,6 +153,10 @@
             overflow: hidden;
             background-color: white;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            flex:1;
+            min-width: 380px;
         }
 
         /* 十六进制视图头部 */
@@ -183,6 +193,8 @@
             display: flex;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+                position: relative;
+                            flex:1;
         }
 
         .address-column {
@@ -203,7 +215,9 @@
 
         .hex-byte {
             width: calc(100% / 16);
-            padding: 6px 3px;
+            padding: 0px 0px;
+            height: 30px;
+            line-height: 30px;
             text-align: center;
             cursor: pointer;
             transition: background-color 0.2s;
@@ -214,6 +228,38 @@
 
         .hex-byte:hover, .hex-byte:active {
             background-color: var(--highlight-color);
+        }
+
+        .hex-byte.editing {
+            background-color: #ffeb3b !important;
+            border: 2px solid #ff9800;
+            color: #333;
+            font-weight: bold;
+            position: relative;
+        }
+
+        .hex-byte.editing::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 1px;
+            height: 16px;
+            background-color: #333;
+            transform: translateY(-50%);
+            animation: blink 1s infinite;
+        }
+
+        .hex-byte.editing[data-cursor="high"]::after {
+            left: 25%;
+        }
+
+        .hex-byte.editing[data-cursor="low"]::after {
+            left: 75%;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
         }
 
         .ascii-column {
@@ -422,7 +468,7 @@
             
             .hex-byte {
                 width: calc(100% / 8);
-                padding: 5px 2px;
+                padding: 0px 0px;
                 font-size: 0.8rem;
             }
             
@@ -525,6 +571,69 @@
                 margin-bottom: 50px; /* 为移动工具栏留出空间 */
             }
         }
+
+    :root {
+  --hexedit-scrollbar-button-background: #ededed; /* 默认背景颜色 */
+  --hexedit-scrollbar-button-hover: #d0d0d0;     /* 悬停时的背景颜色 */
+  --hexedit-scrollbar-button-active: #b0b0b0;    /* 点击时的背景颜色 */
+  --hexedit-scrollbar-button-arrow: #666;        /* 箭头颜色 */
+}
+
+.scrollbar {
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 16px;
+    min-height: 32px;
+}
+
+.scrollbar-button-up {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    top: 0px;
+    background: var(--hexedit-scrollbar-button-background, #ededed);
+}
+
+
+.scrollbar-button-down {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    bottom: 0px;
+    background: var(--hexedit-scrollbar-button-background, #ededed);
+    transform: rotate(180deg); /* 旋转180度 */
+}
+
+.scrollbar-track-vertical {
+    position: absolute;
+    top: 16px;
+    right: 0;
+    bottom: 16px;
+    width: 100%;
+    overflow: hidden;
+    background: var(--hexedit-scrollbar-track-background, #ededed);
+}
+
+.scrollbar-thumb-vertical {
+    position: absolute;
+    width: 100%;
+    transition: background-color 0ms linear 40ms;
+    background: var(--hexedit-scrollbar-thumb-foreground, #ccc);
+}
+
+.scrollbar-button-up::after,
+.scrollbar-button-down::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+}
+
+
     </style>
 </head>
 <body>
@@ -605,6 +714,17 @@
                 <div class="address-column" id="address-column"></div>
                 <div class="hex-column" id="hex-column"></div>
                 <div class="ascii-column" id="ascii-column"></div>
+                <div class="scrollbar" id="scrollbar">
+                    <div class="scrollbar-button-up">
+                        <img src="img/up.svg" alt="SVG Image" width="20" height="20">
+                    </div>
+                    <div class="scrollbar-button-down">
+                        <img src="img/up.svg" alt="SVG Image" width="20" height="20">
+                    </div>
+                    <div class="scrollbar-track-vertical">
+                        <div class="scrollbar-thumb-vertical" style="height: 18px; top: 97.675%;"></div>
+                    </div>
+                </div>
             </div>
             <div class="status-bar">
                 <div class="file-info">

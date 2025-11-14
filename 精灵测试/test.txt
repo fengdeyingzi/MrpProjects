@@ -1,0 +1,169 @@
+(索引):1174 10050 drawRegion x_src=-116 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10129 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10224 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10306 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10368 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10434 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10498 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10557 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10631 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10717 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10795 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10856 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 10950 drawRegion x_src=-9 y_src=25 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11057 drawRegion x_src=-9 y_src=25 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11155 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11255 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11379 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11497 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11604 drawRegion x_src=98 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11689 drawRegion x_src=98 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11775 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11847 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 11926 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12019 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12102 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12170 drawRegion x_src=-116 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12261 drawRegion x_src=-116 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12353 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12412 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12481 drawRegion x_src=126 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12570 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12665 drawRegion x_src=112 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12737 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12823 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12915 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 12979 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13055 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13155 drawRegion x_src=-9 y_src=25 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13218 drawRegion x_src=-9 y_src=25 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13279 drawRegion x_src=-9 y_src=25 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13355 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13441 drawRegion x_src=-88 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13552 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13642 drawRegion x_src=-102 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13711 drawRegion x_src=98 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+(索引):1174 13767 drawRegion x_src=98 y_src=1 width=14 height=24 transform=0 x_dest=113 y_dest=136 anchor=51
+
+utter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=247 y_src=25
+flutter: x_src=247 y_src=25
+flutter: x_src=247 y_src=25
+flutter: x_src=247 y_src=25
+flutter: x_src=247 y_src=25
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=98 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=140 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=126 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=112 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=154 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=168 y_src=1
+flutter: x_src=247 y_src=25
+flutter: x_src=247 y_src=25

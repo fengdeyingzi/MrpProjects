@@ -1,0 +1,1 @@
+java -jar E:\app\mrpbuilder.jar -t build -i main.c platEx.c -Lsss.lib -o test.mrp -displayname platEx测试 -vendor 风的影子 -desc 测试程序

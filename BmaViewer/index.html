@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAP565 Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        
+        
+
+        
+        #open-btn {
+            background-color: #0d5bbc;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        
+        #viewer-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: #333;
+        }
+        
+        #map565-canvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            image-rendering: pixelated;
+        }
+        
+        input[type="file"] {
+            display: none;
+        }
+
+        /* 基础样式 */
+#toolbar {
+    background-color: #1a73e8;
+    color: white;
+    padding: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+}
+
+#title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-right: auto;
+}
+
+#toolbar-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+/* 按钮基础样式 */
+#toolbar button {
+    background-color: #0d5bbc;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+/* 移动端样式 */
+@media (max-width: 768px) {
+    #menu-toggle {
+        display: block;
+        font-size: 1.5rem;
+        padding: 0 12px;
+        width:100px;
+    }
+    
+    #toolbar-buttons {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background-color: #1a73e8;
+        padding: 10px;
+        flex-direction: column;
+        z-index: 100;
+    }
+    
+    #toolbar-buttons.show {
+        display: flex;
+    }
+    
+    #toolbar button {
+        width: 100%;
+        text-align: left;
+        padding: 10px 15px;
+    }
+
+    #title {
+        display: none;
+    }
+}
+
+/* 桌面端样式 */
+@media (min-width: 769px) {
+    #menu-toggle {
+        display: none;
+    }
+    
+    #toolbar-buttons {
+        display: flex !important;
+    }
+}
+
+    </style>
+</head>
+<body>
+    <div id="app-container">
+    <div id="toolbar">
+        <div id="title">MAP565 Viewer</div>
+        <button id="menu-toggle" class="mobile-only">☰ MAP565 Viewer
+        </button>
+        <div id="toolbar-buttons">
+            <button id="open-btn">打开</button>
+            <button id="zoom-in-btn">放大</button>
+            <button id="zoom-out-btn">缩小</button>
+            <button id="reset-zoom-btn">重置</button>
+            <button id="alpha-toggle" style="display: none;">透明</button>
+        </div>
+    </div>
+    <div id="viewer-container">
+        <!-- Canvas将由JavaScript添加 -->
+    </div>
+</div>
+
+    <div id="app-container">
+        <div id="toolbar">
+            <div id="title">MAP565 Viewer</div>
+            <button id="open-btn">打开MAP565文件</button>
+            
+        </div>
+        <div id="viewer-container">
+            <!-- Canvas will be inserted here by JavaScript -->
+        </div>
+    </div>
+    <input type="file" id="file-input" accept=".bma,.bmp">
+    <script src="dist/Map565Viewer.bundle.js"></script>
+</body>
+</html>

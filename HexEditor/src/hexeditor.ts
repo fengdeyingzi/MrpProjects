@@ -1,4 +1,5 @@
 import $ from 'jquery';
+import { CustomScrollbar } from './scrollbar';
 
 interface JQuery {
     closest(selector: string): JQuery;
@@ -13,9 +14,11 @@ interface JQuery {
     hide(): JQuery;
     css(propertyName: string, value: string | number): JQuery;
     on(event: string, handler: (event: any) => void): JQuery;
+    on(event: string, selector: string, handler: (event: any) => void): JQuery;
     click(handler?: (event: any) => void): JQuery;
     change(handler?: (event: any) => void): JQuery;
     text(content: string): JQuery;
+    text(): string;
     length: number;
 }
 
@@ -34,6 +37,20 @@ $(document).ready(function() {
     let tempSelectStart: number = 0;
     let tempSelectEnd: number = 0;
 
+    let scrollbar: CustomScrollbar;
+    // 显示的起始行数
+    let viewStartRow: number = 0;
+    // 最多可以显示多少行
+    let viewMaxRows: number = 10;
+    // 每行显示的数量 默认16
+    const bytesPerRow: number = 16;
+    
+    // 编辑相关状态
+    let isEditing: boolean = false;
+    let editingIndex: number = -1;
+    let editingNibble: number = 0; // 0: 高位 1: 低位
+    
+
     // 移动端菜单切换
     $('#mobile-menu-btn').on('click', function(e: JQuery.ClickEvent) {
         e.stopPropagation();
@@ -46,19 +63,78 @@ $(document).ready(function() {
             $('#menu-bar').removeClass('mobile-visible');
         }
     });
+// 创建滚动条实例
+   scrollbar = new CustomScrollbar('#scrollbar');
+
+   // 添加键盘事件监听
+   $(document).on('keydown', handleKeydown);
+   $(document).on('keypress', handleKeypress);
 
     // 初始化地址列
     function initAddressColumn(): void {
         const addressColumn = $('#address-column');
+        // 清空地址列
         addressColumn.empty();
         
         if (!fileData) return;
         
-        const rows = Math.ceil(fileData.length / 16);
-        for (let i = 0; i < rows; i++) {
-            const address = i.toString(16).padStart(8, '0').toUpperCase();
+        // 根据当前的viewStartRow和viewMaxRows显示地址
+        for (let row = viewStartRow; row < viewStartRow + viewMaxRows; row++) {
+            const address = (row * bytesPerRow).toString(16).padStart(8, '0').toUpperCase();
             addressColumn.append(`<div>${address}</div>`);
         }
+    }
+
+    // 初始化进度
+    function initView() {
+        if (!fileData) {
+            return;
+        }
+        
+        // 计算hex-content的高度
+        const hexContent = $('#hex-content');
+        const hexContentHeight = hexContent.height();
+        if (hexContentHeight) {
+            viewMaxRows = Math.floor(hexContentHeight / 30);
+        }
+        
+        // 计算文件的最大行数
+        let fileMaxRows = Math.ceil(fileData.length / bytesPerRow);
+        
+        // 设置滚动条参数
+        scrollbar.setMaxRows(fileMaxRows);
+        scrollbar.setVisibleRows(viewMaxRows);
+        scrollbar.scrollToTop(); // 初始化滚动到顶部
+        
+        // 监听滚动事件，同步内容区域滚动
+        scrollbar.onScroll((currentRow) => {
+            viewStartRow = currentRow;
+            
+            // 如果正在编辑的字节超出了可见范围，停止编辑
+            if (isEditing) {
+                const editingRow = Math.floor(editingIndex / bytesPerRow);
+                if (editingRow < viewStartRow || editingRow >= viewStartRow + viewMaxRows) {
+                    stopEditing();
+                }
+            }
+            
+            initAddressColumn();
+            initHexView();
+            
+            // 滚动后恢复编辑状态（如果编辑的字节仍在可见范围内）
+            if (isEditing && editingIndex >= 0) {
+                const editingRow = Math.floor(editingIndex / bytesPerRow);
+                if (editingRow >= viewStartRow && editingRow < viewStartRow + viewMaxRows) {
+                    const $editingByte = $(`.hex-byte[data-index="${editingIndex}"]`);
+                    $editingByte.addClass('editing');
+                    if (editingNibble === 0) {
+                        $editingByte.attr('data-cursor', 'high');
+                    } else {
+                        $editingByte.attr('data-cursor', 'low');
+                    }
+                }
+            }
+        });
     }
 
     // 初始化十六进制和ASCII列
@@ -70,18 +146,224 @@ $(document).ready(function() {
         
         if (!fileData) return;
         
-        for (let i = 0; i < fileData.length; i++) {
-            const byte = fileData[i];
-            const hex = byte.toString(16).padStart(2, '0').toUpperCase();
-            const ascii = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
-            
-            hexColumn.append(`<div class="hex-byte" data-index="${i}">${hex}</div>`);
-            
-            if (i % 16 === 0) {
-                asciiColumn.append('<div>');
+        const fileMaxRows = Math.ceil(fileData.length / bytesPerRow);
+        const maxDisplayRows = Math.min(viewMaxRows, fileMaxRows - viewStartRow);
+        
+        for(let row = viewStartRow; row < viewStartRow + maxDisplayRows; row++){
+            for(let col = 0; col < bytesPerRow; col++){
+                const index = row * bytesPerRow + col;
+                if (index >= fileData.length) break;
+                
+                const byte = fileData[index];
+                const hex = byte.toString(16).padStart(2, '0').toUpperCase();
+                const ascii = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+                
+                hexColumn.append(`<div class="hex-byte" data-index="${index}">${hex}</div>`);
+                
+                if (col % 16 === 0) {
+                    asciiColumn.append('<div>');
+                }
+                
+                $(asciiColumn.children().last()).append(ascii);
             }
+        }
+        
+        // 重新渲染后，恢复编辑状态
+        if (isEditing && editingIndex >= 0) {
+            const editingRow = Math.floor(editingIndex / bytesPerRow);
+            if (editingRow >= viewStartRow && editingRow < viewStartRow + viewMaxRows) {
+                const $editingByte = $(`.hex-byte[data-index="${editingIndex}"]`);
+                $editingByte.addClass('editing');
+                if (editingNibble === 0) {
+                    $editingByte.attr('data-cursor', 'high');
+                } else {
+                    $editingByte.attr('data-cursor', 'low');
+                }
+            }
+        }
+    }
+
+    // 开始编辑指定位置的字节
+    function startEditing(index: number): void {
+        if (!fileData || index < 0 || index >= fileData.length) return;
+        
+        isEditing = true;
+        editingIndex = index;
+        editingNibble = 0;
+        
+        // 高亮编辑中的字节
+        $('.hex-byte').removeClass('editing').removeAttr('data-cursor');
+        const $editingByte = $(`.hex-byte[data-index="${index}"]`);
+        $editingByte.addClass('editing').attr('data-cursor', 'high');
+        
+        // 清除选择
+        selectionStart = -1;
+        selectionEnd = -1;
+        updateSelection();
+    }
+
+    // 停止编辑
+    function stopEditing(): void {
+        if (!isEditing) return;
+        
+        console.log("停止编辑，调用堆栈：", new Error().stack);
+        
+        isEditing = false;
+        editingIndex = -1;
+        editingNibble = 0;
+        
+        $('.hex-byte').removeClass('editing').removeAttr('data-cursor');
+    }
+
+    // 处理键盘按下事件
+    function handleKeydown(e: JQuery.KeyDownEvent): void {
+        if (!fileData) return;
+        
+        switch (e.key) {
+            case 'Escape':
+                stopEditing();
+                break;
+                
+            case 'ArrowLeft':
+            case 'ArrowRight':
+            case 'ArrowUp':
+            case 'ArrowDown':
+                handleArrowKeys(e);
+                break;
+                
+            case 'Delete':
+            case 'Backspace':
+                if (isEditing) {
+                    e.preventDefault();
+                    // 将当前字节设为0
+                    fileData[editingIndex] = 0;
+                    updateByteDisplay(editingIndex);
+                }
+                break;
+        }
+    }
+
+    // 处理键盘输入事件
+    function handleKeypress(e: JQuery.KeyPressEvent): void {
+        if (!fileData || !isEditing) return;
+        
+        const char = e.key.toUpperCase();
+        const hexValue = parseInt(char, 16);
+        
+        if (isNaN(hexValue)) return;
+        
+        e.preventDefault();
+        
+        const currentByte = fileData[editingIndex];
+        let newByte: number;
+        
+        if (editingNibble === 0) {
+            // 编辑高位
+            newByte = (hexValue << 4) | (currentByte & 0x0F);
+            editingNibble = 1;
+            fileData[editingIndex] = newByte;
+            updateByteDisplay(editingIndex);
+        } else {
+            // 编辑低位
+            newByte = (currentByte & 0xF0) | hexValue;
+            fileData[editingIndex] = newByte;
+            updateByteDisplay(editingIndex);
             
-            $(asciiColumn.children().last()).append(ascii);
+            // 完成当前字节的编辑，移动到下一个字节
+            editingNibble = 0;
+            if (editingIndex + 1 < fileData.length) {
+                startEditing(editingIndex + 1);
+            } else {
+                stopEditing();
+            }
+        }
+    }
+
+    // 处理方向键
+    function handleArrowKeys(e: JQuery.KeyDownEvent): void {
+        if (!fileData) return;
+        
+        e.preventDefault();
+        
+        let newIndex = isEditing ? editingIndex : (selectionStart >= 0 ? selectionStart : 0);
+        
+        switch (e.key) {
+            case 'ArrowLeft':
+                newIndex = Math.max(0, newIndex - 1);
+                break;
+            case 'ArrowRight':
+                newIndex = Math.min(fileData.length - 1, newIndex + 1);
+                break;
+            case 'ArrowUp':
+                newIndex = Math.max(0, newIndex - bytesPerRow);
+                break;
+            case 'ArrowDown':
+                newIndex = Math.min(fileData.length - 1, newIndex + bytesPerRow);
+                break;
+        }
+        
+        // 确保新位置可见
+        const newRow = Math.floor(newIndex / bytesPerRow);
+        if (newRow < viewStartRow || newRow >= viewStartRow + viewMaxRows) {
+            scrollbar.scrollToRow(Math.max(0, newRow - Math.floor(viewMaxRows / 2)));
+        }
+        
+        if (isEditing) {
+            startEditing(newIndex);
+        } else {
+            selectionStart = newIndex;
+            selectionEnd = newIndex;
+            updateSelection();
+        }
+    }
+
+    // 更新单个字节的显示
+    function updateByteDisplay(index: number): void {
+        if (!fileData) return;
+        
+        const byte = fileData[index];
+        const hex = byte.toString(16).padStart(2, '0').toUpperCase();
+        const ascii = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+        
+        // 更新十六进制显示
+        const $hexByte = $(`.hex-byte[data-index="${index}"]`);
+        $hexByte.text(hex);
+        
+        // 如果正在编辑这个字节，恢复编辑状态
+        if (isEditing && editingIndex === index) {
+            $hexByte.addClass('editing');
+            // 添加光标位置提示
+            if (editingNibble === 0) {
+                $hexByte.attr('data-cursor', 'high');
+            } else {
+                $hexByte.attr('data-cursor', 'low');
+            }
+        }
+        
+        // 更新ASCII显示 - 只更新对应的ASCII字符，不重新渲染整个视图
+        updateAsciiDisplay(index, ascii);
+    }
+
+    // 更新单个字节对应的ASCII显示
+    function updateAsciiDisplay(index: number, ascii: string): void {
+        // 计算在当前视图中的行和列
+        const row = Math.floor(index / bytesPerRow);
+        const col = index % bytesPerRow;
+        
+        // 如果不在当前可见范围内，忽略
+        if (row < viewStartRow || row >= viewStartRow + viewMaxRows) {
+            return;
+        }
+        
+        const visibleRow = row - viewStartRow;
+        const asciiColumn = $('#ascii-column');
+        const rowDiv = asciiColumn.children().eq(visibleRow);
+        
+        if (rowDiv.length) {
+            const currentText = rowDiv.text();
+            // 替换对应位置的字符
+            const newText = currentText.substring(0, col) + ascii + currentText.substring(col + 1);
+            rowDiv.text(newText);
         }
     }
 
@@ -100,10 +382,19 @@ $(document).ready(function() {
         $('#file-size').text(`(${(file.size / 1024).toFixed(2)} KB)`);
         
         const reader = new FileReader();
+        // xldebug
         reader.onload = function(e: ProgressEvent<FileReader>) {
             const arrayBuffer = e.target?.result as ArrayBuffer;
             fileData = new Uint8Array(arrayBuffer);
             
+            // 重新计算可见行数（可能窗口大小改变了）
+            const hexContent = $('#hex-content');
+            const hexContentHeight = hexContent.height();
+            if (hexContentHeight) {
+                viewMaxRows = Math.floor(hexContentHeight / 30);
+            }
+            
+            initView();
             initAddressColumn();
             initHexView();
             
@@ -123,7 +414,7 @@ $(document).ready(function() {
             return;
         }
         
-        const blob = new Blob([fileData], { type: 'application/octet-stream' });
+        const blob = new Blob([fileData!.buffer], { type: 'application/octet-stream' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -138,6 +429,9 @@ $(document).ready(function() {
     $('.hex-column').on('mousedown', '.hex-byte', function(e: JQuery.MouseDownEvent) {
         e.preventDefault();
         if (e.button === 0) {
+            // 如果正在编辑模式，不要干扰编辑
+            if (isEditing) return;
+            
             console.log("左键点击");
             isSelecting = true;
             const index = parseInt($(this).data('index'));
@@ -147,8 +441,15 @@ $(document).ready(function() {
         }
     });
 
+    // 双击开始编辑
+    $('.hex-column').on('dblclick', '.hex-byte', function(e: JQuery.DoubleClickEvent) {
+        e.preventDefault();
+        const index = parseInt($(this).data('index'));
+        startEditing(index);
+    });
+
     $(document).on('mousemove', function(e: JQuery.MouseMoveEvent) {
-        if (!isSelecting) return;
+        if (!isSelecting || isEditing) return; // 编辑模式时不处理鼠标移动
         e.preventDefault();
         
         const hexByte = $(e.target).closest('.hex-byte');
@@ -229,7 +530,13 @@ $(document).ready(function() {
     // 更新选择区域
     function updateSelection(): void {
         console.trace("当前调用堆栈:");
-        $('.hex-byte').removeClass('selected');
+        
+        // 如果正在编辑，不要清除编辑样式
+        if (isEditing) {
+            $('.hex-byte').not('.editing').removeClass('selected');
+        } else {
+            $('.hex-byte').removeClass('selected');
+        }
         
         if (selectionStart === -1 || selectionEnd === -1) return;
         
@@ -237,6 +544,8 @@ $(document).ready(function() {
         const end = Math.max(selectionStart, selectionEnd);
         
         for (let i = start; i <= end; i++) {
+            // 不要给正在编辑的字节添加选择样式
+            if (isEditing && i === editingIndex) continue;
             $(`.hex-byte[data-index="${i}"]`).addClass('selected');
         }
         
@@ -247,6 +556,10 @@ $(document).ready(function() {
     // 右键菜单
     $(document).on('contextmenu', '.hex-byte', function(e: JQuery.ContextMenuEvent) {
         e.preventDefault();
+        
+        // 如果正在编辑，不显示右键菜单
+        if (isEditing) return;
+        
         const index = parseInt($(this).data('index'));
         console.log("右键菜单："+selectionStart+","+index);
         
@@ -265,6 +578,12 @@ $(document).ready(function() {
     });
 
     $(document).on('click', function(e: JQuery.ClickEvent) {
+        // 如果点击的不是hex-byte，并且不是菜单相关，则停止编辑
+        if (isEditing && !$(e.target).closest('.hex-byte').length && 
+            !$(e.target).closest('.context-menu').length) {
+            stopEditing();
+        }
+        
         if (!$(e.target).closest('.context-menu').length) {
             $('#context-menu').hide();
         }

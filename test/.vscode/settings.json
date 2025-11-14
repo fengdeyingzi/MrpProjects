@@ -1,0 +1,18 @@
+{
+    "files.associations": {
+        "*.h": "c"
+    },
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+    "[c]": {
+        "files.encoding": "gbk" // 不能设置成gb2312，会导致代码提示乱码
+    },
+    "[cpp]": {
+        "files.encoding": "gbk" // 不能设置成gb2312，会导致代码提示乱码
+    },
+    "files.autoGuessEncoding": false,
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: Google, UseTab: Always, IndentWidth: 4, TabWidth: 4, AllowShortIfStatementsOnASingleLine: false, IndentCaseLabels: false, ColumnLimit: 0, AccessModifierOffset: -4, NamespaceIndentation: All, FixNamespaceComments: false }",
+    "C_Cpp.clang_format_sortIncludes": false,
+    "C_Cpp.default.compilerPath": "",
+}

@@ -1,0 +1,33 @@
+[information]
+projectname=FixedByFrac.mpr
+filename=FixedByFrac.mrp
+appname=ASM定点乘法
+appid=30008
+version=100
+visible=1
+cpu=3
+vendor=E界开发团队
+output=FixedByFrac.mrp
+description=演示嵌入汇编实现定点乘法
+include=D:\SKYSDK\include\
+config=UseASM,UseC
+
+[config_UseC]
+define=__ARM7_C
+output=FixedByFrac_C.mrp
+bmp_mode=normal
+
+[config_UseASM]
+output=FixedByFrac_ASM.mrp
+bmp_mode=normal
+
+[files_UseC]
+file110 = ..\src\FixedByFrac.c
+
+[files_UseASM]
+file110 = ..\src\FixedByFrac.s
+
+[files]
+file01 = ..\src\main.c
+file02 = ..\src\filetrace.c
+

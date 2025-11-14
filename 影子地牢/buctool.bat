@@ -1,0 +1,1 @@
+java -jar E:\app\mrpbuilder.jar -t gcc -i ma.c -DMR_VERSION=2222 -o ma.exe

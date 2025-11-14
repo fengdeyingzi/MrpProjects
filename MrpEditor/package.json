@@ -19,6 +19,8 @@
   "dependencies": {
     "@types/pako": "^2.0.3",
     "gbk.js": "^0.3.0",
+    "midi-player-js": "^2.0.16",
+    "soundfont-player": "^0.12.0",
     "pako": "^2.1.0"
   },
   "devDependencies": {

@@ -1,0 +1,1 @@
+gcc uc3_tool.c -o uc3_tool.exe
