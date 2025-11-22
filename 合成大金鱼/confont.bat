@@ -1,0 +1,1 @@
+uc3small temp/font.uc3 assets/font.uc3 " 0123456789:.!@#$%%^&*()\"\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~开始游戏合成大金鱼，游戏帮助，关于，退出，得分，最高分，最低分，风的影子，主菜单，帮助关于简单普通困难地狱分数关卡生命"

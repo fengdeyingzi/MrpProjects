@@ -1,0 +1,32 @@
+{
+    "files.associations": {
+        "mrc_base.h": "c",
+        "buffer.h": "c",
+        "http.h": "c",
+        "stdio.h": "c",
+        "float.h": "c",
+        "filelist.h": "c",
+        "url_docode.h": "c",
+        "mrc_exb.h": "c",
+        "mrc_base_i.h": "c",
+        "array": "c",
+        "vector": "c",
+        "xstring": "c",
+        "xutility": "c",
+        "iterator": "c",
+        "cstdlib": "c",
+        "stdlib.h": "c",
+        "compare": "c",
+        "stop_token": "c",
+        "xl_coding.h": "c",
+        "system_error": "c",
+        "momo.h": "c",
+        "string.h": "c",
+        "httpclient.h": "c",
+        "textview.h": "c"
+    },
+    "files.encoding": "utf8",
+    "[bat]": {
+        "files.encoding": "gbk"
+    },
+}

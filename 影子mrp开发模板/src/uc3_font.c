@@ -3,25 +3,34 @@
 uint8 *uc3_buf = NULL;
 int32 uc3_buf_len = 0;
 
+// 鏄惁浣跨敤UTF-8缂栫爜
+#define USE_UTF8 1
+
+// 鏄惁妯睆缁樺埗
+#define USE_HOR_DRAW 0
+
+// 寮�鍚綅缃氦鎹?
+#define SWAP_FONT 0
+
 extern void drawBitmapBit(
-    uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b);
-  extern  void drawBitmapBitRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, int type);
+uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b);
+extern  void drawBitmapBitRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, int type);
 extern int getUC3Width(int id);
 extern uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size);
 extern int getFontPixel(uint8 *buf, int n);
 
 int tempfontindex;
 /*
-uc3字体文件结构说明
-0-3字节前缀字符串 "FT16"
-4-7字节字体图片宽度 fontw
-8-11字节字体图片高度 fonth
-12-15字节文字数量
-16字节开始 记录文字id以及对应的offset,id占2字节,offset占4字节
-读取单个字的字节大小dataSize计算为: isAddBit = (fontw * fonth % 8) > 0; dataSize = ((fontw * fonth / 8) + (isAddBit ? 1 : 0));
+uc3瀛椾綋鏂囦欢缁撴瀯璇存槑
+0-3瀛楄妭鍓嶇紑瀛楃涓? "FT16"
+4-7瀛楄妭瀛椾綋鍥剧墖瀹藉害 fontw
+8-11瀛楄妭瀛椾綋鍥剧墖楂樺害 fonth
+12-15瀛楄妭鏂囧瓧鏁伴噺
+16瀛楄妭寮�濮? 璁板綍鏂囧瓧id浠ュ強瀵瑰簲鐨刼ffset,id鍗?2瀛楄妭,offset鍗?4瀛楄妭
+璇诲彇鍗曚釜瀛楃殑瀛楄妭澶у皬dataSize璁＄畻涓?: isAddBit = (fontw * fonth % 8) > 0; dataSize = ((fontw * fonth / 8) + (isAddBit ? 1 : 0));
 
 */
-// 初始化uc3字体
+// 鍒濆鍖杣c3瀛椾綋
 int32 uc3_init(void)
 {
     int32 re = 0;
@@ -47,6 +56,9 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
     uint16 *buf = NULL;
     uint16 code = 0;
     uint8 *tempchar = NULL;
+    #if USE_HOR_DRAW
+    return uc3_drawTextHor(pcText, x, y, r, g, b, is_unicode);
+    #else
     if (is_unicode)
     {
         while (*ucptr)
@@ -61,6 +73,29 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
     }
     else
     {
+        #if USE_UTF8
+        {
+            uint8 *utf8 = (uint8 *)pcText;
+            while (*utf8)
+            {
+                uint16 unicode;
+                if ((*utf8 & 0x80) == 0) {
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                code = (uint16)((unicode << 8) & 0xff00 | unicode >> 8);
+                tempchar = getCharUC3(code, 16, 16, &out_size);
+                if (tempchar != NULL)
+                    drawBitmapBit(tempchar, ix, iy, r, g, b);
+                ix += getUC3Width(code);
+            }
+        }
+        #else
         // mrc_printf("start con");
         buf = mrc_c2u(pcText, &err, &csize);
         if (buf == NULL)
@@ -75,7 +110,7 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
             uint16 code = *ucptr;
 
             uint8 *tempchar = getCharUC3((uint16)((code << 8) & 0xff00 | code >> 8), 16, 16, &out_size);
-            // mrc_printf("draw %x\n",code);
+            // mrc_printf("draw %x ptr=%p\n", (uint16)((code << 8) & 0xff00 | code >> 8), tempchar);
             if (tempchar != NULL)
             {
                 drawBitmapBit(tempchar, ix, iy, r, g, b);
@@ -87,12 +122,15 @@ int32 uc3_drawText(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, in
         }
         // mrc_printf("free buf");
         mrc_free(buf);
+        #endif
     }
+    
     return 0;
+    #endif
 }
 
 
-//横屏绘制文字
+//妯睆缁樺埗鏂囧瓧
 int32 uc3_drawTextHor(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, int is_unicode)
 {
     mr_screeninfo screen;
@@ -121,6 +159,29 @@ int32 uc3_drawTextHor(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b,
     }
     else
     {
+        #if USE_UTF8
+        {
+            uint8 *utf8 = (uint8 *)pcText;
+            while (*utf8)
+            {
+                uint16 unicode;
+                if ((*utf8 & 0x80) == 0) {
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                code = (uint16)((unicode << 8) & 0xff00 | unicode >> 8);
+                tempchar = getCharUC3(unicode, 16, 16, &out_size);
+                if (tempchar != NULL)
+                    drawBitmapBitRotate(tempchar, ix, iy, r, g, b, 1);
+                iy += getUC3Width(unicode);
+            }
+        }
+        #else
         // mrc_printf("start con");
         buf = mrc_c2u(pcText, &err, &csize);
         if (buf == NULL)
@@ -147,6 +208,7 @@ int32 uc3_drawTextHor(char *pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b,
         }
         // mrc_printf("free buf");
         mrc_free(buf);
+        #endif
     }
     return 0;
 }
@@ -177,6 +239,25 @@ int uc3_getWidth(char *pcText, int is_unicode)
     }
     else
     {
+        #if USE_UTF8
+        {
+            uint8 *utf8 = (uint8 *)pcText;
+            while (*utf8)
+            {
+                uint16 unicode;
+                if ((*utf8 & 0x80) == 0) {
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                iw += getUC3Width((uint16)((unicode << 8) & 0xff00 | unicode >> 8));
+            }
+        }
+        #else
         // mrc_printf("start con");
         buf = mrc_c2u(pcText, &err, &csize);
         if (buf == NULL)
@@ -196,19 +277,20 @@ int uc3_getWidth(char *pcText, int is_unicode)
         }
         // mrc_printf("free buf");
         mrc_free(buf);
+        #endif
     }
     return iw;
 }
 
-// 旋转绘制二进制位图
-// type取值 1:90 2:180 3:270
+// 鏃嬭浆缁樺埗浜岃繘鍒朵綅鍥?
+// type鍙栧�? 1:90 2:180 3:270
 void drawBitmapBitRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, int type) {
     
     int iy = 0;
     int bit = 0;
 
     switch(type) {
-        case 1: // 90度旋转
+        case 1: // 90搴︽棆杞?
             for (iy = 0; iy < 16; iy++) {
                 for (bit = 0; bit < 16; bit++) {
                     if (getFontPixel(font, iy * 16 + bit) >= 1) {
@@ -217,7 +299,7 @@ void drawBitmapBitRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, i
                 }
             }
             break;
-        case 2: // 180度旋转
+        case 2: // 180搴︽棆杞?
             for (iy = 0; iy < 16; iy++) {
                 for (bit = 0; bit < 16; bit++) {
                     if (getFontPixel(font, (15 - iy) * 16 + (15 - bit)) >= 1) {
@@ -226,7 +308,7 @@ void drawBitmapBitRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, i
                 }
             }
             break;
-        case 3: // 270度旋转
+        case 3: // 270搴︽棆杞?
             for (iy = 0; iy < 16; iy++) {
                 for (bit = 0; bit < 16; bit++) {
                     if (getFontPixel(font, iy * 16 + bit) >= 1) {
@@ -236,14 +318,14 @@ void drawBitmapBitRotate(uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b, i
             }
             break;
         default:
-            // 处理无效的type值
+            // 澶勭悊鏃犳晥鐨則ype鍊?
             break;
     }
 }
 
-// 绘制二进制位图数据
-// x,y 绘制在屏幕上的坐标点
-// r,g,b 绘制的颜色
+// 缁樺埗浜岃繘鍒朵綅鍥炬暟鎹?
+// x,y 缁樺埗鍦ㄥ睆骞曚笂鐨勫潗鏍囩偣
+// r,g,b 缁樺埗鐨勯鑹?
 void drawBitmapBit(
     uint8 *font, int x, int y, uint8 r, uint8 g, uint8 b)
 {
@@ -265,7 +347,7 @@ void drawBitmapBit(
     }
 }
 
-//获取二进制位图中第n个点信息
+//鑾峰彇浜岃繘鍒朵綅鍥句腑绗琻涓偣淇℃伅
 int getFontPixel(uint8 *buf, int n)
 {
     // Calculate which byte and bit position
@@ -295,7 +377,7 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
 
     // fontCount = (fontCount & 0xFFFFFFFF); // Ensure it's properly interpreted
 
-    // mrc_printf("文字数量: %u\n", fontCount);
+    // mrc_printf("鏂囧瓧鏁伴噺: %u\n", fontCount);
 
     // Calculate start and end positions
 
@@ -315,6 +397,7 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
 
             // tempoffset = *(uint32 *)(uc3_buf + i + 2);
             mrc_memcpy(&tempoffset, uc3_buf + i + 2, sizeof(uint32));
+            #if SWAP_FONT
             if (i - startPos > 600)
             {
                 tempfontindex++;
@@ -322,12 +405,13 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
                 {
                     tempfontindex = 0;
                 }
-                // 交换位置
+                // 浜ゆ崲浣嶇疆
 
                 mrc_memcpy(tempsw, uc3_buf + i, 6);
                 mrc_memcpy(uc3_buf + i, uc3_buf + tempfontindex * 6 + startPos, 6);
                 mrc_memcpy(uc3_buf + tempfontindex * 6 + startPos, tempsw, 6);
             }
+            #endif
             dataSize = (uint32)((fontw * fonth / 8) + (isAddBit ? 1 : 0));
             if (tempoffset + dataSize <= uc3_buf_len)
             {
@@ -348,7 +432,7 @@ uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size)
     return NULL;
 }
 
-// 释放uc3字体
+// 閲婃斁uc3瀛椾綋
 void uc3_free(void)
 {
     if (uc3_buf != NULL)

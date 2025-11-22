@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>合成大金鱼 - 梦幻水族馆</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #e0f7fa;
+            font-family: 'ZCOOL KuaiLe', sans-serif; /* 可爱的字体 */
+            touch-action: none; /* 防止手机端滚动 */
+        }
+
+        /* 游戏容器 */
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(to bottom, #81d4fa 0%, #29b6f6 40%, #0288d1 100%);
+        }
+
+        /* 鱼缸背景装饰 - 气泡 */
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            animation: float 8s infinite ease-in;
+            bottom: -50px;
+            pointer-events: none;
+        }
+        @keyframes float {
+            0% { transform: translateY(0) scale(1); opacity: 0; }
+            50% { opacity: 0.6; }
+            100% { transform: translateY(-110vh) scale(1.5); opacity: 0; }
+        }
+
+        canvas {
+            background: rgba(255, 255, 255, 0.1); /* 玻璃质感 */
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            border: 4px solid rgba(255, 255, 255, 0.5);
+            border-radius: 0 0 15px 15px;
+            cursor: pointer;
+        }
+
+        /* UI 层 */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            justify-content: center;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-size: 24px;
+        }
+
+        #next-preview {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            color: white;
+            backdrop-filter: blur(5px);
+        }
+
+        #game-over-screen {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            pointer-events: auto;
+        }
+
+        .btn {
+            background: #ff9800;
+            border: none;
+            padding: 15px 40px;
+            color: white;
+            font-size: 24px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-family: inherit;
+            box-shadow: 0 5px #f57c00;
+            transition: transform 0.1s;
+        }
+        .btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 #f57c00;
+        }
+
+        h1 { color: #fff; font-size: 48px; margin-bottom: 10px; text-shadow: 0 0 10px #ffeb3b; }
+        
+        /* 警告线提示 */
+        #limit-line-hint {
+            position: absolute;
+            top: 150px; /* 对应代码中的 limitY */
+            width: 100%;
+            border-top: 2px dashed rgba(255, 100, 100, 0.6);
+            display: none; 
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <!-- 动态生成的背景气泡 -->
+    <div id="bubbles-container"></div>
+
+    <canvas id="world"></canvas>
+
+    <div id="limit-line-hint"></div>
+
+    <div id="ui-layer">
+        <div id="score-board">
+            <div>分数: <span id="score">0</span></div>
+            <div style="font-size: 0.8em; opacity: 0.8;">最高: <span id="best-score">0</span></div>
+        </div>
+        <div id="next-preview">
+            <div style="font-size: 14px; margin-bottom: 5px;">下一个</div>
+            <div id="next-item-icon" style="font-size: 30px;">💧</div>
+        </div>
+    </div>
+
+    <div id="game-over-screen">
+        <h1>游戏结束</h1>
+        <p style="color:white; font-size: 24px; margin-bottom: 30px;">最终得分: <span id="final-score">0</span></p>
+        <button class="btn" onclick="restartGame()">再玩一次</button>
+    </div>
+</div>
+
+<!-- 引入 Matter.js 物理引擎 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+
+<script>
+    // ---------------------- 配置与数据 ----------------------
+    
+    // 生物合成序列
+    const FISH_TYPES = [
+        { level: 0, radius: 20,  val: 1,   icon: "💧", color: "#E1F5FE", name: "水滴" },
+        { level: 1, radius: 30,  val: 3,   icon: "🎵", color: "#B3E5FC", name: "小蝌蚪" }, // 用音符代表蝌蚪的灵动
+        { level: 2, radius: 42,  val: 6,   icon: "💡", color: "#FFF59D", name: "灯鱼" },
+        { level: 3, radius: 56,  val: 10,  icon: "🐠", color: "#FFCC80", name: "小丑鱼" },
+        { level: 4, radius: 72,  val: 15,  icon: "🐟", color: "#90CAF9", name: "神仙鱼" },
+        { level: 5, radius: 90,  val: 21,  icon: "🎏", color: "#EF9A9A", name: "锦鲤" },
+        { level: 6, radius: 110, val: 28,  icon: "🐉", color: "#C5E1A5", name: "金龙鱼" },
+        { level: 7, radius: 132, val: 36,  icon: "🪼", color: "#E1BEE7", name: "发光水母" },
+        { level: 8, radius: 156, val: 45,  icon: "🐢", color: "#A5D6A7", name: "海龟" },
+        { level: 9, radius: 180, val: 100, icon: "👑", color: "#FFD54F", name: "大金鱼" } // 终极目标
+    ];
+
+    // 游戏常量
+    const GAME_WIDTH = 450; // 鱼缸宽度
+    const GAME_HEIGHT = 750; // 鱼缸高度
+    const WALL_THICKNESS = 50;
+    const LIMIT_LINE_Y = 150; // 警戒线高度
+
+    // Matter.js 模块别名
+    const Engine = Matter.Engine,
+          Render = Matter.Render,
+          Runner = Matter.Runner,
+          Bodies = Matter.Bodies,
+          Composite = Matter.Composite,
+          Events = Matter.Events,
+          Body = Matter.Body,
+          Vector = Matter.Vector;
+
+    // 全局变量
+    let engine, world, render, runner;
+    let score = 0;
+    let bestScore = localStorage.getItem('goldfish_best') || 0;
+    let currentFishType = 0;
+    let nextFishType = 0;
+    let isGameOver = false;
+    let canDrop = true;
+    let currentDropper = null; // 当前正在顶部跟随鼠标的物体（只是一个视觉预览，不是物理实体）
+    
+    const canvas = document.getElementById('world');
+    const ctx = canvas.getContext('2d');
+    const scoreEl = document.getElementById('score');
+    const bestScoreEl = document.getElementById('best-score');
+    const nextIconEl = document.getElementById('next-item-icon');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreEl = document.getElementById('final-score');
+    const limitLineEl = document.getElementById('limit-line-hint');
+
+    // ---------------------- 初始化 ----------------------
+
+    function init() {
+        bestScoreEl.innerText = bestScore;
+        
+        // 设置 Canvas 大小 (适配移动端)
+        let containerW = window.innerWidth;
+        let containerH = window.innerHeight;
+        
+        // 保持宽高比，限制最大宽度
+        let targetWidth = Math.min(GAME_WIDTH, containerW - 20);
+        let targetHeight = Math.min(GAME_HEIGHT, containerH - 20);
+        
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+
+        // 更新警戒线视觉位置
+        limitLineEl.style.top = (LIMIT_LINE_Y * (targetHeight / GAME_HEIGHT)) + "px";
+        limitLineEl.style.width = targetWidth + "px";
+
+        // 创建物理引擎
+        engine = Engine.create();
+        world = engine.world;
+        
+        // 调整重力 (水下感觉重力稍低，或者阻力大)
+        engine.gravity.y = 1.2; 
+
+        // 创建边界
+        createWalls(targetWidth, targetHeight);
+
+        // 输入事件绑定
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('click', onMouseClick);
+        canvas.addEventListener('touchmove', onTouchMove, {passive: false});
+        canvas.addEventListener('touchstart', onTouchStart, {passive: false});
+        canvas.addEventListener('touchend', onTouchEnd, {passive: false});
+
+        // 碰撞检测事件
+        Events.on(engine, 'collisionStart', handleCollisions);
+
+        // 启动游戏循环
+        requestAnimationFrame(gameLoop);
+
+        // 初始化第一个生物
+        setNextFish();
+        spawnNewDropper();
+    }
+
+    // 创建墙壁
+    function createWalls(w, h) {
+        const ground = Bodies.rectangle(w/2, h + WALL_THICKNESS/2 - 10, w, WALL_THICKNESS, { isStatic: true, render: { visible: false } });
+        const leftWall = Bodies.rectangle(0 - WALL_THICKNESS/2, h/2, WALL_THICKNESS, h * 2, { isStatic: true, render: { visible: false } });
+        const rightWall = Bodies.rectangle(w + WALL_THICKNESS/2, h/2, WALL_THICKNESS, h * 2, { isStatic: true, render: { visible: false } });
+
+        Composite.add(world, [ground, leftWall, rightWall]);
+    }
+
+    // ---------------------- 游戏逻辑 ----------------------
+
+    function setNextFish() {
+        // 只生成前 5 种级别的小生物 (0-4)
+        nextFishType = Math.floor(Math.random() * 5);
+        nextIconEl.innerText = FISH_TYPES[nextFishType].icon;
+        nextIconEl.style.textShadow = `0 0 10px ${FISH_TYPES[nextFishType].color}`;
+    }
+
+    function spawnNewDropper() {
+        if (isGameOver) return;
+        currentFishType = nextFishType;
+        setNextFish();
+        canDrop = true;
+        
+        // 初始化 Dropper 位置在中间
+        currentDropper = {
+            x: canvas.width / 2,
+            y: 50,
+            level: currentFishType
+        };
+    }
+
+    // 鼠标/触摸移动处理
+    function updateDropperPos(clientX) {
+        if (!canDrop || isGameOver) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        let x = clientX - rect.left;
+        
+        // 限制在墙壁内
+        const radius = FISH_TYPES[currentFishType].radius;
+        if (x < radius) x = radius;
+        if (x > canvas.width - radius) x = canvas.width - radius;
+
+        currentDropper.x = x;
+    }
+
+    function onMouseMove(e) { updateDropperPos(e.clientX); }
+    function onTouchMove(e) { e.preventDefault(); updateDropperPos(e.touches[0].clientX); }
+    function onTouchStart(e) { e.preventDefault(); updateDropperPos(e.touches[0].clientX); }
+    function onTouchEnd(e) {
+        e.preventDefault();
+        // 从最后触摸点的位置投放
+        if (e.changedTouches && e.changedTouches.length > 0) {
+            updateDropperPos(e.changedTouches[0].clientX);
+        }
+        dropFish();
+    }
+
+    // 放置生物
+    function dropFish() {
+        if (!canDrop || isGameOver) return;
+
+        canDrop = false;
+        
+        const type = FISH_TYPES[currentFishType];
+        // 创建物理实体
+        const body = Bodies.circle(currentDropper.x, currentDropper.y, type.radius, {
+            restitution: 0.3, // 弹性
+            friction: 0.1,    // 摩擦
+            density: 0.002 * (type.level + 1), // 重量随等级增加
+            label: 'fish',
+            plugin: {
+                level: currentFishType // 自定义属性：等级
+            }
+        });
+
+        Composite.add(world, body);
+
+        // 延迟生成下一个
+        setTimeout(() => {
+            spawnNewDropper();
+        }, 800);
+    }
+
+    function onMouseClick() { dropFish(); }
+
+    // ---------------------- 物理 & 合成逻辑 ----------------------
+
+    function handleCollisions(event) {
+        if (isGameOver) return;
+
+        const pairs = event.pairs;
+
+        // 使用 Set 防止同一次碰撞处理多次
+        const bodiesToRemove = new Set();
+        const newBodiesToCreate = [];
+
+        for (let i = 0; i < pairs.length; i++) {
+            const bodyA = pairs[i].bodyA;
+            const bodyB = pairs[i].bodyB;
+
+            // 确保是鱼且未被标记移除
+            if (bodyA.label !== 'fish' || bodyB.label !== 'fish') continue;
+            if (bodiesToRemove.has(bodyA.id) || bodiesToRemove.has(bodyB.id)) continue;
+
+            // 检查等级是否相同
+            if (bodyA.plugin.level === bodyB.plugin.level) {
+                const currentLevel = bodyA.plugin.level;
+                
+                // 如果不是最高级，则合成
+                if (currentLevel < FISH_TYPES.length - 1) {
+                    // 标记移除旧的
+                    bodiesToRemove.add(bodyA);
+                    bodiesToRemove.add(bodyB);
+
+                    // 计算新位置（两个中心的中点）
+                    const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                    const midY = (bodyA.position.y + bodyB.position.y) / 2;
+
+                    newBodiesToCreate.push({
+                        x: midX,
+                        y: midY,
+                        level: currentLevel + 1
+                    });
+
+                    // 加分
+                    addScore(FISH_TYPES[currentLevel].val * 2);
+                }
+            }
+        }
+
+        // 执行移除和创建
+        if (bodiesToRemove.size > 0) {
+            Composite.remove(world, Array.from(bodiesToRemove));
+            
+            newBodiesToCreate.forEach(data => {
+                const type = FISH_TYPES[data.level];
+                const newBody = Bodies.circle(data.x, data.y, type.radius, {
+                    restitution: 0.3,
+                    label: 'fish',
+                    plugin: { level: data.level }
+                });
+                Composite.add(world, newBody);
+                
+                // 简单的合成特效（这里用console代替，实际在draw中表现）
+                // console.log(`Synthesized: ${type.name}`);
+            });
+        }
+    }
+
+    function addScore(val) {
+        score += val;
+        scoreEl.innerText = score;
+        if (score > bestScore) {
+            bestScore = score;
+            localStorage.setItem('goldfish_best', bestScore);
+            bestScoreEl.innerText = bestScore;
+        }
+    }
+
+    function checkGameOver() {
+        const bodies = Composite.allBodies(world);
+        for (let body of bodies) {
+            if (body.label === 'fish' && !body.isSleeping) {
+                // 如果物体静止（速度很小）且高度超过警戒线
+                // 为了宽容度，只有当物体y值小于 LIMIT_LINE_Y 且存活了一段时间才算输
+                // 这里简化：只要有静止的物体超出红线
+                if (body.position.y < LIMIT_LINE_Y && body.speed < 0.5) {
+                    // 这里需要一个计时器确认，避免刚生成时误判
+                    // 为简单起见，我们假设如果它在上面太久
+                    if (!body.plugin.dangerTime) body.plugin.dangerTime = 0;
+                    body.plugin.dangerTime++;
+                    
+                    if (body.plugin.dangerTime > 100) { // 约1.6秒
+                        triggerGameOver();
+                    }
+                } else {
+                    body.plugin.dangerTime = 0;
+                }
+            }
+        }
+    }
+
+    function triggerGameOver() {
+        isGameOver = true;
+        finalScoreEl.innerText = score;
+        gameOverScreen.style.display = 'flex';
+    }
+
+    window.restartGame = function() {
+        // 清空物理世界
+        Composite.clear(world, false); // keep static bodies if structured differently, but here we recreate
+        // 简单起见，重新初始化 world 内容，保留 engine
+        Composite.clear(world, false);
+        engine.events = {}; // 清除事件以免累积
+        
+        // 重新加载页面最简单，但为了体验好，我们重置变量
+        score = 0;
+        scoreEl.innerText = '0';
+        isGameOver = false;
+        gameOverScreen.style.display = 'none';
+        
+        // 重新添加墙壁
+        let w = canvas.width;
+        let h = canvas.height;
+        createWalls(w, h);
+
+        Events.on(engine, 'collisionStart', handleCollisions);
+        
+        spawnNewDropper();
+    }
+
+    // ---------------------- 渲染循环 ----------------------
+
+    function draw() {
+        // 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 1. 绘制警戒线
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(255, 100, 100, 0.3)";
+        ctx.setLineDash([10, 10]);
+        ctx.moveTo(0, LIMIT_LINE_Y);
+        ctx.lineTo(canvas.width, LIMIT_LINE_Y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 2. 绘制物理世界中的鱼
+        const bodies = Composite.allBodies(world);
+        bodies.forEach(body => {
+            if (body.label === 'fish') {
+                drawFish(body.position.x, body.position.y, body.angle, body.plugin.level);
+            }
+        });
+
+        // 3. 绘制当前的 Dropper (预览)
+        if (canDrop && currentDropper && !isGameOver) {
+            drawFish(currentDropper.x, currentDropper.y, 0, currentDropper.level, true);
+            // 绘制辅助线
+            ctx.beginPath();
+            ctx.moveTo(currentDropper.x, currentDropper.y + FISH_TYPES[currentDropper.level].radius);
+            ctx.lineTo(currentDropper.x, canvas.height);
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.stroke();
+        }
+    }
+
+    function drawFish(x, y, angle, level, isPreview = false) {
+        const type = FISH_TYPES[level];
+        const r = type.radius;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        
+        if (isPreview) {
+            ctx.globalAlpha = 0.6;
+        }
+
+        // 绘制圆形身体 (水彩风格：渐变)
+        const gradient = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+        gradient.addColorStop(0, "#FFFFFF");
+        gradient.addColorStop(0.3, type.color);
+        gradient.addColorStop(1, darkenColor(type.color, -20)); // 边缘稍暗
+
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, 2 * Math.PI);
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // 边缘描边
+        ctx.strokeStyle = "rgba(255,255,255,0.5)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 绘制 Emoji
+        ctx.font = `${r}px sans-serif`; // Emoji 大小随半径变化
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        // 稍微调整 Emoji 的垂直偏移，使其视觉居中
+        ctx.fillStyle = "#000"; 
+        
+        // 特殊处理大金鱼的闪光效果
+        if (level === 9) {
+            ctx.shadowColor = "#FFD700";
+            ctx.shadowBlur = 20;
+        }
+
+        ctx.fillText(type.icon, 0, r * 0.1);
+
+        // 恢复
+        ctx.restore();
+    }
+
+    // 辅助颜色变暗函数
+    function darkenColor(color, amount) {
+        return color; // 简单起见直接返回原色，或者可以使用库处理颜色
+    }
+
+    function gameLoop() {
+        Engine.update(engine, 1000 / 60);
+        draw();
+        checkGameOver();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ---------------------- 页面装饰逻辑 ----------------------
+    
+    // 生成背景泡泡
+    const bubblesContainer = document.getElementById('bubbles-container');
+    for(let i=0; i<15; i++) {
+        let b = document.createElement('div');
+        b.className = 'bubble';
+        let size = Math.random() * 20 + 10;
+        b.style.width = size + 'px';
+        b.style.height = size + 'px';
+        b.style.left = Math.random() * 100 + 'vw';
+        b.style.animationDuration = (Math.random() * 5 + 5) + 's';
+        b.style.animationDelay = Math.random() * 5 + 's';
+        bubblesContainer.appendChild(b);
+    }
+
+    // 启动
+    window.onload = init;
+
+</script>
+</body>
+</html>
