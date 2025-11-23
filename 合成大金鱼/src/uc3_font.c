@@ -254,7 +254,7 @@ int uc3_getWidth(const char *pcText, int is_unicode)
                     unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
                     utf8 += 3;
                 }
-                iw += getUC3Width((uint16)((unicode << 8) & 0xff00 | unicode >> 8));
+                iw += getUC3Width(unicode);
             }
         }
         #else

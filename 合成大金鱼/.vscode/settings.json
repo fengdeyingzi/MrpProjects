@@ -23,7 +23,8 @@
         "momo.h": "c",
         "string.h": "c",
         "httpclient.h": "c",
-        "textview.h": "c"
+        "textview.h": "c",
+        "xiosbase": "c"
     },
     "files.encoding": "utf8",
     "[bat]": {
