@@ -1,0 +1,1282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Metal Slug HTML5 - Mission Start</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #111;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border: 4px solid #444;
+        }
+        canvas {
+            display: block;
+            background-color: #87CEEB; /* 天空蓝 */
+            image-rendering: pixelated; /* 像素风格 */
+        }
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            padding: 20px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .hp-bar {
+            width: 200px;
+            height: 20px;
+            background: #555;
+            border: 2px solid #fff;
+            position: relative;
+        }
+        .hp-fill {
+            height: 100%;
+            background: #ffcc00;
+            width: 100%;
+            transition: width 0.1s;
+        }
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            pointer-events: auto;
+            z-index: 10;
+        }
+        h1 { font-size: 60px; margin: 0; color: #f4d03f; text-shadow: 4px 4px 0 #a93226; transform: skew(-10deg); }
+        p { font-size: 20px; animation: blink 1s infinite; margin-top: 20px; }
+        @keyframes blink { 50% { opacity: 0; } }
+        .controls-hint {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #ccc;
+            text-align: center;
+            line-height: 1.6;
+            animation: none;
+        }
+        .key {
+            display: inline-block;
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #666;
+            font-weight: bold;
+            color: #fff;
+        }
+        #notification {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.9);
+            color: #f4d03f;
+            padding: 20px 30px;
+            border-radius: 8px;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+            border: 3px solid #f4d03f;
+            display: none;
+            z-index: 20;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 0 20px rgba(244, 208, 63, 0.5);
+        }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(400px); opacity: 0; }
+        }
+        .notification-hide {
+            animation: slideOut 0.3s ease-in !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="450"></canvas>
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div>P1 <span id="score">000000</span></div>
+            <div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
+            <div>LEVEL <span id="level">1</span></div>
+        </div>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h2 id="boss-text" style="display:none; color:red; text-shadow:2px 2px 0 #000; font-size:40px;">WARNING</h2>
+        </div>
+        <div id="notification"></div>
+    </div>
+    <div id="overlay" onclick="startGame()">
+        <h1>METAL SLUG JS</h1>
+        <p>CLICK TO START MISSION</p>
+        <div class="controls-hint">
+            <span class="key">WASD</span> / <span class="key">Arrows</span> Move<br>
+            <span class="key">Space</span> Jump ( <span class="key">↓</span> + <span class="key">Space</span> Drop Down )<br>
+            <span class="key">J</span> / <span class="key">Z</span> Shoot
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * ------------------------------------------------------------------
+ * 核心引擎与常量
+ * ------------------------------------------------------------------
+ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const GRAVITY = 0.6;
+const FRICTION = 0.8;
+const CAMERA_SPEED = 0.1;
+
+// 游戏状态
+let gameState = {
+    running: false,
+    score: 0,
+    cameraX: 0,
+    shake: 0,
+    frame: 0,
+    bossActive: false,
+    gameOver: false,
+    currentLevel: 1,
+    totalLevels: 5
+};
+
+// 输入控制
+const keys = {
+    up: false, down: false, left: false, right: false,
+    jump: false, shoot: false,
+    jumpPressed: false, shootPressed: false
+};
+
+/**
+ * ------------------------------------------------------------------
+ * 像素精灵系统 (Sprite System)
+ * ------------------------------------------------------------------
+ */
+const PALETTE = {
+    _: null, // 透明
+    R: '#e74c3c', // 红
+    S: '#f1c40f', // 皮肤
+    G: '#2ecc71', // 绿
+    B: '#3498db', // 蓝
+    K: '#2c3e50', // 黑/深灰
+    W: '#ffffff', // 白
+    Y: '#f39c12', // 黄
+    O: '#d35400', // 橙
+    M: '#7f8c8d', // 灰 (敌人)
+    D: '#34495e'  // 深灰
+};
+
+const SPRITES = {
+    enemy_soldier: [
+        [
+            "___MMMM___",
+            "__MMMMMM__",
+            "___SSSS___",
+            "__MMMMMM__",
+            "__MMMMMM__",
+            "__KKKKKK__",
+            "__MM__MM__",
+            "_KK____KK_"
+        ],
+        [
+            "___MMMM___",
+            "__MMMMMM__",
+            "___SSSS___",
+            "__MMMMMM__",
+            "__MMMMMM__",
+            "__KKKKKK__",
+            "___MMMM___",
+            "___K__K___"
+        ]
+    ],
+    tank: [
+        "______KKKKKK______",
+        "_____KKKKKKKK_____",
+        "____DDDDDDDDDD____",
+        "___MMMMMMMMMMMM___",
+        "MMMMMMMMMMMMMMMMM_",
+        "KOKOKOKOKOKOKOKO__",
+        "KKKKKKKKKKKKKKKK__"
+    ]
+};
+
+function drawSprite(ctx, sprite, x, y, scale = 4, flip = false) {
+    if (!sprite) return;
+    const h = sprite.length;
+    const w = sprite[0].length;
+
+    ctx.save();
+    ctx.translate(x, y);
+    if (flip) {
+        ctx.scale(-1, 1);
+        ctx.translate(-w * scale, 0);
+    }
+
+    for (let r = 0; r < h; r++) {
+        for (let c = 0; c < w; c++) {
+            const char = sprite[r][c];
+            if (PALETTE[char]) {
+                ctx.fillStyle = PALETTE[char];
+                ctx.fillRect(c * scale, r * scale, scale, scale);
+            }
+        }
+    }
+    ctx.restore();
+}
+
+/**
+ * ------------------------------------------------------------------
+ * 音频合成器 (Web Audio API) - 无需外部素材
+ * ------------------------------------------------------------------
+ */
+const Sound = {
+    ctx: null,
+    init: function() {
+        if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    },
+    playTone: function(freq, type, duration, vol = 0.1) {
+        if (!this.ctx) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + duration);
+    },
+    shoot: function() {
+        if (!this.ctx) return;
+        // 模拟重机枪声音 (噪音 + 快速衰减)
+        const bufferSize = this.ctx.sampleRate * 0.1;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        noise.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start();
+    },
+    jump: function() {
+        this.playTone(150, 'square', 0.1, 0.05);
+    },
+    explosion: function() {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * 0.5;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
+        
+        // 低通滤波器模拟爆炸沉闷感
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 1000;
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start();
+    },
+    missionStart: function() {
+        // 简单的旋律
+        [440, 554, 659, 880].forEach((f, i) => setTimeout(() => this.playTone(f, 'square', 0.2, 0.1), i * 150));
+    }
+};
+
+/**
+ * ------------------------------------------------------------------
+ * 实体类定义
+ * ------------------------------------------------------------------
+ */
+class Entity {
+    constructor(x, y, w, h, color) {
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.vx = 0;
+        this.vy = 0;
+        this.color = color;
+        this.markedForDeletion = false;
+        this.facingRight = true;
+        this.hp = 1;
+        this.maxHp = 1;
+        this.flashTimer = 0; // 受伤闪烁
+    }
+    
+    draw(ctx, camX) {
+        if (this.flashTimer > 0) {
+            this.flashTimer--;
+            if (Math.floor(gameState.frame / 2) % 2 === 0) {
+                ctx.fillStyle = '#fff'; // 闪白
+            } else {
+                ctx.fillStyle = this.color;
+            }
+        } else {
+            ctx.fillStyle = this.color;
+        }
+        // 简单的矩形绘制，子类会覆盖这个方法进行精细绘制
+        ctx.fillRect(this.x - camX, this.y, this.w, this.h);
+    }
+
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+    }
+
+    takeDamage(amount) {
+        this.hp -= amount;
+        this.flashTimer = 5;
+        if (this.hp <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.markedForDeletion = true;
+        createExplosion(this.x + this.w/2, this.y + this.h/2, 10);
+        Sound.explosion();
+        gameState.shake = 10;
+    }
+}
+
+// 粒子效果
+class Particle extends Entity {
+    constructor(x, y, vx, vy, life, color) {
+        super(x, y, 4, 4, color);
+        this.vx = vx;
+        this.vy = vy;
+        this.life = life;
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += GRAVITY * 0.5;
+        this.life--;
+        if (this.life <= 0) this.markedForDeletion = true;
+    }
+}
+
+// 子弹
+class Bullet extends Entity {
+    constructor(x, y, vx, isPlayer) {
+        super(x, y, 8, 6, isPlayer ? '#ffcc00' : '#ff4444');
+        this.vx = vx;
+        this.isPlayer = isPlayer;
+        this.life = 100;
+    }
+    update() {
+        this.x += this.vx;
+        this.life--;
+        if (this.life <= 0) this.markedForDeletion = true;
+        
+        // 简单的尾焰粒子
+        if (gameState.frame % 2 === 0) {
+            particles.push(new Particle(this.x, this.y + 2, 0, 0, 5, '#fff'));
+        }
+    }
+    draw(ctx, camX) {
+        ctx.fillStyle = this.color;
+        // 绘制子弹形状
+        ctx.beginPath();
+        ctx.ellipse(this.x - camX + 4, this.y + 3, 6, 3, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+// 玩家
+class Player extends Entity {
+    constructor(x, y) {
+        super(x, y, 30, 50, '#2ecc71');
+        this.speed = 4;
+        this.jumpForce = 12;
+        this.onGround = false;
+        this.shootTimer = 0;
+        this.state = 'idle'; // idle, run, jump, shoot
+        this.hp = 100;
+        this.maxHp = 100;
+        this.invincible = 0;
+    }
+
+    update(platforms) {
+        // 左右移动
+        if (keys.right) {
+            this.vx = this.speed;
+            this.facingRight = true;
+            this.state = 'run';
+        } else if (keys.left) {
+            this.vx = -this.speed;
+            this.facingRight = false;
+            this.state = 'run';
+        } else {
+            this.vx = 0;
+            this.state = 'idle';
+        }
+
+        // 跳跃
+        if (keys.jumpPressed && this.onGround) {
+            // 下跳检测
+            if (keys.down) {
+                this.y += 1; // 稍微向下移动以穿过平台
+                this.onGround = false;
+                this.vy = 1;
+            } else {
+                this.vy = -this.jumpForce;
+                this.onGround = false;
+                Sound.jump();
+            }
+            keys.jumpPressed = false;
+        }
+
+        // 射击 - 自动射击模式
+        if (this.shootTimer > 0) this.shootTimer--;
+        if (this.shootTimer <= 0) {
+            this.shoot();
+            // 手动射击仍然有效
+        }
+        // 如果按下射击键，也可以立即射击
+        if (keys.shootPressed && this.shootTimer <= 0) {
+            this.shoot();
+            keys.shootPressed = false;
+        }
+
+        // 物理更新
+        this.vy += GRAVITY;
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // 限制在地图内
+        if (this.x < 0) this.x = 0;
+        if (this.y > canvas.height + 100) this.takeDamage(100); // 掉坑死
+
+        // 平台碰撞
+        this.onGround = false;
+        platforms.forEach(p => {
+            // 简单的AABB
+            if (this.x < p.x + p.w && this.x + this.w > p.x &&
+                this.y < p.y + p.h && this.y + this.h > p.y) {
+                
+                // 只有当从上方落下，且不是按住下键下跳时
+                if (this.vy > 0 && this.y + this.h - this.vy <= p.y + 10) {
+                    if (p.type === 'solid' || (p.type === 'oneway' && !keys.down)) {
+                        this.y = p.y - this.h;
+                        this.vy = 0;
+                        this.onGround = true;
+                    }
+                } else if (p.type === 'solid') {
+                    // 简单的墙壁碰撞
+                    if (this.vx > 0) this.x = p.x - this.w;
+                    else if (this.vx < 0) this.x = p.x + p.w;
+                }
+            }
+        });
+
+        if (!this.onGround) this.state = 'jump';
+        if (this.invincible > 0) this.invincible--;
+    }
+
+    shoot() {
+        this.shootTimer = 8;
+        let bx = this.facingRight ? this.x + this.w : this.x - 10;
+        let bvx = this.facingRight ? 12 : -12;
+        bullets.push(new Bullet(bx, this.y + 15, bvx, true));
+        Sound.shoot();
+        // 后坐力
+        // this.x -= bvx * 0.1;
+    }
+
+    takeDamage(amount) {
+        if (this.invincible > 0) return;
+        this.hp -= amount;
+        this.invincible = 60;
+        gameState.shake = 5;
+        document.getElementById('hp-fill').style.width = (this.hp / this.maxHp * 100) + '%';
+        if (this.hp <= 0) {
+            gameState.gameOver = true;
+            Sound.explosion();
+            createExplosion(this.x, this.y, 50);
+            setTimeout(() => {
+                showNotification("MISSION FAILED", 2000);
+                setTimeout(() => {
+                    location.reload();
+                }, 2500);
+            }, 1000);
+        }
+    }
+
+    draw(ctx, camX) {
+        if (this.invincible > 0 && Math.floor(gameState.frame / 4) % 2 === 0) return;
+
+        let x = this.x - camX;
+        let y = this.y;
+
+        // 绘制像素小人 (Marco风格)
+        ctx.save();
+        if (!this.facingRight) {
+            ctx.translate(x + this.w, y);
+            ctx.scale(-1, 1);
+            x = 0;
+            y = 0;
+        } else {
+            ctx.translate(x, y);
+            x = 0;
+            y = 0;
+        }
+
+        // 腿 (简单的跑步动画)
+        let legOffset = (this.state === 'run') ? Math.sin(gameState.frame * 0.5) * 5 : 0;
+        ctx.fillStyle = '#5d4037'; // 裤子
+        ctx.fillRect(x + 5 + legOffset, y + 30, 8, 20);
+        ctx.fillRect(x + 17 - legOffset, y + 30, 8, 20);
+
+        // 身体
+        ctx.fillStyle = '#c0392b'; // 马甲
+        ctx.fillRect(x + 5, y + 15, 20, 20);
+        ctx.fillStyle = '#f1c40f'; // 皮肤
+        ctx.fillRect(x + 8, y + 15, 8, 5); // 脖子
+
+        // 头
+        ctx.fillStyle = '#f1c40f'; // 脸
+        ctx.fillRect(x + 6, y, 18, 15);
+        ctx.fillStyle = '#fff'; // 头带
+        ctx.fillRect(x + 6, y + 2, 18, 4);
+        ctx.fillStyle = '#000'; // 眼睛
+        ctx.fillRect(x + 18, y + 6, 4, 2);
+
+        // 枪
+        ctx.fillStyle = '#555';
+        ctx.fillRect(x + 15, y + 20, 25, 6); // 枪管
+        ctx.fillStyle = '#222';
+        ctx.fillRect(x + 15, y + 22, 8, 8); // 握把
+
+        ctx.restore();
+    }
+}
+
+// 敌人
+class Enemy extends Entity {
+    constructor(x, y, type) {
+        super(x, y, 30, 50, '#555');
+        this.type = type; // 'soldier', 'elite', 'tank'
+
+        // 根据类型设置属性
+        if (type === 'tank') {
+            this.hp = 500;
+            this.w = 120;
+            this.h = 80;
+        } else if (type === 'elite') {
+            this.hp = 50; // 精英士兵血量更高
+            this.w = 50;
+            this.h = 40;
+        } else { // soldier
+            this.hp = 30;
+        }
+
+        this.maxHp = this.hp;
+        this.timer = 0;
+    }
+
+    update(player, platforms) {
+        if (this.type === 'soldier') {
+            // 简单的巡逻AI
+            let dist = player.x - this.x;
+            this.facingRight = dist > 0;
+
+            // 如果距离近，射击
+            if (Math.abs(dist) < 300 && Math.abs(dist) > 50) {
+                this.timer++;
+                if (this.timer > 100) {
+                    let bvx = this.facingRight ? 6 : -6;
+                    bullets.push(new Bullet(this.x + (this.facingRight?30:0), this.y + 15, bvx, false));
+                    this.timer = 0;
+                }
+            }
+
+            // 简单的重力
+            this.vy += GRAVITY;
+            this.y += this.vy;
+
+            // 碰撞
+            platforms.forEach(p => {
+                if (this.x < p.x + p.w && this.x + this.w > p.x &&
+                    this.y < p.y + p.h && this.y + this.h > p.y) {
+                    if (this.vy > 0) {
+                        this.y = p.y - this.h;
+                        this.vy = 0;
+                    }
+                }
+            });
+
+        } else if (this.type === 'elite') {
+            // 精英士兵AI - 更激进，射速更快
+            let dist = player.x - this.x;
+            this.facingRight = dist > 0;
+
+            // 主动靠近玩家
+            if (Math.abs(dist) > 100 && Math.abs(dist) < 400) {
+                this.vx = this.facingRight ? 2 : -2;
+                this.x += this.vx;
+            } else {
+                this.vx = 0;
+            }
+
+            // 更快的射击速度（三连发）
+            if (Math.abs(dist) < 400 && Math.abs(dist) > 50) {
+                this.timer++;
+                if (this.timer === 60 || this.timer === 70 || this.timer === 80) {
+                    let bvx = this.facingRight ? 8 : -8;
+                    bullets.push(new Bullet(this.x + (this.facingRight?50:0), this.y + 20, bvx, false));
+                    Sound.shoot();
+                }
+                if (this.timer > 200) this.timer = 0;
+            }
+
+            // 重力和碰撞
+            this.vy += GRAVITY;
+            this.y += this.vy;
+
+            platforms.forEach(p => {
+                if (this.x < p.x + p.w && this.x + this.w > p.x &&
+                    this.y < p.y + p.h && this.y + this.h > p.y) {
+                    if (this.vy > 0) {
+                        this.y = p.y - this.h;
+                        this.vy = 0;
+                    }
+                }
+            });
+
+        } else if (this.type === 'tank') {
+            // Boss 逻辑
+            if (this.x - gameState.cameraX < 700) { // 进入视野
+                gameState.bossActive = true;
+                document.getElementById('boss-text').style.display = 'block';
+            }
+            
+            if (gameState.bossActive) {
+                this.timer++;
+                // 移动模式
+                this.x += Math.sin(gameState.frame * 0.02) * 1;
+
+                // 攻击模式
+                if (this.timer % 120 === 0) {
+                    // 发射大炮
+                    bullets.push(new Bullet(this.x, this.y + 20, -8, false));
+                    Sound.explosion(); // 借用爆炸声当炮声
+                }
+                if (this.timer % 150 === 0) {
+                    // 抛物线手雷 (简单模拟)
+                    // 这里为了简化，用慢速子弹代替
+                    bullets.push(new Bullet(this.x + 20, this.y, -4, false));
+                    bullets.push(new Bullet(this.x + 20, this.y - 20, -5, false));
+                }
+            }
+        }
+    }
+
+    draw(ctx, camX) {
+        // 处理闪烁
+        if (this.flashTimer > 0 && Math.floor(gameState.frame / 2) % 2 === 0) {
+            ctx.fillStyle = '#fff';
+        } else {
+            ctx.fillStyle = this.color;
+        }
+
+        let x = this.x - camX;
+        let y = this.y;
+
+        if (this.type === 'soldier') {
+            // 绘制反叛军士兵
+            ctx.fillStyle = '#2c3e50'; // 军装
+            ctx.fillRect(x, y + 10, 30, 40);
+            ctx.fillStyle = '#95a5a6'; // 头盔
+            ctx.fillRect(x, y, 30, 12);
+            // 枪
+            ctx.fillStyle = '#000';
+            if (this.facingRight) ctx.fillRect(x + 15, y + 25, 20, 5);
+            else ctx.fillRect(x - 5, y + 25, 20, 5);
+        } else if (this.type === 'elite') {
+            // 使用像素精灵绘制精英士兵（新敌人类型）
+            let frameIdx = Math.floor(gameState.frame / 10) % 2;
+            drawSprite(ctx, SPRITES.enemy_soldier[frameIdx], x, y, 5, this.facingRight);
+
+            // 绘制枪
+            ctx.fillStyle = '#000';
+            let gunX = this.facingRight ? x + 40 : x - 10;
+            ctx.fillRect(gunX, y + 20, 15, 4);
+        } else if (this.type === 'tank') {
+            // 绘制Boss坦克
+            ctx.fillStyle = '#5d6d7e'; // 履带
+            ctx.fillRect(x + 10, y + 60, 100, 20);
+            // 轮子
+            ctx.fillStyle = '#000';
+            for(let i=0; i<4; i++) ctx.beginPath(), ctx.arc(x + 25 + i*25, y + 70, 8, 0, Math.PI*2), ctx.fill();
+
+            ctx.fillStyle = '#2874a6'; // 车身
+            ctx.fillRect(x, y + 30, 120, 30);
+            ctx.fillStyle = '#1b4f72'; // 炮塔
+            ctx.fillRect(x + 30, y, 60, 30);
+
+            // 炮管
+            ctx.fillStyle = '#000';
+            ctx.fillRect(x - 20, y + 10, 50, 10);
+
+            // Boss血条
+            ctx.fillStyle = 'red';
+            ctx.fillRect(x, y - 20, 120 * (this.hp / this.maxHp), 10);
+        }
+    }
+    
+    die() {
+        super.die();
+        // 根据敌人类型给予不同分数
+        if (this.type === 'tank') {
+            gameState.score += 5000;
+        } else if (this.type === 'elite') {
+            gameState.score += 300; // 精英士兵分数更高
+        } else {
+            gameState.score += 100; // 普通士兵
+        }
+        if (this.type === 'tank') {
+            // Boss被击败，关卡完成
+            createExplosion(this.x + 60, this.y + 40, 100);
+            setTimeout(() => {
+                showNotification(`LEVEL ${gameState.currentLevel} COMPLETE! Score: ${gameState.score}`, 2000);
+                setTimeout(() => {
+                    nextLevel();
+                }, 2000);
+            }, 500);
+        } else {
+            // 检查是否所有敌人都被消灭（延迟检查，因为当前敌人还未从数组移除）
+            setTimeout(() => {
+                if (enemies.length === 0) {
+                    showNotification(`LEVEL ${gameState.currentLevel} COMPLETE! Score: ${gameState.score}`, 2000);
+                    setTimeout(() => {
+                        nextLevel();
+                    }, 2000);
+                }
+            }, 100);
+        }
+    }
+}
+
+/**
+ * ------------------------------------------------------------------
+ * 关卡数据
+ * ------------------------------------------------------------------
+ */
+const levelData = {
+    1: { // 关卡1：入门训练 - 简单地形，逐步增加难度，末尾Boss
+        platforms: [
+            {x: 0, y: 400, w: 4500, h: 50, type: 'solid'},
+            {x: 400, y: 320, w: 150, h: 20, type: 'oneway'},
+            {x: 700, y: 280, w: 120, h: 20, type: 'oneway'},
+            {x: 1000, y: 350, w: 150, h: 20, type: 'oneway'},
+            {x: 1300, y: 320, w: 180, h: 20, type: 'oneway'},
+            {x: 1600, y: 280, w: 150, h: 20, type: 'oneway'},
+            {x: 1900, y: 340, w: 200, h: 20, type: 'oneway'},
+            {x: 2200, y: 300, w: 150, h: 20, type: 'oneway'},
+            {x: 2500, y: 350, w: 180, h: 20, type: 'oneway'},
+            {x: 2800, y: 320, w: 150, h: 20, type: 'oneway'},
+            {x: 3100, y: 280, w: 200, h: 20, type: 'oneway'},
+            {x: 3400, y: 400, w: 1100, h: 50, type: 'solid'} // Boss区域
+        ],
+        enemies: [
+            {x: 500, y: 350, type: 'soldier'},
+            {x: 800, y: 230, type: 'soldier'},
+            {x: 1200, y: 300, type: 'soldier'},
+            {x: 1400, y: 270, type: 'soldier'},
+            {x: 1700, y: 230, type: 'soldier'},
+            {x: 2000, y: 290, type: 'soldier'},
+            {x: 2300, y: 250, type: 'soldier'},
+            {x: 2600, y: 300, type: 'soldier'},
+            {x: 2900, y: 270, type: 'soldier'},
+            {x: 3200, y: 230, type: 'soldier'},
+            {x: 4200, y: 320, type: 'tank'} // 关卡1 Boss
+        ],
+        mapWidth: 4500
+    },
+    2: { // 关卡2：丛林突击 - 增加平台和敌人数量，引入精英士兵，末尾Boss
+        platforms: [
+            {x: 0, y: 400, w: 5000, h: 50, type: 'solid'},
+            {x: 300, y: 300, w: 150, h: 20, type: 'oneway'},
+            {x: 500, y: 250, w: 120, h: 20, type: 'oneway'},
+            {x: 700, y: 200, w: 150, h: 20, type: 'oneway'},
+            {x: 900, y: 300, w: 200, h: 20, type: 'solid'},
+            {x: 1200, y: 250, w: 150, h: 20, type: 'oneway'},
+            {x: 1500, y: 320, w: 180, h: 20, type: 'oneway'},
+            {x: 1800, y: 260, w: 150, h: 20, type: 'oneway'},
+            {x: 2100, y: 200, w: 180, h: 20, type: 'oneway'},
+            {x: 2400, y: 280, w: 200, h: 20, type: 'solid'},
+            {x: 2700, y: 340, w: 150, h: 20, type: 'oneway'},
+            {x: 3000, y: 280, w: 180, h: 20, type: 'oneway'},
+            {x: 3300, y: 220, w: 150, h: 20, type: 'oneway'},
+            {x: 3600, y: 300, w: 200, h: 20, type: 'oneway'},
+            {x: 3900, y: 400, w: 1100, h: 50, type: 'solid'} // Boss区域
+        ],
+        enemies: [
+            {x: 400, y: 350, type: 'soldier'},
+            {x: 600, y: 200, type: 'elite'},
+            {x: 800, y: 350, type: 'soldier'},
+            {x: 1000, y: 250, type: 'soldier'},
+            {x: 1300, y: 200, type: 'elite'},
+            {x: 1600, y: 270, type: 'soldier'},
+            {x: 1900, y: 210, type: 'soldier'},
+            {x: 2200, y: 150, type: 'elite'},
+            {x: 2500, y: 230, type: 'soldier'},
+            {x: 2800, y: 290, type: 'soldier'},
+            {x: 3100, y: 230, type: 'elite'},
+            {x: 3400, y: 170, type: 'soldier'},
+            {x: 3700, y: 250, type: 'elite'},
+            {x: 4700, y: 320, type: 'tank'} // 关卡2 Boss
+        ],
+        mapWidth: 5000
+    },
+    3: { // 关卡3：城市战争 - 复杂跳跃，更密集的敌人，更多精英，末尾Boss
+        platforms: [
+            {x: 0, y: 400, w: 5500, h: 50, type: 'solid'},
+            {x: 300, y: 320, w: 100, h: 20, type: 'oneway'},
+            {x: 450, y: 240, w: 100, h: 20, type: 'oneway'},
+            {x: 600, y: 180, w: 150, h: 20, type: 'oneway'},
+            {x: 800, y: 240, w: 100, h: 20, type: 'oneway'},
+            {x: 950, y: 300, w: 200, h: 20, type: 'solid'},
+            {x: 1200, y: 200, w: 150, h: 20, type: 'oneway'},
+            {x: 1400, y: 280, w: 120, h: 20, type: 'oneway'},
+            {x: 1600, y: 220, w: 150, h: 20, type: 'oneway'},
+            {x: 1800, y: 340, w: 150, h: 20, type: 'oneway'},
+            {x: 2000, y: 260, w: 120, h: 20, type: 'oneway'},
+            {x: 2200, y: 180, w: 150, h: 20, type: 'oneway'},
+            {x: 2450, y: 260, w: 100, h: 20, type: 'oneway'},
+            {x: 2650, y: 320, w: 180, h: 20, type: 'solid'},
+            {x: 2900, y: 240, w: 150, h: 20, type: 'oneway'},
+            {x: 3150, y: 300, w: 120, h: 20, type: 'oneway'},
+            {x: 3350, y: 220, w: 150, h: 20, type: 'oneway'},
+            {x: 3600, y: 280, w: 180, h: 20, type: 'oneway'},
+            {x: 3850, y: 340, w: 150, h: 20, type: 'oneway'},
+            {x: 4100, y: 260, w: 200, h: 20, type: 'oneway'},
+            {x: 4400, y: 400, w: 1100, h: 50, type: 'solid'} // Boss区域
+        ],
+        enemies: [
+            {x: 350, y: 350, type: 'soldier'},
+            {x: 500, y: 190, type: 'elite'},
+            {x: 650, y: 130, type: 'soldier'},
+            {x: 850, y: 190, type: 'elite'},
+            {x: 1000, y: 250, type: 'soldier'},
+            {x: 1250, y: 150, type: 'elite'},
+            {x: 1450, y: 230, type: 'soldier'},
+            {x: 1650, y: 170, type: 'elite'},
+            {x: 1850, y: 290, type: 'soldier'},
+            {x: 2050, y: 210, type: 'elite'},
+            {x: 2250, y: 130, type: 'soldier'},
+            {x: 2500, y: 210, type: 'elite'},
+            {x: 2700, y: 270, type: 'soldier'},
+            {x: 2950, y: 190, type: 'elite'},
+            {x: 3200, y: 250, type: 'soldier'},
+            {x: 3400, y: 170, type: 'elite'},
+            {x: 3650, y: 230, type: 'soldier'},
+            {x: 3900, y: 290, type: 'elite'},
+            {x: 4150, y: 210, type: 'soldier'},
+            {x: 5200, y: 320, type: 'tank'} // 关卡3 Boss
+        ],
+        mapWidth: 5500
+    },
+    4: { // 关卡4：沙漠风暴 - 高难度地形，大量精英士兵，末尾Boss
+        platforms: [
+            {x: 0, y: 400, w: 6000, h: 50, type: 'solid'},
+            {x: 250, y: 300, w: 120, h: 20, type: 'oneway'},
+            {x: 400, y: 220, w: 100, h: 20, type: 'oneway'},
+            {x: 550, y: 160, w: 100, h: 20, type: 'oneway'},
+            {x: 700, y: 100, w: 150, h: 20, type: 'oneway'},
+            {x: 900, y: 180, w: 120, h: 20, type: 'oneway'},
+            {x: 1100, y: 260, w: 180, h: 20, type: 'solid'},
+            {x: 1350, y: 200, w: 100, h: 20, type: 'oneway'},
+            {x: 1500, y: 140, w: 100, h: 20, type: 'oneway'},
+            {x: 1650, y: 220, w: 150, h: 20, type: 'oneway'},
+            {x: 1850, y: 300, w: 120, h: 20, type: 'oneway'},
+            {x: 2050, y: 240, w: 150, h: 20, type: 'oneway'},
+            {x: 2250, y: 160, w: 120, h: 20, type: 'oneway'},
+            {x: 2450, y: 240, w: 180, h: 20, type: 'oneway'},
+            {x: 2700, y: 320, w: 150, h: 20, type: 'solid'},
+            {x: 2950, y: 260, w: 120, h: 20, type: 'oneway'},
+            {x: 3150, y: 180, w: 150, h: 20, type: 'oneway'},
+            {x: 3350, y: 260, w: 100, h: 20, type: 'oneway'},
+            {x: 3550, y: 340, w: 180, h: 20, type: 'oneway'},
+            {x: 3800, y: 280, w: 150, h: 20, type: 'oneway'},
+            {x: 4050, y: 200, w: 120, h: 20, type: 'oneway'},
+            {x: 4250, y: 280, w: 200, h: 20, type: 'oneway'},
+            {x: 4550, y: 340, w: 150, h: 20, type: 'oneway'},
+            {x: 4800, y: 400, w: 1200, h: 50, type: 'solid'} // Boss区域
+        ],
+        enemies: [
+            {x: 300, y: 350, type: 'elite'},
+            {x: 450, y: 170, type: 'soldier'},
+            {x: 600, y: 110, type: 'elite'},
+            {x: 750, y: 50, type: 'elite'},
+            {x: 950, y: 130, type: 'soldier'},
+            {x: 1150, y: 210, type: 'elite'},
+            {x: 1400, y: 150, type: 'elite'},
+            {x: 1550, y: 90, type: 'soldier'},
+            {x: 1700, y: 170, type: 'elite'},
+            {x: 1900, y: 250, type: 'elite'},
+            {x: 2100, y: 190, type: 'soldier'},
+            {x: 2300, y: 110, type: 'elite'},
+            {x: 2500, y: 190, type: 'elite'},
+            {x: 2750, y: 270, type: 'soldier'},
+            {x: 3000, y: 210, type: 'elite'},
+            {x: 3200, y: 130, type: 'elite'},
+            {x: 3400, y: 210, type: 'soldier'},
+            {x: 3600, y: 290, type: 'elite'},
+            {x: 3850, y: 230, type: 'elite'},
+            {x: 4100, y: 150, type: 'soldier'},
+            {x: 4300, y: 230, type: 'elite'},
+            {x: 4600, y: 290, type: 'elite'},
+            {x: 5700, y: 320, type: 'tank'} // 关卡4 Boss
+        ],
+        mapWidth: 6000
+    },
+    5: { // 关卡5：最终决战 - 超长地图，精英部队+最终Boss
+        platforms: [
+            {x: 0, y: 400, w: 7000, h: 50, type: 'solid'},
+            {x: 300, y: 300, w: 200, h: 20, type: 'oneway'},
+            {x: 600, y: 250, w: 150, h: 20, type: 'oneway'},
+            {x: 800, y: 350, w: 100, h: 20, type: 'oneway'},
+            {x: 1000, y: 200, w: 300, h: 20, type: 'solid'},
+            {x: 1400, y: 300, w: 150, h: 20, type: 'oneway'},
+            {x: 1700, y: 250, w: 150, h: 20, type: 'oneway'},
+            {x: 2000, y: 320, w: 200, h: 20, type: 'oneway'},
+            {x: 2300, y: 260, w: 150, h: 20, type: 'oneway'},
+            {x: 2550, y: 180, w: 180, h: 20, type: 'oneway'},
+            {x: 2800, y: 280, w: 200, h: 20, type: 'solid'},
+            {x: 3100, y: 340, w: 150, h: 20, type: 'oneway'},
+            {x: 3350, y: 260, w: 120, h: 20, type: 'oneway'},
+            {x: 3550, y: 180, w: 150, h: 20, type: 'oneway'},
+            {x: 3800, y: 260, w: 180, h: 20, type: 'oneway'},
+            {x: 4050, y: 340, w: 200, h: 20, type: 'oneway'},
+            {x: 4350, y: 280, w: 150, h: 20, type: 'oneway'},
+            {x: 4600, y: 200, w: 180, h: 20, type: 'solid'},
+            {x: 4900, y: 280, w: 150, h: 20, type: 'oneway'},
+            {x: 5150, y: 340, w: 200, h: 20, type: 'oneway'},
+            {x: 5450, y: 280, w: 150, h: 20, type: 'oneway'},
+            {x: 5700, y: 220, w: 180, h: 20, type: 'oneway'},
+            {x: 5950, y: 300, w: 200, h: 20, type: 'oneway'},
+            {x: 6250, y: 400, w: 750, h: 50, type: 'solid'} // 最终Boss区域
+        ],
+        enemies: [
+            {x: 400, y: 350, type: 'elite'},
+            {x: 650, y: 200, type: 'elite'},
+            {x: 850, y: 300, type: 'soldier'},
+            {x: 1050, y: 150, type: 'elite'},
+            {x: 1250, y: 150, type: 'elite'},
+            {x: 1450, y: 250, type: 'elite'},
+            {x: 1750, y: 200, type: 'soldier'},
+            {x: 2050, y: 270, type: 'elite'},
+            {x: 2350, y: 210, type: 'elite'},
+            {x: 2600, y: 130, type: 'elite'},
+            {x: 2850, y: 230, type: 'soldier'},
+            {x: 3150, y: 290, type: 'elite'},
+            {x: 3400, y: 210, type: 'elite'},
+            {x: 3600, y: 130, type: 'elite'},
+            {x: 3850, y: 210, type: 'soldier'},
+            {x: 4100, y: 290, type: 'elite'},
+            {x: 4400, y: 230, type: 'elite'},
+            {x: 4650, y: 150, type: 'elite'},
+            {x: 4950, y: 230, type: 'soldier'},
+            {x: 5200, y: 290, type: 'elite'},
+            {x: 5500, y: 230, type: 'elite'},
+            {x: 5750, y: 170, type: 'elite'},
+            {x: 6000, y: 250, type: 'elite'},
+            {x: 6700, y: 320, type: 'tank'}       // 最终Boss
+        ],
+        mapWidth: 7000
+    }
+};
+
+let platforms = [];
+let enemies = [];
+let bullets = [];
+let particles = [];
+let player = new Player(100, 350); // 玩家初始位置在地面上 (地面y=400, 玩家高度50)
+
+/**
+ * ------------------------------------------------------------------
+ * 通知系统
+ * ------------------------------------------------------------------
+ */
+let notificationTimer = null;
+
+function showNotification(message, duration = 2000) {
+    const notification = document.getElementById('notification');
+    notification.textContent = message;
+    notification.style.display = 'block';
+    notification.classList.remove('notification-hide');
+
+    // 清除之前的定时器
+    if (notificationTimer) {
+        clearTimeout(notificationTimer);
+    }
+
+    // 设置新的定时器
+    notificationTimer = setTimeout(() => {
+        notification.classList.add('notification-hide');
+        setTimeout(() => {
+            notification.style.display = 'none';
+        }, 300); // 等待动画完成
+    }, duration);
+}
+
+/**
+ * ------------------------------------------------------------------
+ * 关卡管理
+ * ------------------------------------------------------------------
+ */
+function loadLevel(levelNum) {
+    const level = levelData[levelNum];
+    if (!level) return false;
+
+    // 重置游戏状态
+    gameState.currentLevel = levelNum;
+    gameState.bossActive = false;
+    gameState.cameraX = 0;
+    document.getElementById('boss-text').style.display = 'none';
+    document.getElementById('level').innerText = levelNum;
+
+    // 加载平台
+    platforms = [...level.platforms];
+
+    // 加载敌人
+    enemies = [];
+    level.enemies.forEach(e => {
+        enemies.push(new Enemy(e.x, e.y, e.type));
+    });
+
+    // 重置玩家位置
+    player.x = 100;
+    player.y = 350;
+    player.vx = 0;
+    player.vy = 0;
+
+    // 清空子弹和粒子
+    bullets = [];
+    particles = [];
+
+    return true;
+}
+
+function nextLevel() {
+    if (gameState.currentLevel < gameState.totalLevels) {
+        gameState.currentLevel++;
+        setTimeout(() => {
+            loadLevel(gameState.currentLevel);
+            showNotification(`LEVEL ${gameState.currentLevel} START!`, 2000);
+        }, 1000);
+    } else {
+        // 全部关卡完成
+        setTimeout(() => {
+            showNotification(`ALL MISSIONS COMPLETE! Final Score: ${gameState.score}`, 3000);
+            setTimeout(() => {
+                location.reload();
+            }, 3500);
+        }, 2000);
+    }
+}
+
+/**
+ * ------------------------------------------------------------------
+ * 游戏循环
+ * ------------------------------------------------------------------
+ */
+function createExplosion(x, y, count) {
+    for (let i = 0; i < count; i++) {
+        let vx = (Math.random() - 0.5) * 10;
+        let vy = (Math.random() - 0.5) * 10;
+        let color = Math.random() > 0.5 ? '#e74c3c' : '#f1c40f';
+        particles.push(new Particle(x, y, vx, vy, 30 + Math.random()*20, color));
+    }
+}
+
+function update() {
+    if (!gameState.running || gameState.gameOver) return;
+
+    // 相机跟随
+    let targetCamX = player.x - 200;
+    if (targetCamX < 0) targetCamX = 0;
+    let maxCameraX = levelData[gameState.currentLevel].mapWidth - 800;
+    if (targetCamX > maxCameraX) targetCamX = maxCameraX;
+    gameState.cameraX += (targetCamX - gameState.cameraX) * 0.1;
+
+    // 震动衰减
+    if (gameState.shake > 0) gameState.shake *= 0.9;
+    if (gameState.shake < 0.5) gameState.shake = 0;
+
+    player.update(platforms);
+
+    // 更新子弹
+    bullets.forEach(b => b.update());
+    bullets = bullets.filter(b => !b.markedForDeletion && b.x > gameState.cameraX - 100 && b.x < gameState.cameraX + 900);
+
+    // 更新敌人
+    enemies.forEach(e => e.update(player, platforms));
+    enemies = enemies.filter(e => !e.markedForDeletion);
+
+    // 更新粒子
+    particles.forEach(p => p.update());
+    particles = particles.filter(p => !p.markedForDeletion);
+
+    // 碰撞检测：子弹击中
+    bullets.forEach(b => {
+        if (b.isPlayer) {
+            enemies.forEach(e => {
+                if (b.x < e.x + e.w && b.x + 6 > e.x && b.y < e.y + e.h && b.y + 6 > e.y) {
+                    e.takeDamage(10);
+                    b.markedForDeletion = true;
+                    createExplosion(b.x, b.y, 3);
+                }
+            });
+        } else {
+            if (b.x < player.x + player.w && b.x + 6 > player.x && b.y < player.y + player.h && b.y + 6 > player.y) {
+                player.takeDamage(10);
+                b.markedForDeletion = true;
+            }
+        }
+    });
+
+    // 碰撞检测：玩家碰敌人
+    enemies.forEach(e => {
+        if (player.x < e.x + e.w && player.x + player.w > e.x && player.y < e.y + e.h && player.y + player.h > e.y) {
+            player.takeDamage(5);
+        }
+    });
+
+    // UI更新
+    document.getElementById('score').innerText = gameState.score.toString().padStart(6, '0');
+    document.getElementById('level').innerText = gameState.currentLevel;
+
+    gameState.frame++;
+}
+
+function draw() {
+    // 清空画布
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 震动应用
+    ctx.save();
+    if (gameState.shake > 0) {
+        let dx = (Math.random() - 0.5) * gameState.shake;
+        let dy = (Math.random() - 0.5) * gameState.shake;
+        ctx.translate(dx, dy);
+    }
+
+    // 绘制背景 (简单的视差)
+    ctx.fillStyle = '#2ecc71'; // 远山
+    ctx.beginPath();
+    ctx.moveTo(0, 450);
+    for(let i=0; i<=800; i+=50) {
+        ctx.lineTo(i, 350 - Math.sin((i + gameState.cameraX * 0.5) * 0.01) * 50);
+    }
+    ctx.lineTo(800, 450);
+    ctx.fill();
+
+    // 绘制平台
+    platforms.forEach(p => {
+        if (p.x - gameState.cameraX > 800 || p.x + p.w - gameState.cameraX < 0) return;
+        
+        if (p.type === 'solid') {
+            ctx.fillStyle = '#795548'; // 泥土
+            ctx.fillRect(p.x - gameState.cameraX, p.y, p.w, p.h);
+            ctx.fillStyle = '#27ae60'; // 草皮
+            ctx.fillRect(p.x - gameState.cameraX, p.y, p.w, 10);
+        } else {
+            ctx.fillStyle = '#555'; // 钢板
+            ctx.fillRect(p.x - gameState.cameraX, p.y, p.w, 10);
+        }
+    });
+
+    // 绘制实体
+    enemies.forEach(e => e.draw(ctx, gameState.cameraX));
+    player.draw(ctx, gameState.cameraX);
+    bullets.forEach(b => b.draw(ctx, gameState.cameraX));
+    particles.forEach(p => p.draw(ctx, gameState.cameraX));
+
+    ctx.restore();
+    
+    if (gameState.running) requestAnimationFrame(() => { update(); draw(); });
+}
+
+function startGame() {
+    if (gameState.running) return;
+    Sound.init();
+    Sound.missionStart();
+    document.getElementById('overlay').style.display = 'none';
+
+    // 加载第一个关卡
+    loadLevel(1);
+
+    gameState.running = true;
+    draw();
+}
+
+// 键盘监听
+window.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = true;
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = true;
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+    if (e.key === ' ' && !keys.jump) { keys.jump = true; keys.jumpPressed = true; }
+    if ((e.key === 'j' || e.key === 'J' || e.key === 'z' || e.key === 'Z') && !keys.shoot) { keys.shoot = true; keys.shootPressed = true; }
+});
+
+window.addEventListener('keyup', e => {
+    if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') keys.up = false;
+    if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') keys.down = false;
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+    if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+    if (e.key === ' ') keys.jump = false;
+    if (e.key === 'j' || e.key === 'J' || e.key === 'z' || e.key === 'Z') keys.shoot = false;
+});
+
+</script>
+</body>
+</html>

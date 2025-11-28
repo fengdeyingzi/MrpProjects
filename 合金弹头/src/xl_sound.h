@@ -3,7 +3,7 @@
 #include <mrc_base.h>
 
 
-//加载音频文件(mid/mp3格式) 返回音频文件id
+//加载音频文件 返回音频文件id
 int32 soundLoad(char *filename);
 
 //播放音频文件

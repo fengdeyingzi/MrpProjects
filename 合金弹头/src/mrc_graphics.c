@@ -1725,25 +1725,33 @@ void gl_drawColor(uint32 color)
 void gl_clearScreen(int32 r, int32 g, int32 b)
 {
   int i;
+  int copyLines;
   uint16 color = MAKERGB(r, g, b);
   uint16 *buffer = w_getScreenBuffer();
+  mrc_printf("clearScreen.....");
   if ((color >> 8) == (color & 0xff))
   {
-    // mrc_printf("memset screen");
+    /* 优化路径：当颜色的高低字节相等时，可以用memset */
     mrc_memset(buffer, color, SCRW * SCRH * 2);
+    mrc_printf("clearScreen..... %d", SCRW * SCRH * 2);
   }
   else
   {
-    // mrc_printf("memcpy screen with color");
+    /* 通用路径：先填充第一行，然后使用倍增法复制 */
+    /* 第一步：填充第一行 */
     for (i = 0; i < SCRW; i++)
     {
       buffer[i] = color;
     }
-    for (i = 0; i < SCRH / 2; i++)
+
+    /* 第二步：使用倍增法复制到剩余行 */
+    /* 每次将已填充的部分翻倍，直到填满整个屏幕 */
+    for (i = 1; i < SCRH; i *= 2)
     {
-      mrc_memcpy(buffer + i * SCRW, (const void *)buffer, SCRW * 2);
+      mrc_printf("clearScreen.....%d - %d", i, SCRW * SCRH * 2);
+       copyLines = (i * 2 <= SCRH) ? i : (SCRH - i);
+      mrc_memcpy(buffer + i * SCRW, buffer, copyLines * SCRW * 2);
     }
-    mrc_memcpy(buffer + SCRW * SCRH / 2, buffer, SCRW * SCRH);
   }
 }
 
@@ -1753,25 +1761,38 @@ void gl_drawRect(int32 x, int32 y, int32 w, int32 h, uint32 color)
   int ix, iy;
   uint16 *buffer = w_getScreenBuffer();
   int32 maxX, maxY;
+  int32 startX, startY;
 
   uint16 upcolor;
   uint16 upscrcolor = 0;
+
+  /* 计算实际绘制区域（裁剪到屏幕范围内） */
   maxX = MIN(SCRW, x + w);
   maxY = MIN(SCRH, y + h);
-  x = MAX(0, x);
-  y = MAX(0, y);
+  startX = MAX(0, x);
+  startY = MAX(0, y);
+
+  /* 如果矩形完全在屏幕外，直接返回 */
+  if (startX >= maxX || startY >= maxY) {
+    return;
+  }
 
   upcolor = blendColor888(upscrcolor, color);
   if ((color >> 24) == 0xff)
   {
-    // mrc_printf("drawRect mrc");
-    mrc_drawRect((int16)x, (int16)y, (int16)w, (int16)h, (uint8)(color >> 16) & 0xff, (uint8)(color >> 8) & 0xff, (uint8)color & 0xff);
+    /* 不透明矩形：使用系统函数 */
+    /* 注意：需要传递裁剪后的坐标和调整后的宽高 */
+    int32 clippedW = maxX - startX;
+    int32 clippedH = maxY - startY;
+    mrc_drawRect((int16)startX, (int16)startY, (int16)clippedW, (int16)clippedH,
+                 (uint8)(color >> 16) & 0xff, (uint8)(color >> 8) & 0xff, (uint8)color & 0xff);
   }
   else
   {
-    for (ix = x; ix < maxX; ix++)
+    /* 半透明矩形：手动混合 */
+    for (ix = startX; ix < maxX; ix++)
     {
-      for (iy = y; iy < maxY; iy++)
+      for (iy = startY; iy < maxY; iy++)
       {
         if (upscrcolor == *(buffer + SCRW * iy + ix))
         {
