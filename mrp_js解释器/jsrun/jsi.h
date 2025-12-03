@@ -262,5 +262,5 @@ struct js_State
 	js_Jumpbuf trybuf[JS_TRYLIMIT];
 };
 //xldebug
-void jsS_init();
+void jsS_init(void);
 #endif

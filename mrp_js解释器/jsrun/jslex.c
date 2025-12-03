@@ -1,7 +1,6 @@
 #include "jsi.h"
 #include "jslex.h"
 #include "utf.h"
-#include <stdio.h>
 #include <mrc_base.h>
 
 JS_NORETURN static void jsY_error(js_State *J, const char *fmt, ...) JS_PRINTFLIKE(2,3);
@@ -23,71 +22,91 @@ static void jsY_error(js_State *J, const char *fmt, ...)
 	js_throw(J);
 }
 
-static const char *tokenstring[] = {
-	"(end-of-file)",
-	"'\\x01'", "'\\x02'", "'\\x03'", "'\\x04'", "'\\x05'", "'\\x06'", "'\\x07'",
-	"'\\x08'", "'\\x09'", "'\\x0A'", "'\\x0B'", "'\\x0C'", "'\\x0D'", "'\\x0E'", "'\\x0F'",
-	"'\\x10'", "'\\x11'", "'\\x12'", "'\\x13'", "'\\x14'", "'\\x15'", "'\\x16'", "'\\x17'",
-	"'\\x18'", "'\\x19'", "'\\x1A'", "'\\x1B'", "'\\x1C'", "'\\x1D'", "'\\x1E'", "'\\x1F'",
-	"' '", "'!'", "'\"'", "'#'", "'$'", "'%'", "'&'", "'\\''",
-	"'('", "')'", "'*'", "'+'", "','", "'-'", "'.'", "'/'",
-	"'0'", "'1'", "'2'", "'3'", "'4'", "'5'", "'6'", "'7'",
-	"'8'", "'9'", "':'", "';'", "'<'", "'='", "'>'", "'?'",
-	"'@'", "'A'", "'B'", "'C'", "'D'", "'E'", "'F'", "'G'",
-	"'H'", "'I'", "'J'", "'K'", "'L'", "'M'", "'N'", "'O'",
-	"'P'", "'Q'", "'R'", "'S'", "'T'", "'U'", "'V'", "'W'",
-	"'X'", "'Y'", "'Z'", "'['", "'\'", "']'", "'^'", "'_'",
-	"'`'", "'a'", "'b'", "'c'", "'d'", "'e'", "'f'", "'g'",
-	"'h'", "'i'", "'j'", "'k'", "'l'", "'m'", "'n'", "'o'",
-	"'p'", "'q'", "'r'", "'s'", "'t'", "'u'", "'v'", "'w'",
-	"'x'", "'y'", "'z'", "'{'", "'|'", "'}'", "'~'", "'\\x7F'",
+static const char *tokenstring[320]; /* 运行时初始化，足够大以容纳所有token */
+#define TOKENSTRING_LEN 320
 
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-
-	"(identifier)", "(number)", "(string)", "(regexp)",
-
-	"'<='", "'>='", "'=='", "'!='", "'==='", "'!=='",
-	"'<<'", "'>>'", "'>>>'", "'&&'", "'||'",
-	"'+='", "'-='", "'*='", "'/='", "'%='",
-	"'<<='", "'>>='", "'>>>='", "'&='", "'|='", "'^='",
-	"'++'", "'--'",
-
-	"'break'", "'case'", "'catch'", "'continue'", "'debugger'",
-	"'default'", "'delete'", "'do'", "'else'", "'false'", "'finally'", "'for'",
-	"'function'", "'if'", "'in'", "'instanceof'", "'new'", "'null'", "'return'",
-	"'switch'", "'this'", "'throw'", "'true'", "'try'", "'typeof'", "'var'",
-	"'void'", "'while'", "'with'",
-};
+void jsY_inittokenstring(void) {
+	int i;
+	tokenstring[0] = "(end-of-file)";
+	tokenstring[1] = "'\\x01'"; tokenstring[2] = "'\\x02'"; tokenstring[3] = "'\\x03'"; tokenstring[4] = "'\\x04'";
+	tokenstring[5] = "'\\x05'"; tokenstring[6] = "'\\x06'"; tokenstring[7] = "'\\x07'"; tokenstring[8] = "'\\x08'";
+	tokenstring[9] = "'\\x09'"; tokenstring[10] = "'\\x0A'"; tokenstring[11] = "'\\x0B'"; tokenstring[12] = "'\\x0C'";
+	tokenstring[13] = "'\\x0D'"; tokenstring[14] = "'\\x0E'"; tokenstring[15] = "'\\x0F'"; tokenstring[16] = "'\\x10'";
+	tokenstring[17] = "'\\x11'"; tokenstring[18] = "'\\x12'"; tokenstring[19] = "'\\x13'"; tokenstring[20] = "'\\x14'";
+	tokenstring[21] = "'\\x15'"; tokenstring[22] = "'\\x16'"; tokenstring[23] = "'\\x17'"; tokenstring[24] = "'\\x18'";
+	tokenstring[25] = "'\\x19'"; tokenstring[26] = "'\\x1A'"; tokenstring[27] = "'\\x1B'"; tokenstring[28] = "'\\x1C'";
+	tokenstring[29] = "'\\x1D'"; tokenstring[30] = "'\\x1E'"; tokenstring[31] = "'\\x1F'"; tokenstring[32] = "' '";
+	tokenstring[33] = "'!'"; tokenstring[34] = "'\"'"; tokenstring[35] = "'#'"; tokenstring[36] = "'$'";
+	tokenstring[37] = "'%'"; tokenstring[38] = "'&'"; tokenstring[39] = "'\\''"; tokenstring[40] = "'('";
+	tokenstring[41] = "')'"; tokenstring[42] = "'*'"; tokenstring[43] = "'+'"; tokenstring[44] = "','";
+	tokenstring[45] = "'-'"; tokenstring[46] = "'.'"; tokenstring[47] = "'/'"; tokenstring[48] = "'0'";
+	tokenstring[49] = "'1'"; tokenstring[50] = "'2'"; tokenstring[51] = "'3'"; tokenstring[52] = "'4'";
+	tokenstring[53] = "'5'"; tokenstring[54] = "'6'"; tokenstring[55] = "'7'"; tokenstring[56] = "'8'";
+	tokenstring[57] = "'9'"; tokenstring[58] = "':'"; tokenstring[59] = "';'"; tokenstring[60] = "'<'";
+	tokenstring[61] = "'='"; tokenstring[62] = "'>'"; tokenstring[63] = "'?'"; tokenstring[64] = "'@'";
+	tokenstring[65] = "'A'"; tokenstring[66] = "'B'"; tokenstring[67] = "'C'"; tokenstring[68] = "'D'";
+	tokenstring[69] = "'E'"; tokenstring[70] = "'F'"; tokenstring[71] = "'G'"; tokenstring[72] = "'H'";
+	tokenstring[73] = "'I'"; tokenstring[74] = "'J'"; tokenstring[75] = "'K'"; tokenstring[76] = "'L'";
+	tokenstring[77] = "'M'"; tokenstring[78] = "'N'"; tokenstring[79] = "'O'"; tokenstring[80] = "'P'";
+	tokenstring[81] = "'Q'"; tokenstring[82] = "'R'"; tokenstring[83] = "'S'"; tokenstring[84] = "'T'";
+	tokenstring[85] = "'U'"; tokenstring[86] = "'V'"; tokenstring[87] = "'W'"; tokenstring[88] = "'X'";
+	tokenstring[89] = "'Y'"; tokenstring[90] = "'Z'"; tokenstring[91] = "'['"; tokenstring[92] = "'\\'";
+	tokenstring[93] = "']'"; tokenstring[94] = "'^'"; tokenstring[95] = "'_'"; tokenstring[96] = "'`'";
+	tokenstring[97] = "'a'"; tokenstring[98] = "'b'"; tokenstring[99] = "'c'"; tokenstring[100] = "'d'";
+	tokenstring[101] = "'e'"; tokenstring[102] = "'f'"; tokenstring[103] = "'g'"; tokenstring[104] = "'h'";
+	tokenstring[105] = "'i'"; tokenstring[106] = "'j'"; tokenstring[107] = "'k'"; tokenstring[108] = "'l'";
+	tokenstring[109] = "'m'"; tokenstring[110] = "'n'"; tokenstring[111] = "'o'"; tokenstring[112] = "'p'";
+	tokenstring[113] = "'q'"; tokenstring[114] = "'r'"; tokenstring[115] = "'s'"; tokenstring[116] = "'t'";
+	tokenstring[117] = "'u'"; tokenstring[118] = "'v'"; tokenstring[119] = "'w'"; tokenstring[120] = "'x'";
+	tokenstring[121] = "'y'"; tokenstring[122] = "'z'"; tokenstring[123] = "'{'"; tokenstring[124] = "'|'";
+	tokenstring[125] = "'}'"; tokenstring[126] = "'~'"; tokenstring[127] = "'\\x7F'";
+	for (i = 128; i < 256; i++) tokenstring[i] = 0; /* 128-255 are NULL */
+	/* TK_IDENTIFIER=256 开始 */
+	tokenstring[256] = "(identifier)"; tokenstring[257] = "(number)";
+	tokenstring[258] = "(string)"; tokenstring[259] = "(regexp)";
+	/* operators: TK_LE=260 开始 */
+	tokenstring[260] = "'<='"; tokenstring[261] = "'>='"; tokenstring[262] = "'=='";
+	tokenstring[263] = "'!='"; tokenstring[264] = "'==='"; tokenstring[265] = "'!=='";
+	tokenstring[266] = "'<<'"; tokenstring[267] = "'>>'"; tokenstring[268] = "'>>>'";
+	tokenstring[269] = "'&&'"; tokenstring[270] = "'||'"; tokenstring[271] = "'+='";
+	tokenstring[272] = "'-='"; tokenstring[273] = "'*='"; tokenstring[274] = "'/='";
+	tokenstring[275] = "'%='"; tokenstring[276] = "'<<='"; tokenstring[277] = "'>>='";
+	tokenstring[278] = "'>>>='"; tokenstring[279] = "'&='"; tokenstring[280] = "'|='";
+	tokenstring[281] = "'^='"; tokenstring[282] = "'++'"; tokenstring[283] = "'--'";
+	/* keywords: TK_BREAK=284 开始 */
+	tokenstring[284] = "'break'"; tokenstring[285] = "'case'"; tokenstring[286] = "'catch'";
+	tokenstring[287] = "'continue'"; tokenstring[288] = "'debugger'"; tokenstring[289] = "'default'";
+	tokenstring[290] = "'delete'"; tokenstring[291] = "'do'"; tokenstring[292] = "'else'";
+	tokenstring[293] = "'false'"; tokenstring[294] = "'finally'"; tokenstring[295] = "'for'";
+	tokenstring[296] = "'function'"; tokenstring[297] = "'if'"; tokenstring[298] = "'in'";
+	tokenstring[299] = "'instanceof'"; tokenstring[300] = "'new'"; tokenstring[301] = "'null'";
+	tokenstring[302] = "'return'"; tokenstring[303] = "'switch'"; tokenstring[304] = "'this'";
+	tokenstring[305] = "'throw'"; tokenstring[306] = "'true'"; tokenstring[307] = "'try'";
+	tokenstring[308] = "'typeof'"; tokenstring[309] = "'var'"; tokenstring[310] = "'void'";
+	tokenstring[311] = "'while'"; tokenstring[312] = "'with'";
+}
 
 const char *jsY_tokenstring(int token)
 {
-	if (token >= 0 && token < (int)nelem(tokenstring))
+	if (token >= 0 && token < (int)TOKENSTRING_LEN)
 		if (tokenstring[token])
 			return tokenstring[token];
 	return "<unknown>";
 }
 
-static const char *keywords[] = {
-	"break", "case", "catch", "continue", "debugger", "default", "delete",
-	"do", "else", "false", "finally", "for", "function", "if", "in",
-	"instanceof", "new", "null", "return", "switch", "this", "throw",
-	"true", "try", "typeof", "var", "void", "while", "with",
-};
+char keywords_storage[29][12]; /* 存储关键字字符串 */
+const char *keywords[29]; /* 指向keywords_storage的指针数组 */
+#define KEYWORDS_LEN 29
 
 int jsY_findword(const char *s, const char **list, int num)
 {
+	int m, c;
 	int l = 0;
 	int r = num - 1;
 	while (l <= r) {
-		int m = (l + r) >> 1;
-		int c = strcmp(s, list[m]);
+		m = (l + r) >> 1;
+		c = strcmp(s, list[m]);
+		mrc_printf("strcmp %s, %s", s, list[m]);
 		if (c < 0)
 			r = m - 1;
 		else if (c > 0)
@@ -100,11 +119,12 @@ int jsY_findword(const char *s, const char **list, int num)
 
 static int jsY_findkeyword(js_State *J, const char *s)
 {
-	int i = jsY_findword(s, keywords, nelem(keywords));
+	int i = jsY_findword(s, keywords, KEYWORDS_LEN);
 	if (i >= 0) {
 		J->text = keywords[i];
 		return TK_BREAK + i; /* first keyword + i */
 	}
+	mrc_printf("jsY_findkeyword: not found, identifier '%s'\n", s);
 	J->text = js_intern(J, s);
 	return TK_IDENTIFIER;
 }
@@ -451,7 +471,7 @@ static int lexstring(js_State *J)
 	jsY_expect(J, q);
 
 	s = textend(J);
-
+	mrc_printf("lexstring: '%s'\n", s);
 	J->text = js_intern(J, s);
 	return TK_STRING;
 }
@@ -525,7 +545,7 @@ static int lexregexp(js_State *J)
 
 	if (g > 1 || i > 1 || m > 1)
 		jsY_error(J, "duplicated flag in regular expression");
-
+	mrc_printf("lexregexp: /%s/ %s%s%s\n", s, g ? "g" : "", i ? "i" : "", m ? "m" : "");
 	J->text = js_intern(J, s);
 	J->number = 0;
 	if (g) J->number += JS_REGEXP_G;
@@ -830,7 +850,7 @@ static int lexjsonstring(js_State *J)
 	jsY_expect(J, '"');
 
 	s = textend(J);
-
+	mrc_printf("lexjsonstring: '%s'\n", s);
 	J->text = js_intern(J, s);
 	return TK_STRING;
 }

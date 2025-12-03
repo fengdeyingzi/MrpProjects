@@ -25,7 +25,7 @@ enum {
 	REG_NEWLINE = 2,
 
 	/* regexec flags */
-	REG_NOTBOL = 4,
+	REG_NOTBOL = 4
 };
 
 /* If you redefine REG_MAXSUB, you must make sure both the calling

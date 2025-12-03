@@ -103,7 +103,7 @@ static void Encode(js_State *J, const char *str, const char *unescaped)
 {
 	js_Buffer *sb = NULL;
 
-	static const char *HEX = "0123456789ABCDEF";
+	char *HEX = "0123456789ABCDEF";
 
 	if (js_try(J)) {
 		js_free(J, sb);
@@ -193,8 +193,7 @@ static void jsB_encodeURIComponent(js_State *J)
 
 void jsB_init(js_State *J)
 {
-	mrc_printf("jsB_init %d",1);
-	/* Create the prototype objects here, before the constructors */
+/* Create the prototype objects here, before the constructors */
 	J->Object_prototype = jsV_newobject(J, JS_COBJECT, NULL);
 	J->Array_prototype = jsV_newobject(J, JS_CARRAY, J->Object_prototype);
 	J->Function_prototype = jsV_newobject(J, JS_CCFUNCTION, J->Object_prototype);
@@ -203,8 +202,7 @@ void jsB_init(js_State *J)
 	J->String_prototype = jsV_newobject(J, JS_CSTRING, J->Object_prototype);
 	J->RegExp_prototype = jsV_newobject(J, JS_COBJECT, J->Object_prototype);
 	J->Date_prototype = jsV_newobject(J, JS_CDATE, J->Object_prototype);
-mrc_printf("jsB_init %d",2);
-	/* All the native error types */
+/* All the native error types */
 	J->Error_prototype = jsV_newobject(J, JS_CERROR, J->Object_prototype);
 	J->EvalError_prototype = jsV_newobject(J, JS_CERROR, J->Error_prototype);
 	J->RangeError_prototype = jsV_newobject(J, JS_CERROR, J->Error_prototype);
@@ -212,31 +210,19 @@ mrc_printf("jsB_init %d",2);
 	J->SyntaxError_prototype = jsV_newobject(J, JS_CERROR, J->Error_prototype);
 	J->TypeError_prototype = jsV_newobject(J, JS_CERROR, J->Error_prototype);
 	J->URIError_prototype = jsV_newobject(J, JS_CERROR, J->Error_prototype);
-mrc_printf("jsB_init %d",3);
-	/* Create the constructors and fill out the prototype objects */
+/* Create the constructors and fill out the prototype objects */
 	jsB_initobject(J);
-	mrc_printf("jsB_init %d",311);
-	jsB_initarray(J);
-	mrc_printf("jsB_init %d",312);
-	jsB_initfunction(J);
-	mrc_printf("jsB_init %d",313);
-	jsB_initboolean(J);
-	mrc_printf("jsB_init %d",314);
-	jsB_initnumber(J);
-	mrc_printf("jsB_init %d",315);
-	jsB_initstring(J);
-	mrc_printf("jsB_init %d",316);
-	jsB_initregexp(J);
-	mrc_printf("jsB_init %d",317);
-	jsB_initdate(J);
-	mrc_printf("jsB_init %d",318);
-	jsB_initerror(J);
-	mrc_printf("jsB_init %d",319);
-	// jsB_initmath(J); //xldebug
-	mrc_printf("jsB_init %d",320);
-	jsB_initjson(J);
-mrc_printf("jsB_init %d",4);
-	/* Initialize the global object */
+jsB_initarray(J);
+jsB_initfunction(J);
+jsB_initboolean(J);
+jsB_initnumber(J);
+jsB_initstring(J);
+jsB_initregexp(J);
+jsB_initdate(J);
+jsB_initerror(J);
+// jsB_initmath(J); //xldebug
+jsB_initjson(J);
+/* Initialize the global object */
 	js_pushnumber(J, NAN);
 	js_defglobal(J, "NaN", JS_READONLY | JS_DONTENUM | JS_DONTCONF);
 
@@ -255,5 +241,4 @@ mrc_printf("jsB_init %d",4);
 	jsB_globalf(J, "decodeURIComponent", jsB_decodeURIComponent, 1);
 	jsB_globalf(J, "encodeURI", jsB_encodeURI, 1);
 	jsB_globalf(J, "encodeURIComponent", jsB_encodeURIComponent, 1);
-	mrc_printf("jsB_init %d",5);
 }

@@ -34,41 +34,66 @@ void jsC_error(js_State *J, js_Ast *node, const char *fmt, ...)
 	js_throw(J);
 }
 
-static const char *futurewords[] = {
-	"class", "const", "enum", "export", "extends", "import", "super",
-};
+static const char *futurewords[7]; /* 运行时初始化 */
+static const char *strictfuturewords[9]; /* 运行时初始化 */
+#define FUTUREWORDS_SIZE 7
+#define STRICTFUTUREWORDS_SIZE 9
 
-static const char *strictfuturewords[] = {
-	"implements", "interface", "let", "package", "private", "protected",
-	"public", "static", "yield",
-};
+void jsC_initfuturewords(void) {
+	futurewords[0] = "class";
+	futurewords[1] = "const";
+	futurewords[2] = "enum";
+	futurewords[3] = "export";
+	futurewords[4] = "extends";
+	futurewords[5] = "import";
+	futurewords[6] = "super";
+
+	strictfuturewords[0] = "implements";
+	strictfuturewords[1] = "interface";
+	strictfuturewords[2] = "let";
+	strictfuturewords[3] = "package";
+	strictfuturewords[4] = "private";
+	strictfuturewords[5] = "protected";
+	strictfuturewords[6] = "public";
+	strictfuturewords[7] = "static";
+	strictfuturewords[8] = "yield";
+}
 
 static void checkfutureword(JF, js_Ast *exp)
 {
-	if (jsY_findword(exp->string, futurewords, nelem(futurewords)) >= 0)
+	if (jsY_findword(exp->string, futurewords, FUTUREWORDS_SIZE) >= 0)
 		jsC_error(J, exp, "'%s' is a future reserved word", exp->string);
 	if (F->strict) {
-		if (jsY_findword(exp->string, strictfuturewords, nelem(strictfuturewords)) >= 0)
+		if (jsY_findword(exp->string, strictfuturewords, STRICTFUTUREWORDS_SIZE) >= 0)
 			jsC_error(J, exp, "'%s' is a strict mode future reserved word", exp->string);
 	}
 }
 
 static js_Function *newfun(js_State *J, int line, js_Ast *name, js_Ast *params, js_Ast *body, int script, int default_strict)
 {
-	js_Function *F = js_malloc(J, sizeof *F);
+	js_Function *F;
+	
+	F = js_malloc(J, sizeof *F);
+	
 	memset(F, 0, sizeof *F);
+	
 	F->gcmark = 0;
 	F->gcnext = J->gcfun;
 	J->gcfun = F;
 	++J->gccounter;
+	
 
+	mrc_printf("Creating new function object\n");
 	F->filename = js_intern(J, J->filename);
+	mrc_printf("Creating function at %s:%d\n", F->filename, line);
 	F->line = line;
 	F->script = script;
 	F->strict = default_strict;
 	F->name = name ? name->string : "";
+	mrc_printf("Function name: %s\n", F->name);
 
 	cfunbody(J, F, name, params, body);
+	
 
 	return F;
 }
@@ -372,11 +397,13 @@ static void cobject(JF, js_Ast *list)
 			emit(J, F, OP_INITPROP);
 			break;
 		case EXP_PROP_GET:
+		
 			emitfunction(J, F, newfun(J, prop->line, NULL, NULL, kv->c, 0, F->strict));
 			emitline(J, F, kv);
 			emit(J, F, OP_INITGETTER);
 			break;
 		case EXP_PROP_SET:
+		
 			emitfunction(J, F, newfun(J, prop->line, NULL, kv->b, kv->c, 0, F->strict));
 			emitline(J, F, kv);
 			emit(J, F, OP_INITSETTER);
@@ -651,6 +678,7 @@ static void cexp(JF, js_Ast *exp)
 
 	case EXP_FUN:
 		emitline(J, F, exp);
+		
 		emitfunction(J, F, newfun(J, exp->line, exp->a, exp->b, exp->c, 0, F->strict));
 		break;
 
@@ -1385,6 +1413,7 @@ static void cfundecs(JF, js_Ast *list)
 		js_Ast *stm = list->a;
 		if (stm->type == AST_FUNDEC) {
 			emitline(J, F, stm);
+			
 			emitfunction(J, F, newfun(J, stm->line, stm->a, stm->b, stm->c, 0, F->strict));
 			emitline(J, F, stm);
 			emit(J, F, OP_SETLOCAL);
@@ -1440,10 +1469,12 @@ static void cfunbody(JF, js_Ast *name, js_Ast *params, js_Ast *body)
 
 js_Function *jsC_compilefunction(js_State *J, js_Ast *prog)
 {
+	
 	return newfun(J, prog->line, prog->a, prog->b, prog->c, 0, J->default_strict);
 }
 
 js_Function *jsC_compilescript(js_State *J, js_Ast *prog, int default_strict)
 {
+	
 	return newfun(J, prog ? prog->line : 0, NULL, NULL, prog, 1, default_strict);
 }

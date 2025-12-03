@@ -285,7 +285,6 @@ char *UCS2BEStrToUTF8Str(const uint8 *unicode, uint32 *outMemLen) {
 
 /*
 #include <fcntl.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <unistd.h>

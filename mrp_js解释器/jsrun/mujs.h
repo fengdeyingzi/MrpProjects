@@ -68,21 +68,21 @@ void js_endtry(js_State *J);
 
 /* State constructor flags */
 enum {
-	JS_STRICT = 1,
+	JS_STRICT = 1
 };
 
 /* RegExp flags */
 enum {
 	JS_REGEXP_G = 1,
 	JS_REGEXP_I = 2,
-	JS_REGEXP_M = 4,
+	JS_REGEXP_M = 4
 };
 
 /* Property attribute flags */
 enum {
 	JS_READONLY = 1,
 	JS_DONTENUM = 2,
-	JS_DONTCONF = 4,
+	JS_DONTCONF = 4
 };
 
 void js_report(js_State *J, const char *message);

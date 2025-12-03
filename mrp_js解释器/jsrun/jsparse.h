@@ -111,7 +111,7 @@ enum js_AstType
 
 	STM_LABEL,
 	STM_CASE,
-	STM_DEFAULT,
+	STM_DEFAULT
 };
 
 typedef struct js_JumpList js_JumpList;

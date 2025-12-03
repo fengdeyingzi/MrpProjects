@@ -19,7 +19,7 @@ enum js_Type {
 	JS_TNUMBER,
 	JS_TLITSTR,
 	JS_TMEMSTR,
-	JS_TOBJECT,
+	JS_TOBJECT
 };
 
 enum js_Class {
@@ -39,7 +39,7 @@ enum js_Class {
 	JS_CJSON,
 	JS_CARGUMENTS,
 	JS_CITERATOR,
-	JS_CUSERDATA,
+	JS_CUSERDATA
 };
 
 /*
@@ -186,5 +186,5 @@ void js_dumpobject(js_State *J, js_Object *obj);
 void js_dumpvalue(js_State *J, js_Value v);
 
 //xldebug
-void jsV_init();
+void jsV_init(void);
 #endif

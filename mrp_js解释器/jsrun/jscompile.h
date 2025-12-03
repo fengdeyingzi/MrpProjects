@@ -104,7 +104,7 @@ enum js_OpCode
 	OP_JUMP,
 	OP_JTRUE,
 	OP_JFALSE,
-	OP_RETURN,
+	OP_RETURN
 };
 
 struct js_Function

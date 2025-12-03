@@ -12,7 +12,6 @@
  * OF THIS SOFTWARE OR ITS FITNESS FOR ANY PARTICULAR PURPOSE.
  */
 #include <stdlib.h>
-#include <string.h>
 
 #include "utf.h"
 

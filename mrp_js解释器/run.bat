@@ -1,0 +1,30 @@
+mrpbuilder -t build -o test.mrp -Isrc -I. -i src/ assets/ base.c jsrun/mrc_math.c ^
+jsrun/hello.c ^
+jsrun/jscapp.c ^
+jsrun/jsarray.c ^
+jsrun/jsboolean.c ^
+jsrun/jsbuiltin.c  ^
+jsrun/jscompile.c ^
+jsrun/jsdate.c ^
+jsrun/jsdtoa.c ^
+jsrun/jsdump.c ^
+jsrun/jserror.c ^
+jsrun/jsfunction.c ^
+jsrun/jsgc.c ^
+jsrun/jsintern.c ^
+jsrun/jslex.c ^
+jsrun/jsmath.c ^
+jsrun/jsnumber.c ^
+jsrun/jsobject.c ^
+jsrun/json.c ^
+jsrun/jsparse.c ^
+jsrun/jsproperty.c ^
+jsrun/jsregexp.c ^
+jsrun/jsrepr.c ^
+jsrun/jsstate.c ^
+jsrun/jsstring.c ^
+jsrun/jsvalue.c ^
+jsrun/jsrun.c ^
+jsrun/regexp.c ^
+jsrun/utf.c ^
+jsrun/utftype.c  

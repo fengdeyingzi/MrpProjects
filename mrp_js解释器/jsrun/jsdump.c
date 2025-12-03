@@ -6,29 +6,23 @@
 #include "utf.h"
 #include <mrc_base.h>
 #include <assert.h>
+#include "base.h"
 
-static const char *astname[] = {
-#include "astnames.h"
-NULL
-};
-
-static const char *opname[] = {
-#include "opnames.h"
-NULL
-};
+static char astname[94][32];
+static char opname[84][32];
 
 static int minify = 0;
 
 const char *jsP_aststring(enum js_AstType type)
 {
-	if (type < nelem(astname)-1)
+	if (type < 92)
 		return astname[type];
 	return "<unknown>";
 }
 
 const char *jsC_opcodestring(enum js_OpCode opcode)
 {
-	if (opcode < nelem(opname)-1)
+	if (opcode < 83)
 		return opname[opcode];
 	return "<unknown>";
 }
@@ -254,7 +248,7 @@ static void pobject(int d, js_Ast *list)
 
 static void pstr(const char *s)
 {
-	static const char *HEX = "0123456789ABCDEF";
+	char *HEX = "0123456789ABCDEF";
 	Rune c;
 	pc(minify ? '\'' : '"');
 	while (*s) {
@@ -921,4 +915,189 @@ void js_dumpobject(js_State *J, js_Object *obj)
 	if (obj->properties->level)
 		js_dumpproperty(J, obj->properties);
 	mrc_printf("}\n");
+}
+
+void jsP_initnames(void)
+{
+	/* 初始化astname数组 */
+	strcpy(astname[0], "list");
+	strcpy(astname[1], "fundec");
+	strcpy(astname[2], "identifier");
+	strcpy(astname[3], "exp_identifier");
+	strcpy(astname[4], "exp_number");
+	strcpy(astname[5], "exp_string");
+	strcpy(astname[6], "exp_regexp");
+	strcpy(astname[7], "exp_undef");
+	strcpy(astname[8], "exp_null");
+	strcpy(astname[9], "exp_true");
+	strcpy(astname[10], "exp_false");
+	strcpy(astname[11], "exp_this");
+	strcpy(astname[12], "exp_array");
+	strcpy(astname[13], "exp_object");
+	strcpy(astname[14], "exp_prop_val");
+	strcpy(astname[15], "exp_prop_get");
+	strcpy(astname[16], "exp_prop_set");
+	strcpy(astname[17], "exp_fun");
+	strcpy(astname[18], "exp_index");
+	strcpy(astname[19], "exp_member");
+	strcpy(astname[20], "exp_call");
+	strcpy(astname[21], "exp_new");
+	strcpy(astname[22], "exp_postinc");
+	strcpy(astname[23], "exp_postdec");
+	strcpy(astname[24], "exp_delete");
+	strcpy(astname[25], "exp_void");
+	strcpy(astname[26], "exp_typeof");
+	strcpy(astname[27], "exp_preinc");
+	strcpy(astname[28], "exp_predec");
+	strcpy(astname[29], "exp_pos");
+	strcpy(astname[30], "exp_neg");
+	strcpy(astname[31], "exp_bitnot");
+	strcpy(astname[32], "exp_lognot");
+	strcpy(astname[33], "exp_mod");
+	strcpy(astname[34], "exp_div");
+	strcpy(astname[35], "exp_mul");
+	strcpy(astname[36], "exp_sub");
+	strcpy(astname[37], "exp_add");
+	strcpy(astname[38], "exp_ushr");
+	strcpy(astname[39], "exp_shr");
+	strcpy(astname[40], "exp_shl");
+	strcpy(astname[41], "exp_in");
+	strcpy(astname[42], "exp_instanceof");
+	strcpy(astname[43], "exp_ge");
+	strcpy(astname[44], "exp_le");
+	strcpy(astname[45], "exp_gt");
+	strcpy(astname[46], "exp_lt");
+	strcpy(astname[47], "exp_strictne");
+	strcpy(astname[48], "exp_stricteq");
+	strcpy(astname[49], "exp_ne");
+	strcpy(astname[50], "exp_eq");
+	strcpy(astname[51], "exp_bitand");
+	strcpy(astname[52], "exp_bitxor");
+	strcpy(astname[53], "exp_bitor");
+	strcpy(astname[54], "exp_logand");
+	strcpy(astname[55], "exp_logor");
+	strcpy(astname[56], "exp_cond");
+	strcpy(astname[57], "exp_ass");
+	strcpy(astname[58], "exp_ass_mul");
+	strcpy(astname[59], "exp_ass_div");
+	strcpy(astname[60], "exp_ass_mod");
+	strcpy(astname[61], "exp_ass_add");
+	strcpy(astname[62], "exp_ass_sub");
+	strcpy(astname[63], "exp_ass_shl");
+	strcpy(astname[64], "exp_ass_shr");
+	strcpy(astname[65], "exp_ass_ushr");
+	strcpy(astname[66], "exp_ass_bitand");
+	strcpy(astname[67], "exp_ass_bitxor");
+	strcpy(astname[68], "exp_ass_bitor");
+	strcpy(astname[69], "exp_comma");
+	strcpy(astname[70], "exp_var");
+	strcpy(astname[71], "stm_block");
+	strcpy(astname[72], "stm_empty");
+	strcpy(astname[73], "stm_var");
+	strcpy(astname[74], "stm_if");
+	strcpy(astname[75], "stm_do");
+	strcpy(astname[76], "stm_while");
+	strcpy(astname[77], "stm_for");
+	strcpy(astname[78], "stm_for_var");
+	strcpy(astname[79], "stm_for_in");
+	strcpy(astname[80], "stm_for_in_var");
+	strcpy(astname[81], "stm_continue");
+	strcpy(astname[82], "stm_break");
+	strcpy(astname[83], "stm_return");
+	strcpy(astname[84], "stm_with");
+	strcpy(astname[85], "stm_switch");
+	strcpy(astname[86], "stm_throw");
+	strcpy(astname[87], "stm_try");
+	strcpy(astname[88], "stm_debugger");
+	strcpy(astname[89], "stm_label");
+	strcpy(astname[90], "stm_case");
+	strcpy(astname[91], "stm_default");
+	strcpy(astname[92], "");
+	strcpy(astname[93], "");
+
+	/* 初始化opname数组 */
+	strcpy(opname[0], "pop");
+	strcpy(opname[1], "dup");
+	strcpy(opname[2], "dup2");
+	strcpy(opname[3], "rot2");
+	strcpy(opname[4], "rot3");
+	strcpy(opname[5], "rot4");
+	strcpy(opname[6], "integer");
+	strcpy(opname[7], "number");
+	strcpy(opname[8], "string");
+	strcpy(opname[9], "closure");
+	strcpy(opname[10], "newarray");
+	strcpy(opname[11], "newobject");
+	strcpy(opname[12], "newregexp");
+	strcpy(opname[13], "undef");
+	strcpy(opname[14], "null");
+	strcpy(opname[15], "true");
+	strcpy(opname[16], "false");
+	strcpy(opname[17], "this");
+	strcpy(opname[18], "current");
+	strcpy(opname[19], "getlocal");
+	strcpy(opname[20], "setlocal");
+	strcpy(opname[21], "dellocal");
+	strcpy(opname[22], "hasvar");
+	strcpy(opname[23], "getvar");
+	strcpy(opname[24], "setvar");
+	strcpy(opname[25], "delvar");
+	strcpy(opname[26], "in");
+	strcpy(opname[27], "initprop");
+	strcpy(opname[28], "initgetter");
+	strcpy(opname[29], "initsetter");
+	strcpy(opname[30], "getprop");
+	strcpy(opname[31], "getprop_s");
+	strcpy(opname[32], "setprop");
+	strcpy(opname[33], "setprop_s");
+	strcpy(opname[34], "delprop");
+	strcpy(opname[35], "delprop_s");
+	strcpy(opname[36], "iterator");
+	strcpy(opname[37], "nextiter");
+	strcpy(opname[38], "eval");
+	strcpy(opname[39], "call");
+	strcpy(opname[40], "new");
+	strcpy(opname[41], "typeof");
+	strcpy(opname[42], "pos");
+	strcpy(opname[43], "neg");
+	strcpy(opname[44], "bitnot");
+	strcpy(opname[45], "lognot");
+	strcpy(opname[46], "inc");
+	strcpy(opname[47], "dec");
+	strcpy(opname[48], "postinc");
+	strcpy(opname[49], "postdec");
+	strcpy(opname[50], "mul");
+	strcpy(opname[51], "div");
+	strcpy(opname[52], "mod");
+	strcpy(opname[53], "add");
+	strcpy(opname[54], "sub");
+	strcpy(opname[55], "shl");
+	strcpy(opname[56], "shr");
+	strcpy(opname[57], "ushr");
+	strcpy(opname[58], "lt");
+	strcpy(opname[59], "gt");
+	strcpy(opname[60], "le");
+	strcpy(opname[61], "ge");
+	strcpy(opname[62], "eq");
+	strcpy(opname[63], "ne");
+	strcpy(opname[64], "stricteq");
+	strcpy(opname[65], "strictne");
+	strcpy(opname[66], "jcase");
+	strcpy(opname[67], "bitand");
+	strcpy(opname[68], "bitxor");
+	strcpy(opname[69], "bitor");
+	strcpy(opname[70], "instanceof");
+	strcpy(opname[71], "throw");
+	strcpy(opname[72], "try");
+	strcpy(opname[73], "endtry");
+	strcpy(opname[74], "catch");
+	strcpy(opname[75], "endcatch");
+	strcpy(opname[76], "with");
+	strcpy(opname[77], "endwith");
+	strcpy(opname[78], "debugger");
+	strcpy(opname[79], "jump");
+	strcpy(opname[80], "jtrue");
+	strcpy(opname[81], "jfalse");
+	strcpy(opname[82], "return");
+	strcpy(opname[83], "");
 }

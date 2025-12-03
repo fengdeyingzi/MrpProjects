@@ -23,6 +23,7 @@ static js_Property sentinel;
 static js_Property *newproperty(js_State *J, js_Object *obj, const char *name)
 {
 	js_Property *node = js_malloc(J, sizeof *node);
+	mrc_printf("newproperty: name='%s'\n", name);
 	node->name = js_intern(J, name);
 	node->left = node->right = &sentinel;
 	node->level = 1;
@@ -269,6 +270,7 @@ js_Object *jsV_newiterator(js_State *J, js_Object *obj, int own)
 			js_itoa(buf, k);
 			if (!jsV_getenumproperty(J, obj, buf)) {
 				js_Iterator *node = js_malloc(J, sizeof *node);
+				mrc_printf("jsV_newiterator: adding string index '%s'\n", buf);
 				node->name = js_intern(J, js_itoa(buf, k));
 				node->next = NULL;
 				if (!tail)
@@ -339,6 +341,9 @@ void jsV_init(){
 	sentinel.right = &sentinel;
 	sentinel.level = 0;
 	sentinel.atts = 0;
+	/* 初始化 value 为 undefined */
+	sentinel.value.type = JS_TUNDEFINED;
+	sentinel.value.u.number = 0;
 	sentinel.getter = NULL;
 	sentinel.setter = NULL;
 }

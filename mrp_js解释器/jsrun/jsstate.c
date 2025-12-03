@@ -12,19 +12,30 @@
 
 static void *js_defaultalloc(void *actx, void *ptr, int size)
 {
+	void *result;
 #ifndef __has_feature
 #define __has_feature(x) 0
 #endif
-#if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
+	/* size == 0 means free */
 	if (size == 0) {
-		free(ptr);
+		if (ptr) {
+			
+			free(ptr);
+		}
 		return NULL;
 	}
-#endif
+
+	/* ptr == NULL means malloc */
     if(ptr == NULL){
-		return malloc((size_t)size);
+		result = malloc((size_t)size);
+		
+		return result;
 	}
-	return realloc(ptr, (size_t)size);
+
+	/* Otherwise realloc */
+	result = realloc(ptr, (size_t)size);
+	
+	return result;
 
 }
 
@@ -110,19 +121,22 @@ static void js_loadstringx(js_State *J, const char *filename, const char *source
 {
 	js_Ast *P;
 	js_Function *F;
-	mrc_printf("js_loadstringx %d",1);
+	
 	if (js_try(J)) {
 		jsP_freeparse(J);
 		js_throw(J);
 	}
-mrc_printf("js_loadstringx %d",2);
+
 	P = jsP_parse(J, filename, source);
-	mrc_printf("js_loadstringx %d",3);
+	
+	
 	F = jsC_compilescript(J, P, iseval ? J->strict : J->default_strict);
+	
 	jsP_freeparse(J);
-	mrc_printf("js_loadstringx %d",4);
+	
+	
 	js_newscript(J, F, iseval ? (J->strict ? J->E : NULL) : J->GE, iseval ? JS_CEVAL : JS_CSCRIPT);
-mrc_printf("js_loadstringx %d",5);
+
 	js_endtry(J);
 }
 
@@ -207,23 +221,23 @@ void js_loadfile(js_State *J, const char *filename)
 
 int js_dostring(js_State *J, const char *source)
 {
-	mrc_printf("js_dostring %d",1);
+	
 	if (js_try(J)) {
 		js_report(J, js_trystring(J, -1, "Error"));
 		js_pop(J, 1);
 		return 1;
 	}
-	mrc_printf("js_dostring %d",2);
+	
 	js_loadstring(J, "[string]", source);
-	mrc_printf("js_dostring %d",3);
+	
 	js_pushundefined(J);
-	mrc_printf("js_dostring %d",4);
+	
 	js_call(J, 0);
-	mrc_printf("js_dostring %d",5);
+	
 	js_pop(J, 1);
-	mrc_printf("js_dostring %d",6);
+	
 	js_endtry(J);
-	mrc_printf("js_dostring %d",7);
+	
 	return 0;
 }
 
@@ -273,10 +287,10 @@ void *js_getcontext(js_State *J)
 js_State *js_newstate(js_Alloc alloc, void *actx, int flags)
 {
 	js_State *J;
-    mrc_printf("js_newstate 1");
+    
 	assert(sizeof(js_Value) == 16);
 	assert(soffsetof(js_Value, type) == 15);
-mrc_printf("js_newstate 2");
+
 	if (!alloc)
 		alloc = js_defaultalloc;
 
@@ -284,17 +298,17 @@ mrc_printf("js_newstate 2");
 	if (!J)
 		return NULL;
 	memset(J, 0, sizeof(*J));
-	mrc_printf("js_newstate 3");
+	
 	J->actx = actx;
 	J->alloc = alloc;
-mrc_printf("js_newstate 4");
+
 	if (flags & JS_STRICT)
 		J->strict = J->default_strict = 1;
 
 	J->trace[0].name = "-top-";
 	J->trace[0].file = "native";
 	J->trace[0].line = 0;
-mrc_printf("js_newstate 5");
+
 	J->report = js_defaultreport;
 	J->panic = js_defaultpanic;
 
@@ -303,7 +317,7 @@ mrc_printf("js_newstate 5");
 		alloc(actx, NULL, 0);
 		return NULL;
 	}
-mrc_printf("js_newstate 6");
+
 	J->gcmark = 1;
 	J->nextref = 0;
 	J->gcthresh = 0; /* reaches stability within ~ 2-5 GC cycles */
@@ -312,8 +326,8 @@ mrc_printf("js_newstate 6");
 	J->G = jsV_newobject(J, JS_COBJECT, NULL);
 	J->E = jsR_newenvironment(J, J->G, NULL);
 	J->GE = J->E;
-mrc_printf("js_newstate 7");
+
 	jsB_init(J);
-mrc_printf("js_newstate 8");
+
 	return J;
 }

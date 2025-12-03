@@ -63,7 +63,7 @@ enum
 	TK_VAR,
 	TK_VOID,
 	TK_WHILE,
-	TK_WITH,
+	TK_WITH
 };
 
 int jsY_iswhite(int c);

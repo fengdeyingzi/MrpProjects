@@ -76,6 +76,7 @@ int capp_ftell(CAPP_FILE *f){
 
 int capp_putchar(char ch){
 	mrc_printf("%c",ch);
+    return 0;
 }
 
 // void snprintf(char *text, int len, char *format, ...)

@@ -54,9 +54,9 @@ double mrc_pow(double x, double y) {
 }
 
 // 求根
-static double gen(double x, double y) {
-    return mrc_pow(x, 1 / y);
-}
+// static double gen(double x, double y) {
+//     return mrc_pow(x, 1 / y);
+// }
 
 // 计算绝对值
 double mrc_fabs(double x) {

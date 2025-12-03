@@ -1,6 +1,4 @@
 #include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <setjmp.h> //xldebug
 #include <limits.h>
 #include <mrc_base.h>
@@ -25,6 +23,10 @@
 #endif
 #ifndef REG_MAXCLASS
 #define REG_MAXCLASS 16
+#endif
+
+#ifndef EOF
+#define EOF (-1)
 #endif
 
 typedef struct Reclass Reclass;
@@ -88,7 +90,7 @@ enum {
 	L_WORD,		/* "\b" word boundary */
 	L_NWORD,	/* "\B" non-word boundary */
 	L_REF,		/* "\1" back-reference */
-	L_COUNT,	/* {M,N} */
+	L_COUNT		/* {M,N} */
 };
 
 static int hex(struct cstate *g, int c)
@@ -415,7 +417,7 @@ enum {
 	P_BOL, P_EOL, P_WORD, P_NWORD,
 	P_PAR, P_PLA, P_NLA,
 	P_ANY, P_CHAR, P_CCLASS, P_NCCLASS,
-	P_REF,
+	P_REF
 };
 
 struct Renode {

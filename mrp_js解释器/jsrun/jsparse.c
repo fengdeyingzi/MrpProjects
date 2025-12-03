@@ -91,10 +91,18 @@ static js_Ast *jsP_newnode(js_State *J, enum js_AstType type, int line, js_Ast *
 
 static js_Ast *jsP_list(js_Ast *head)
 {
+	js_Ast *prev;
+	js_Ast *node;
 
 	/* set parent pointers in list nodes */
-	js_Ast *prev = head, *node = head->b;
-	mrc_printf("jsP_list %d",1);
+	if (!head) {
+		
+		return NULL;
+	}
+
+	prev = head;
+	node = head->b;
+	
 	while (node) {
 		node->parent = prev;
 		prev = node;
@@ -188,6 +196,7 @@ static js_Ast *identifiername(js_State *J)
 		return a;
 	}
 	jsP_error(J, "unexpected token: %s (expected identifier or keyword)", jsY_tokenstring(J->lookahead));
+	return NULL;
 }
 
 static js_Ast *arrayelement(js_State *J)
@@ -368,6 +377,7 @@ static js_Ast *primary(js_State *J)
 	}
 
 	jsP_error(J, "unexpected token in expression: %s", jsY_tokenstring(J->lookahead));
+	return NULL;
 }
 
 static js_Ast *arguments(js_State *J)
@@ -705,6 +715,7 @@ static js_Ast *caseclause(js_State *J)
 	}
 
 	jsP_error(J, "unexpected token in switch: %s (expected 'case' or 'default')", jsY_tokenstring(J->lookahead));
+	return NULL;
 }
 
 static js_Ast *caselist(js_State *J)
@@ -775,6 +786,7 @@ static js_Ast *forstatement(js_State *J, int line)
 		return STM3(FOR_IN, a, b, c);
 	}
 	jsP_error(J, "unexpected token in for-statement: %s", jsY_tokenstring(J->lookahead));
+	return NULL;
 }
 
 static js_Ast *statement(js_State *J)
@@ -944,16 +956,16 @@ static js_Ast *script(js_State *J, int terminator)
 	js_Ast *head, *tail;
 	if (J->lookahead == terminator)
 		return NULL;
-		mrc_printf("script %d",2);
+		
 	head = tail = LIST(scriptelement(J));
-	mrc_printf("script %d",3);
+	
 	while (J->lookahead != terminator){
-		mrc_printf("while");
+		
 		tail = tail->b = LIST(scriptelement(J));
 		
 	}
 		
-	mrc_printf("script %d",4);
+	
 	return jsP_list(head);
 }
 
@@ -1001,7 +1013,7 @@ static int jsP_foldconst(js_Ast *node)
 {
 	double x, y;
 	int a, b;
-mrc_printf("jsP_foldconst %d",1);
+
 	if (node->type == AST_LIST) {
 		while (node) {
 			jsP_foldconst(node->a);
@@ -1009,15 +1021,15 @@ mrc_printf("jsP_foldconst %d",1);
 		}
 		return 0;
 	}
-mrc_printf("jsP_foldconst %d",2);
+
 	if (node->type == EXP_NUMBER)
 		return 1;
-mrc_printf("jsP_foldconst %d",3);
+
 	a = node->a ? jsP_foldconst(node->a) : 0;
 	b = node->b ? jsP_foldconst(node->b) : 0;
 	if (node->c) jsP_foldconst(node->c);
 	if (node->d) jsP_foldconst(node->d);
-mrc_printf("jsP_foldconst %d",4);
+
 	if (a) {
 		x = node->a->number;
 		switch (node->type) {
@@ -1045,7 +1057,7 @@ mrc_printf("jsP_foldconst %d",4);
 			}
 		}
 	}
-mrc_printf("jsP_foldconst %d",5);
+
 	return 0;
 }
 
@@ -1054,15 +1066,15 @@ mrc_printf("jsP_foldconst %d",5);
 js_Ast *jsP_parse(js_State *J, const char *filename, const char *source)
 {
 	js_Ast *p;
-mrc_printf("jsP_parse %d",1);
+
 	jsY_initlex(J, filename, source);
-	mrc_printf("jsP_parse %d",2);
+	
 	jsP_next(J);
-	mrc_printf("jsP_parse %d",3);
+	
 	J->astdepth = 0;
-	mrc_printf("jsP_parse %d",4);
+	
 	p = script(J, 0);
-	mrc_printf("jsP_parse %d",5);
+	
 	if (p)
 		jsP_foldconst(p);
 

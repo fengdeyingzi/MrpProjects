@@ -1,10 +1,15 @@
-#include <stdio.h>
+
 #include <stdarg.h>
 #include "jscapp.h"
 #include <mrc_base.h>
 
 // static char printBuf[PRINTF_BUF_LEN] = {0};
-char *printf_file = "print.txt";
+char printf_file[20]; /* 运行时初始化 */
+
+void jscapp_init(void) {
+	strcpy(printf_file, "print.txt");
+}
+
 void file_printf(const char *format, ...)
 {
     int fd;
@@ -16,7 +21,7 @@ void file_printf(const char *format, ...)
     mrc_printf("printf:%s", printfBuf);
     fd = mrc_open(printf_file, 12);
     if(fd>0){ //打开成功
-        mrc_seek(fd, 0, SEEK_END);
+        mrc_seek(fd, 0, MR_SEEK_END);
         mrc_write(fd,&printfBuf,strlen(printfBuf));
         mrc_close(fd);
     }

@@ -180,7 +180,7 @@ static void fmtnum(js_State *J, js_Buffer **sb, double n)
 
 static void fmtstr(js_State *J, js_Buffer **sb, const char *s)
 {
-	static const char *HEX = "0123456789ABCDEF";
+	char *HEX = "0123456789ABCDEF";
 	int i, n;
 	Rune c;
 	js_putc(J, sb, '"');

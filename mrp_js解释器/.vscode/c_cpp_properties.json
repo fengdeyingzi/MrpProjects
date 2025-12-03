@@ -4,8 +4,8 @@
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}\\**",
-                "I:\\app\\ADS1.2\\Include\\**",
-                "C:\\SKYsdk\\include\\**"
+                "E:\\app\\ADS1.2\\Include\\**",
+                "E:\\app\\MrpBuilderX\\include\\**"
             ],
             "defines": [
                 "_DEBUG",

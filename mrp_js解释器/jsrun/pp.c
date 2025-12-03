@@ -5,7 +5,6 @@
  * with -s: s-expression syntax tree
  */
 
-#include <stdio.h>
 
 #include "jsi.h"
 #include "jsparse.h"

@@ -308,6 +308,7 @@ js_Regexp *js_toregexp(js_State *J, int idx)
 	if (v->type == JS_TOBJECT && v->u.object->type == JS_CREGEXP)
 		return &v->u.object->u.r;
 	js_typeerror(J, "not a regexp");
+	return NULL;
 }
 
 void *js_touserdata(js_State *J, int idx, const char *tag)
@@ -317,6 +318,7 @@ void *js_touserdata(js_State *J, int idx, const char *tag)
 		if (!strcmp(tag, v->u.object->u.user.tag))
 			return v->u.object->u.user.data;
 	js_typeerror(J, "not a %s", tag);
+	return NULL;
 }
 
 static js_Object *jsR_tofunction(js_State *J, int idx)
@@ -328,6 +330,7 @@ static js_Object *jsR_tofunction(js_State *J, int idx)
 		if (v->u.object->type == JS_CFUNCTION || v->u.object->type == JS_CCFUNCTION)
 			return v->u.object;
 	js_typeerror(J, "not a function");
+	return NULL;
 }
 
 /* Stack manipulation */
@@ -757,10 +760,12 @@ const char *js_ref(js_State *J)
 		break;
 	case JS_TOBJECT:
 		mrc_sprintf(buf, "%p", (void*)v->u.object);
+		mrc_printf("js_ref %p", (void*)v->u.object);
 		s = js_intern(J, buf);
 		break;
 	default:
 		mrc_sprintf(buf, "%d", J->nextref++);
+		mrc_printf("js_ref %s", buf);
 		s = js_intern(J, buf);
 		break;
 	}
@@ -1286,19 +1291,19 @@ void js_throw(js_State *J)
 static void jsR_dumpstack(js_State *J)
 {
 	int i;
-	mrc_printf("stack {\n");
+	
 	for (i = 0; i < TOP; ++i) {
 		capp_putchar(i == BOT ? '>' : ' ');
-		mrc_printf("%4d: ", i);
+		
 		js_dumpvalue(J, STACK[i]);
 		capp_putchar('\n');
 	}
-	mrc_printf("}\n");
+	
 }
 
 static void jsR_dumpenvironment(js_State *J, js_Environment *E, int d)
 {
-	mrc_printf("scope %d ", d);
+	
 	js_dumpobject(J, E->variables);
 	if (E->outer)
 		jsR_dumpenvironment(J, E->outer, d+1);
@@ -1307,7 +1312,7 @@ static void jsR_dumpenvironment(js_State *J, js_Environment *E, int d)
 void js_stacktrace(js_State *J)
 {
 	int n;
-	mrc_printf("stack trace:\n");
+	
 	for (n = J->tracetop; n >= 0; --n) {
 		const char *name = J->trace[n].name;
 		const char *file = J->trace[n].file;

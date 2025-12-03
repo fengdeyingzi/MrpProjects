@@ -300,7 +300,7 @@ static void O_create_walk(js_State *J, js_Object *obj, js_Property *ref)
 static void O_create(js_State *J)
 {
 	js_Object *obj;
-	js_Object *proto;
+	js_Object *proto = NULL;
 	js_Object *props;
 
 	if (js_isobject(J, 1))

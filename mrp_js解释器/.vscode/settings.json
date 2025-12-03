@@ -3,6 +3,15 @@
         "math.h": "c",
         "cmath": "cpp",
         "jsi.h": "c",
-        "encode.h": "c"
+        "encode.h": "c",
+        "base.h": "c",
+        "mrc_base.h": "c",
+        "mrc_graphics.h": "c",
+        "string.h": "c",
+        "stddef.h": "c",
+        "mpc.h": "c",
+        "opnames.h": "c",
+        "astnames.h": "c",
+        "jscompile.h": "c"
     }
 }

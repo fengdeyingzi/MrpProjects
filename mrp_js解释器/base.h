@@ -24,4 +24,5 @@ int capp_fflush(CAPP_FILE *f);
 int capp_fclose(CAPP_FILE *f);
 int capp_ftell(CAPP_FILE *f);
 long mrc_strtol(const char *text,char **endptr,int base);
+int capp_putchar(char ch);
 #endif
