@@ -40,3 +40,168 @@ void debug_printf(char *text,...){
 		mrc_close(f);
 	}
 }
+
+
+char *toCharEx(float num, char *text) {
+    char *p;
+    int exponent;
+    float abs_num;
+    float rounded;
+    int integer;
+    float fraction;
+    char int_buf[20];
+    int int_idx;
+    char rev_buf[20];
+    int rev_idx;
+    int temp;
+    int i;
+    float frac_temp;
+    int digit;
+    char exp_buf[10];
+    int exp_idx;
+
+    /* 处理特殊值 - 简化的NaN和Inf检查 */
+    if (num != num) {  /* NaN检查 */
+        MR_STRCPY(text, "nan");
+        return;
+    }
+
+    /* Inf检查 */
+    if (num > 1e38f || num < -1e38f) {
+        if (num < 0) {
+            MR_STRCPY(text, "-inf");
+        } else {
+            MR_STRCPY(text, "inf");
+        }
+        return;
+    }
+
+    /* 处理0 */
+    if (num == 0.0f) {
+        MR_STRCPY(text, "0.0");
+        return;
+    }
+
+    p = text;
+
+    /* 处理负数 */
+    if (num < 0) {
+        *p++ = '-';
+        num = -num;
+    }
+
+    /* 检查是否需要用科学计数法 */
+    exponent = 0;
+    abs_num = num;
+
+    /* 处理非常大的数 */
+    if (abs_num >= 1e7f) {
+        while (abs_num >= 10.0f) {
+            abs_num /= 10.0f;
+            exponent++;
+        }
+        num = abs_num;
+    }
+    /* 处理非常小的数 */
+    else if (abs_num > 0 && abs_num < 1e-5f) {
+        while (abs_num < 1.0f) {
+            abs_num *= 10.0f;
+            exponent--;
+        }
+        num = abs_num;
+    }
+
+    /* 四舍五入到指定位数 */
+    rounded = (float)((int)(num * 1000000.0f + 0.5f)) / 1000000.0f;
+
+    /* 分离整数和小数部分 */
+    integer = (int)rounded;
+    fraction = rounded - (float)integer;
+
+    /* 转换整数部分 */
+    int_idx = 0;
+
+    if (integer == 0) {
+        int_buf[int_idx++] = '0';
+    } else {
+        rev_idx = 0;
+        temp = integer;
+
+        while (temp > 0) {
+            rev_buf[rev_idx++] = (temp % 10) + '0';
+            temp /= 10;
+        }
+
+        /* 反转 */
+        for (i = rev_idx - 1; i >= 0; i--) {
+            int_buf[int_idx++] = rev_buf[i];
+        }
+    }
+    int_buf[int_idx] = '\0';
+
+    /* 复制整数部分 */
+    MR_STRCPY(p, int_buf);
+    p += int_idx;
+
+    /* 添加小数点 */
+    *p++ = '.';
+
+    /* 转换小数部分 */
+    frac_temp = fraction;
+    for (i = 0; i < 6; i++) {
+        frac_temp *= 10.0f;
+        digit = (int)frac_temp;
+        *p++ = digit + '0';
+        frac_temp -= (float)digit;
+    }
+    *p = '\0';
+
+    /* 移除末尾的0 */
+    p--;
+    while (p > text && *p == '0') {
+        *p = '\0';
+        p--;
+    }
+
+    /* 如果是科学计数法,添加指数 */
+    if (exponent != 0) {
+        /* 移除末尾的"." */
+        if (*p == '.') {
+            *p = 'e';
+        } else {
+            *(++p) = 'e';
+        }
+        p++;
+
+        /* 添加指数 */
+        if (exponent > 0) {
+            *p++ = '+';
+        } else {
+            *p++ = '-';
+            exponent = -exponent;
+        }
+
+        /* 转换指数 */
+        exp_idx = 0;
+
+        if (exponent == 0) {
+            exp_buf[exp_idx++] = '0';
+        } else {
+            rev_idx = 0;
+
+            while (exponent > 0) {
+                rev_buf[rev_idx++] = (exponent % 10) + '0';
+                exponent /= 10;
+            }
+
+            for (i = rev_idx - 1; i >= 0; i--) {
+                exp_buf[exp_idx++] = rev_buf[i];
+            }
+        }
+        exp_buf[exp_idx] = '\0';
+
+        MR_STRCPY(p, exp_buf);
+    }
+    return text;
+}
+

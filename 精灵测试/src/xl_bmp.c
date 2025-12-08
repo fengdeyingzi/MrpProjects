@@ -4,12 +4,12 @@
 #include "xl_bmp.h"
 
 void* mr_malloc(int32 len){
-  uint8 *buf = NULL;
-  buf = mrc_malloc(len-4);
+  char *buf = NULL;
+  buf = (char*)mrc_malloc(len-4);
   return buf-4;
 }
 
-//¹¹½¨Ò»¸öbmp ²ÎÊı£ºÄÚ´æÊı¾İ£¬¿í¶È£¬¸ß¶È£¬Í¸Ã÷É«(0±íÊ¾²»Í¸Ã÷)
+//æ„å»ºä¸€ä¸ªbmp å‚æ•°ï¼šå†…å­˜æ•°æ®ï¼Œå®½åº¦ï¼Œé«˜åº¦ï¼Œé€æ˜è‰²(0è¡¨ç¤ºä¸é€æ˜)
 BITMAP_565* bmp_create(uint16 *bitmap, int width, int height, int transcolor){
  BITMAP_565* bmp = mrc_malloc(sizeof(BITMAP_565));
  memset(bmp, 0, sizeof(BITMAP_565));
@@ -25,7 +25,7 @@ BITMAP_565* bmp_create(uint16 *bitmap, int width, int height, int transcolor){
  return bmp;
 }
 
-//¶ÁÈ¡Ò»¸öµÍÎ»intÀàĞÍÊı×Ö
+//è¯»å–ä¸€ä¸ªä½ä½intç±»å‹æ•°å­—
 int get_int(char *buf,int ptr){
  int num = (buf[ptr]&0xff) | (buf[ptr+1]<<8) | (buf[ptr+2]<<16) | (buf[ptr+3]<<24);
  return num;
@@ -36,13 +36,13 @@ static int get_short(char *buf,int ptr){
  return num;
 }
 
-//¶ÁÈ¡bmp
+//è¯»å–bmp
 BITMAP_565* bmp_read(void *buf, int len){
  char *bufc = (char*)buf;
  int ptr=0;
  int w=0,h=0;
- int bit=16; //bmpÎ»Êı
- int bmpstart=0; //bmpÊı¾İÎ»ÖÃ
+ int bit=16; //bmpä½æ•°
+ int bmpstart=0; //bmpæ•°æ®ä½ç½®
  int iy=0;
  int i=0;
  uint16 *buf16 = NULL;
@@ -55,9 +55,9 @@ BITMAP_565* bmp_read(void *buf, int len){
  bmp->color_bit = 16;
  bmp->mode = BM_COPY;
  bmp->buflen = len;
-//  debug_log("¼ì²âÎÄ¼şÍ·");
-//  debug_log("¼ì²âÎÄ¼şÍ· %c %c",*(bufc+1),*(bufc+2));
- //¼ì²âÎÄ¼şÍ·
+//  debug_log("æ£€æµ‹æ–‡ä»¶å¤´");
+//  debug_log("æ£€æµ‹æ–‡ä»¶å¤´ %c %c",*(bufc+1),*(bufc+2));
+ //æ£€æµ‹æ–‡ä»¶å¤´
  if(bufc[0]=='B' && bufc[1]=='M'){
   // debug_log("BM\n");
   ptr = 10;
@@ -70,33 +70,33 @@ BITMAP_565* bmp_read(void *buf, int len){
   ptr = 28;
   bit = get_short(bufc,ptr);
   if(bit == 16){
-  //  debug_printf("16Î»Í¼\n");
+  //  debug_printf("16ä½å›¾\n");
    ptr = bmpstart;
    bmp->width = w;
    bmp->height = h;
    bmp->bitmap = (uint16*)mrc_malloc(w*h*2);
    bmp->buflen = w*h*2;
-   //¸´ÖÆÎ»Í¼Êı¾İ
+   //å¤åˆ¶ä½å›¾æ•°æ®
    
    for( iy=0;iy<bmp->height;iy++){
     mrc_memcpy(bmp->bitmap+iy*bmp->width, bufc+ptr+(bmp->height-1-iy)*bmp->width*2, w*2);
-    // mrc_printf("¸´ÖÆÎ»Í¼Êı¾İ%d %d\n",iy, bmp->height-1-iy);
+    // mrc_printf("å¤åˆ¶ä½å›¾æ•°æ®%d %d\n",iy, bmp->height-1-iy);
    }
    
   }
   else if(bit == 24){
-  //  debug_printf("µ±Ç°Î»Í¼ÊÇ24Î»");
+  //  debug_printf("å½“å‰ä½å›¾æ˜¯24ä½");
    ptr = bmpstart;
    bmp->width = w;
    bmp->height = h;
-   //¶ÔÆë×Ö½Ú
+   //å¯¹é½å­—èŠ‚
    wsize = w*3;
    if(wsize%4!=0) wsize = wsize - wsize%4 + 4;
-  //  debug_printf("ÉêÇëÄÚ´æ\n");
+  //  debug_printf("ç”³è¯·å†…å­˜\n");
    bmp->bitmap = (uint16*)mr_malloc(w*h*2);
    bmp->buflen = w*h*2;
    
-   //32×ª16Î»
+   //32è½¬16ä½
     buf16 = (unsigned short*)mrc_malloc(bmp->width*bmp->height*2);
     buf24 = (bufc+ptr);
    for(i=0;i<h;i++){
@@ -110,10 +110,10 @@ BITMAP_565* bmp_read(void *buf, int len){
 	
 	   }
    }
-   //¸´ÖÆÎ»Í¼Êı¾İ
+   //å¤åˆ¶ä½å›¾æ•°æ®
     for(iy=0;iy<bmp->height;iy++){
 		
-     //debug_printf("¸´ÖÆÊı¾İ %d %d\n",iy,bmp->height-1-iy);
+     //debug_printf("å¤åˆ¶æ•°æ® %d %d\n",iy,bmp->height-1-iy);
 	 
      mrc_memcpy (bmp->bitmap + iy*bmp->width, buf16+(bmp->height-1-iy)*bmp->width,w*2);
    }
@@ -122,10 +122,10 @@ BITMAP_565* bmp_read(void *buf, int len){
  }
  else
  {
-	//  debug_printf("²»ÊÇbmpÍ¼Æ¬");
+	//  debug_printf("ä¸æ˜¯bmpå›¾ç‰‡");
   return NULL;
  }
-//  debug_printf("·µ»Øbmp\n");
+//  debug_printf("è¿”å›bmp\n");
  return bmp;
 }
 
@@ -178,14 +178,14 @@ BITMAP_565* bma_read(void *buf, int len){
  else
  {
   mrc_free(bmp);
-	//  debug_printf("²»ÊÇbmpÍ¼Æ¬");
+	//  debug_printf("ä¸æ˜¯bmpå›¾ç‰‡");
   return NULL;
  }
-//  debug_printf("·µ»Øbmp\n");
+//  debug_printf("è¿”å›bmp\n");
  return bmp;
 }
 
-//ÉèÖÃÍ¸Ã÷É« argb
+//è®¾ç½®é€æ˜è‰² argb
 void bmp_settranscolor(BITMAP_565* bmp, int color){
  bmp->transcolor = ((color>>8)&0xf800) | ((color>>5)&0x07e0) | ((color>>3)&0x1f);
  if(color != 0){
@@ -196,17 +196,17 @@ void bmp_settranscolor(BITMAP_565* bmp, int color){
  }
  
 }
-//ÏÔÊ¾bmp
+//æ˜¾ç¤ºbmp
 void bmp_draw(BITMAP_565* bmp, int x,int y){
 //  mrc_printf("bmpdraw %d \n",bmp->width);
  mrc_bitmapShowExTrans(bmp->bitmap, (int16)x,(int16)y, (uint16)bmp->width, (uint16)bmp->width,(uint16)bmp->height, (uint16)bmp->mode, 0,0,(uint16)bmp->transcolor);
 }
-//ÇøÓòÏÔÊ¾bmp
+//åŒºåŸŸæ˜¾ç¤ºbmp
 void bmp_drawflip(BITMAP_565* bmp, int x,int y,int w,int h,int tx,int ty){
 //  mrc_printf("bmpshowflip width=%d w=%d\n",bmp->width,w);
  mrc_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)w,(uint16)h, (uint16)bmp->mode, (int16)tx,(int16)ty,(uint16)bmp->transcolor);
 }
-//bmpÊÍ·Å
+//bmpé‡Šæ”¾
 void bmp_free(BITMAP_565* bmp){
   if(bmp->memlen>0){
     mrc_free(bmp->memcache);

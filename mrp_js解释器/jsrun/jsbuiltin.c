@@ -4,6 +4,7 @@
 #include "jsvalue.h"
 #include "jsbuiltin.h"
 #include <mrc_base.h>
+#include <mrc_exb.h>
 #include "mrc_math.h"
 
 static void jsB_globalf(js_State *J, const char *name, js_CFunction cfun, int n)
@@ -14,7 +15,7 @@ static void jsB_globalf(js_State *J, const char *name, js_CFunction cfun, int n)
 
 void jsB_propf(js_State *J, const char *name, js_CFunction cfun, int n)
 {
-	const char *pname = strrchr(name, '.');
+	const char *pname = mrc_strrchr(name, '.');
 	pname = pname ? pname + 1 : name;
 	js_newcfunction(J, cfun, name, n);
 	js_defproperty(J, -2, pname, JS_DONTENUM);

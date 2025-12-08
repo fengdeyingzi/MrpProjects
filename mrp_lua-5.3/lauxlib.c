@@ -691,7 +691,7 @@ static int skipBOM (LoadF *lf) {
 ** first "valid" character of the file (after the optional BOM and
 ** a first-line comment).
 */
-//xldebug ¶ÁÈ¡ÎÄ¼ş
+//xldebug è¯»å–æ–‡ä»¶
 static int skipcomment (LoadF *lf, int *cp) {
   int c = *cp = skipBOM(lf);
   if (c == '#') {  /* first line is a comment (Unix exec. file)? */

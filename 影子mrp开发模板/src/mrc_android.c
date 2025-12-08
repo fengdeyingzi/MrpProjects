@@ -42,8 +42,8 @@ void mrc_freeFileFromAssets(void *data,int32 len){
 void *mrc_readFileFromAssets(const char *filename, int32 *len){
 	uint8 *buf = NULL;
 	int32 re = 0;
- re = mrc_readFileFromMrpEx(NULL,(const char*)filename,&buf,len,0);
- if(re == MR_SUCCESS){
+ buf = mrc_readFileFromMrp((const char*)filename,len,0);
+ if(buf != NULL){
 	 return buf;
  }
  return NULL;

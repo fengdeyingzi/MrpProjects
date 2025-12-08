@@ -1012,7 +1012,7 @@ void drawBitmapRotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, int
   minY = MAX(0, minY);
   maxX = MIN(maxX, SCRW);
   maxY = MIN(maxY, SCRH);
-  mrc_printf("minX = %d, minY = %d, maxX = %d, maxY = %d", minX, minY, maxX, maxY);
+  // mrc_printf("minX = %d, minY = %d, maxX = %d, maxY = %d", minX, minY, maxX, maxY);
   // mrc_drawRect(minX, minY, maxX-minX, maxY-minY, 240, 20, 20);
   // 遍历屏幕的每一个像素
   if(b->color_bit == 16){
@@ -1128,15 +1128,15 @@ void drawBitmapRotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, int
   }
   
   
-  // 绘制旋转后的矩形
-  for (i = 1; i < 4; i++)
-  {
-    x1 = vertices[i][0];
-    y1 = vertices[i][1];
-    x2 = vertices[(i + 1) % 4][0];
-    y2 = vertices[(i + 1) % 4][1];
-    mrc_drawLine(x1, y1, x2, y2, 23, 22, 22);
-  }
+  // // 绘制旋转后的矩形
+  // for (i = 1; i < 4; i++)
+  // {
+  //   x1 = vertices[i][0];
+  //   y1 = vertices[i][1];
+  //   x2 = vertices[(i + 1) % 4][0];
+  //   y2 = vertices[(i + 1) % 4][1];
+  //   mrc_drawLine(x1, y1, x2, y2, 23, 22, 22);
+  // }
 }
 
 /*

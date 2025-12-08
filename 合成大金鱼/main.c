@@ -3,6 +3,8 @@
 #include "mpc.h"
 #include "mrc_graphics.h"
 #include "game_menu.h"
+#include <math.h>
+#include "xl_debug.h"
 
 /*
 合成大金鱼游戏
@@ -20,6 +22,14 @@ int32 GAME_HEIGHT = 0;    // 游戏区域高度
 #define FRICTION 0.98f     // 摩擦系数
 #define DROP_DELAY 24      // 投放延迟（24帧约800ms）
 #define DANGER_THRESHOLD 100 // 超过警戒线判定帧数
+
+// 定义极小值阈值（根据应用场景调整）
+#define TINY_FLOAT_THRESHOLD 0.0001f
+
+int is_tiny_float_simple(float value) {
+    // 使用绝对值判断
+    return fabsf(value) < TINY_FLOAT_THRESHOLD;
+}
 
 
 // ==================== 数据结构 ====================
@@ -257,6 +267,7 @@ void drawTextWithStroke(char* text, int16 x, int16 y) {
 
 // ==================== 工具函数 ====================
 // 快速平方根（牛顿迭代法）
+/*
 float fastSqrt(float x) {
     float xhalf = 0.5f * x;
     int i = *(int*)&x;
@@ -266,6 +277,7 @@ float fastSqrt(float x) {
     x = x * (1.5f - xhalf * x * x); // 二次迭代提高精度
     return 1.0f / x;
 }
+*/
 
 // 简单随机数生成器（线性同余）
 int getRandom(int max) {
@@ -277,7 +289,7 @@ int getRandom(int max) {
 float distance(float x1, float y1, float x2, float y2) {
     float dx = x2 - x1;
     float dy = y2 - y1;
-    return fastSqrt(dx * dx + dy * dy);
+    return sqrt(dx * dx + dy * dy);
 }
 
 // ==================== 游戏逻辑函数 ====================
@@ -312,12 +324,12 @@ void loadAssets(void) {
     BITMAPINFO info;
 
     // 加载背景图片
-    bgBitmap = readBitmap565FromAssets("bg_240.bma");
+    bgBitmap = readBitmap565FromAssets("bg_240.png");
 
     // 加载鱼图片并获取尺寸
     for (i = 0; i < FISH_TYPES_COUNT; i++) {
         fishBitmaps[i] = readBitmap565FromAssets(fishTypes[i].imgName);
-        bitmap565Rotate(fishBitmaps[i], 1, 0);
+        // bitmap565Rotate(fishBitmaps[i], 1, 0);
         // 获取图片宽度并设置半径
         if (fishBitmaps[i] != NULL) {
             if (bitmap565getInfo(fishBitmaps[i], &info) == MR_SUCCESS) {
@@ -398,29 +410,39 @@ void updatePhysics(void) {
         fishes[i].vy += GRAVITY;
 
         // 更新位置
-        fishes[i].x += fishes[i].vx;
-        fishes[i].y += fishes[i].vy;
+        if(!is_tiny_float_simple(fishes[i].vx)){
+            fishes[i].x += fishes[i].vx;
+        }
+        if(!is_tiny_float_simple(fishes[i].vy)){
+            fishes[i].y += fishes[i].vy;
+        }
 
         // 应用摩擦力
-        fishes[i].vx *= FRICTION;
-        fishes[i].vy *= FRICTION;
+        if(!is_tiny_float_simple(fishes[i].vx))
+            fishes[i].vx *= FRICTION;
+        if(!is_tiny_float_simple(fishes[i].vy))
+            fishes[i].vy *= FRICTION;
 
         // 边界碰撞检测 - 左右墙
         if (fishes[i].x - type->radius < 0) {
             fishes[i].x = (float)type->radius;
-            fishes[i].vx = -fishes[i].vx * RESTITUTION;
+            if(!is_tiny_float_simple(fishes[i].vx))
+                fishes[i].vx = -fishes[i].vx * RESTITUTION;
         }
         if (fishes[i].x + type->radius > GAME_WIDTH) {
             fishes[i].x = (float)(GAME_WIDTH - type->radius);
-            fishes[i].vx = -fishes[i].vx * RESTITUTION;
+            if(!is_tiny_float_simple(fishes[i].vx))
+                fishes[i].vx = -fishes[i].vx * RESTITUTION;
         }
 
         // 边界碰撞检测 - 地面
         if (fishes[i].y + type->radius > GAME_HEIGHT) {
             fishes[i].y = (float)(GAME_HEIGHT - type->radius);
-            fishes[i].vy = -fishes[i].vy * RESTITUTION;
+            if(!is_tiny_float_simple(fishes[i].vy))
+                fishes[i].vy = -fishes[i].vy * RESTITUTION;
             // 地面摩擦力
-            fishes[i].vx *= 0.9f;
+            if(!is_tiny_float_simple(fishes[i].vx))
+                fishes[i].vx *= 0.9f;
         }
     }
 }
@@ -512,26 +534,34 @@ void checkCollisions(void) {
 void checkGameOver(void) {
     int i;
     FishType* type;
-    float speed;
-    float vxvy;
+    
+    char temp[30];
+    float speed = 0.0f;
+    float vxvy = 0.0f;
 
     if (gameState.isGameOver) return;
 
     for (i = 0; i < MAX_FISH; i++) {
         if (!fishes[i].active) continue;
         type = &fishTypes[fishes[i].level];
- vxvy = fishes[i].vx * fishes[i].vx + fishes[i].vy * fishes[i].vy;
+        
+        if(!is_tiny_float_simple(fishes[i].vx) && !is_tiny_float_simple(fishes[i].vy)){
+            vxvy = fishes[i].vx * fishes[i].vx + fishes[i].vy * fishes[i].vy;
+            speed = (vxvy < 0.0001f) ? 0.0f : sqrt(vxvy);
+        }
+        LOG_VAR("speed success %d", i);
+ 
 /*
 当鱼完全静止时 (vx = 0, vy = 0)，传入 fastSqrt(0)：
     - 算法计算的是 1/√x，然后返回 1.0f / (1/√x)
     - 当 x = 0 时，1/√0 → ∞，最后 1.0f / ∞ → 0，但中间过程数值不稳定
   2. x 接近 0 时精度问题：当速度非常小时，魔数近似在极小值附近精度很差，可能产生 NaN  或 Inf
 */
-speed = (vxvy < 0.0001f) ? 0.0f : fastSqrt(vxvy);
+
         // speed = fastSqrt(fishes[i].vx * fishes[i].vx + fishes[i].vy * fishes[i].vy);
 
         // 检查是否在警戒线以上且速度很慢（静止）
-        if (fishes[i].y - type->radius < LIMIT_LINE_Y && speed < 0.5f) {
+        if ((int)fishes[i].y - type->radius < LIMIT_LINE_Y && (int)speed < 1) {
             fishes[i].dangerTime++;
             if (fishes[i].dangerTime > DANGER_THRESHOLD) {
                 gameState.isGameOver = 1;
@@ -540,7 +570,9 @@ speed = (vxvy < 0.0001f) ? 0.0f : fastSqrt(vxvy);
         } else {
             fishes[i].dangerTime = 0;
         }
+        
     }
+    LOG_MSG("check success");
 }
 
 // 游戏主循环（定时器回调）
@@ -548,9 +580,13 @@ void timer_run(int32 id) {
     /* 只在游戏窗口时执行游戏逻辑 */
     if (currentWindow == WINDOW_GAME) {
         if (!gameState.isGameOver) {
+            LOG_MSG("updateDropper");
             updateDropper();
+            LOG_MSG("updatePhysics");
             updatePhysics();
+            LOG_MSG("checkCollisions");
             checkCollisions();
+            LOG_MSG("checkGameOver");
             checkGameOver();
         }
 
@@ -653,15 +689,15 @@ int32 mrc_init(void) {
     gameInited = 0;
 
     /* 初始化鱼类型配置 */
-    fishTypes[0].level = 0; fishTypes[0].radius = 11; fishTypes[0].val = 1;  fishTypes[0].imgName = "fish_01_240.bma";
-    fishTypes[1].level = 1; fishTypes[1].radius = 16; fishTypes[1].val = 3;  fishTypes[1].imgName = "fish_02_240.bma";
-    fishTypes[2].level = 2; fishTypes[2].radius = 22; fishTypes[2].val = 6;  fishTypes[2].imgName = "fish_03_240.bma";
-    fishTypes[3].level = 3; fishTypes[3].radius = 30; fishTypes[3].val = 10; fishTypes[3].imgName = "fish_04_240.bma";
-    fishTypes[4].level = 4; fishTypes[4].radius = 38; fishTypes[4].val = 15; fishTypes[4].imgName = "fish_05_240.bma";
-    fishTypes[5].level = 5; fishTypes[5].radius = 48; fishTypes[5].val = 21; fishTypes[5].imgName = "fish_06_240.bma";
-    fishTypes[6].level = 6; fishTypes[6].radius = 59; fishTypes[6].val = 28; fishTypes[6].imgName = "fish_07_240.bma";
-    fishTypes[7].level = 7; fishTypes[7].radius = 70; fishTypes[7].val = 36; fishTypes[7].imgName = "fish_08_240.bma";
-    fishTypes[8].level = 8; fishTypes[8].radius = 83; fishTypes[8].val = 45; fishTypes[8].imgName = "fish_09_240.bma";
+    fishTypes[0].level = 0; fishTypes[0].radius = 11; fishTypes[0].val = 1;  fishTypes[0].imgName = "fish_01_240.png";
+    fishTypes[1].level = 1; fishTypes[1].radius = 16; fishTypes[1].val = 3;  fishTypes[1].imgName = "fish_02_240.png";
+    fishTypes[2].level = 2; fishTypes[2].radius = 22; fishTypes[2].val = 6;  fishTypes[2].imgName = "fish_03_240.png";
+    fishTypes[3].level = 3; fishTypes[3].radius = 30; fishTypes[3].val = 10; fishTypes[3].imgName = "fish_04_240.png";
+    fishTypes[4].level = 4; fishTypes[4].radius = 38; fishTypes[4].val = 15; fishTypes[4].imgName = "fish_05_240.png";
+    fishTypes[5].level = 5; fishTypes[5].radius = 48; fishTypes[5].val = 21; fishTypes[5].imgName = "fish_06_240.png";
+    fishTypes[6].level = 6; fishTypes[6].radius = 59; fishTypes[6].val = 28; fishTypes[6].imgName = "fish_07_240.png";
+    fishTypes[7].level = 7; fishTypes[7].radius = 70; fishTypes[7].val = 36; fishTypes[7].imgName = "fish_08_240.png";
+    fishTypes[8].level = 8; fishTypes[8].radius = 83; fishTypes[8].val = 45; fishTypes[8].imgName = "fish_09_240.png";
 
     mrc_printf("[GAME]mpc_init...");
     /* 初始化MPC */

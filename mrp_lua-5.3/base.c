@@ -15,36 +15,36 @@ CAPP_FILE *capp_fopen(const char *path, const char *mode) {
     int32 file_len = mrc_getLen(path);
     int seek_mode = MR_SEEK_SET;
     mrc_printf("fopen %s %s",path,mode);
-    if (strcmp(mode, "r") == 0) {  //��ֻ����ʽ���ļ������ļ�������ڡ�
+    if (strcmp(mode, "r") == 0) {  //以只读方式打开文件，该文件必须存在。
         file_mode = MR_FILE_RDONLY;
-    } else if (strcmp(mode, "r+") == 0) {  //�Զ�/д��ʽ���ļ������ļ�������ڡ�
+    } else if (strcmp(mode, "r+") == 0) {  //以读/写方式打开文件，该文件必须存在。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
-    } else if (strcmp(mode, "rb+") == 0) {  //�Զ�/д��ʽ��һ���������ļ���ֻ������/д���ݡ�
+    } else if (strcmp(mode, "rb+") == 0) {  //以读/写方式打开一个二进制文件，只允许读/写数据。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
-    } else if (strcmp(mode, "rt+") == 0) {  //�Զ�/д��ʽ��һ���ı��ļ�����������д��
+    } else if (strcmp(mode, "rt+") == 0) {  //以读/写方式打开一个文本文件，允许读和写。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
-    } else if (strcmp(mode, "w") == 0) {  //��ֻд�ļ������ļ������򳤶���Ϊ0�������ļ�������ʧ�����������򴴽����ļ���
+    } else if (strcmp(mode, "w") == 0) {  //打开只写文件，若文件存在则长度清为0，即该文件内容消失，若不存在则创建该文件。
         file_mode = MR_FILE_WRONLY | MR_FILE_CREATE;
         mrc_remove(path);
-    } else if (strcmp(mode, "w+") == 0) {  //�򿪿ɶ�/д�ļ������ļ��������ļ�������Ϊ�㣬�����ļ����ݻ���ʧ�����ļ��������������ļ���
+    } else if (strcmp(mode, "w+") == 0) {  //打开可读/写文件，若文件存在则文件长度清为零，即该文件内容会消失。若文件不存在则建立该文件。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
         mrc_remove(path);
-    } else if (strcmp(mode, "a") == 0) {  //�Ը��ӵķ�ʽ��ֻд�ļ������ļ������ڣ���Ὠ�����ļ�������ļ����ڣ�д������ݻᱻ�ӵ��ļ�β�����ļ�ԭ�ȵ����ݻᱻ������EOF������)��
+    } else if (strcmp(mode, "a") == 0) {  //以附加的方式打开只写文件。若文件不存在，则会建立该文件，如果文件存在，写入的数据会被加到文件尾，即文件原先的内容会被保留（EOF符保留)。
         file_mode = MR_FILE_WRONLY;
         seek_mode = MR_SEEK_END;
-    } else if (strcmp(mode, "a+") == 0) {  //�Ը��ӷ�ʽ�򿪿ɶ�/д���ļ������ļ������ڣ���Ὠ�����ļ�������ļ����ڣ���д������ݻᱻ�ӵ��ļ�β�󣬼��ļ�ԭ�ȵ����ݻᱻ������ԭ����EOF�� ������)��
+    } else if (strcmp(mode, "a+") == 0) {  //以附加方式打开可读/写的文件。若文件不存在，则会建立该文件，如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（原来的EOF符 不保留)。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
         seek_mode = MR_SEEK_END;
-    } else if (strcmp(mode, "wb") == 0) {  //��ֻд��ʽ�򿪻��½�һ���������ļ���ֻ����д���ݡ�
+    } else if (strcmp(mode, "wb") == 0) {  //以只写方式打开或新建一个二进制文件，只允许写数据。
         file_mode = MR_FILE_WRONLY;
-    } else if (strcmp(mode, "wb+") == 0) {  //�Զ�/д��ʽ�򿪻���һ���������ļ�����������д��
+    } else if (strcmp(mode, "wb+") == 0) {  //以读/写方式打开或建立一个二进制文件，允许读和写。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
-    } else if (strcmp(mode, "wt+") == 0) {  //�Զ�/д��ʽ�򿪻���һ���ı��ļ���������д��
+    } else if (strcmp(mode, "wt+") == 0) {  //以读/写方式打开或建立一个文本文件，允许读写。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
-    } else if (strcmp(mode, "at+") == 0) {  //�Զ�/д��ʽ��һ���ı��ļ��������������ı�ĩ׷�����ݡ�
+    } else if (strcmp(mode, "at+") == 0) {  //以读/写方式打开一个文本文件，允许读或在文本末追加数据。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
         seek_mode = MR_SEEK_END;
-    } else if (strcmp(mode, "ab+") == 0) {  //�Զ�/д��ʽ��һ���������ļ��������������ļ�ĩ׷�����ݡ�
+    } else if (strcmp(mode, "ab+") == 0) {  //以读/写方式打开一个二进制文件，允许读或在文件末追加数据。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
         seek_mode = MR_SEEK_END;
     }
@@ -82,36 +82,36 @@ CAPP_FILE *capp_freopen(const char *path, const char *mode, CAPP_FILE *file){
     int seek_mode = MR_SEEK_SET;
     int32 file_len = mrc_getLen(path);
     mrc_printf("freopen %s %s",path,mode);
-    if (strcmp(mode, "r") == 0) {  //��ֻ����ʽ���ļ������ļ�������ڡ�
+    if (strcmp(mode, "r") == 0) {  //以只读方式打开文件，该文件必须存在。
         file_mode = MR_FILE_RDONLY;
-    } else if (strcmp(mode, "r+") == 0) {  //�Զ�/д��ʽ���ļ������ļ�������ڡ�
+    } else if (strcmp(mode, "r+") == 0) {  //以读/写方式打开文件，该文件必须存在。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
-    } else if (strcmp(mode, "rb+") == 0) {  //�Զ�/д��ʽ��һ���������ļ���ֻ������/д���ݡ�
+    } else if (strcmp(mode, "rb+") == 0) {  //以读/写方式打开一个二进制文件，只允许读/写数据。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
-    } else if (strcmp(mode, "rt+") == 0) {  //�Զ�/д��ʽ��һ���ı��ļ�����������д��
+    } else if (strcmp(mode, "rt+") == 0) {  //以读/写方式打开一个文本文件，允许读和写。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
-    } else if (strcmp(mode, "w") == 0) {  //��ֻд�ļ������ļ������򳤶���Ϊ0�������ļ�������ʧ�����������򴴽����ļ���
+    } else if (strcmp(mode, "w") == 0) {  //打开只写文件，若文件存在则长度清为0，即该文件内容消失，若不存在则创建该文件。
         file_mode = MR_FILE_WRONLY | MR_FILE_CREATE;
         mrc_remove(path);
-    } else if (strcmp(mode, "w+") == 0) {  //�򿪿ɶ�/д�ļ������ļ��������ļ�������Ϊ�㣬�����ļ����ݻ���ʧ�����ļ��������������ļ���
+    } else if (strcmp(mode, "w+") == 0) {  //打开可读/写文件，若文件存在则文件长度清为零，即该文件内容会消失。若文件不存在则建立该文件。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
         mrc_remove(path);
-    } else if (strcmp(mode, "a") == 0) {  //�Ը��ӵķ�ʽ��ֻд�ļ������ļ������ڣ���Ὠ�����ļ�������ļ����ڣ�д������ݻᱻ�ӵ��ļ�β�����ļ�ԭ�ȵ����ݻᱻ������EOF������)��
+    } else if (strcmp(mode, "a") == 0) {  //以附加的方式打开只写文件。若文件不存在，则会建立该文件，如果文件存在，写入的数据会被加到文件尾，即文件原先的内容会被保留（EOF符保留)。
         file_mode = MR_FILE_WRONLY;
         seek_mode = MR_SEEK_END;
-    } else if (strcmp(mode, "a+") == 0) {  //�Ը��ӷ�ʽ�򿪿ɶ�/д���ļ������ļ������ڣ���Ὠ�����ļ�������ļ����ڣ���д������ݻᱻ�ӵ��ļ�β�󣬼��ļ�ԭ�ȵ����ݻᱻ������ԭ����EOF�� ������)��
+    } else if (strcmp(mode, "a+") == 0) {  //以附加方式打开可读/写的文件。若文件不存在，则会建立该文件，如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（原来的EOF符 不保留)。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
         seek_mode = MR_SEEK_END;
-    } else if (strcmp(mode, "wb") == 0) {  //��ֻд��ʽ�򿪻��½�һ���������ļ���ֻ����д���ݡ�
+    } else if (strcmp(mode, "wb") == 0) {  //以只写方式打开或新建一个二进制文件，只允许写数据。
         file_mode = MR_FILE_WRONLY;
-    } else if (strcmp(mode, "wb+") == 0) {  //�Զ�/д��ʽ�򿪻���һ���������ļ�����������д��
+    } else if (strcmp(mode, "wb+") == 0) {  //以读/写方式打开或建立一个二进制文件，允许读和写。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
-    } else if (strcmp(mode, "wt+") == 0) {  //�Զ�/д��ʽ�򿪻���һ���ı��ļ���������д��
+    } else if (strcmp(mode, "wt+") == 0) {  //以读/写方式打开或建立一个文本文件，允许读写。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY | MR_FILE_CREATE;
-    } else if (strcmp(mode, "at+") == 0) {  //�Զ�/д��ʽ��һ���ı��ļ��������������ı�ĩ׷�����ݡ�
+    } else if (strcmp(mode, "at+") == 0) {  //以读/写方式打开一个文本文件，允许读或在文本末追加数据。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
         seek_mode = MR_SEEK_END;
-    } else if (strcmp(mode, "ab+") == 0) {  //�Զ�/д��ʽ��һ���������ļ��������������ļ�ĩ׷�����ݡ�
+    } else if (strcmp(mode, "ab+") == 0) {  //以读/写方式打开一个二进制文件，允许读或在文件末追加数据。
         file_mode = MR_FILE_RDONLY | MR_FILE_WRONLY;
         seek_mode = MR_SEEK_END;
     }
@@ -235,7 +235,7 @@ long mrc_strtol(const char *text,char **endptr,int base){
 				int ptr = 0;
                 *endptr = (char *)text;
 				if(len==0)return 0;
-				//����0
+				//跳过0
 				while(text[ptr]=='0'){
 						ptr++;
 					}
@@ -327,19 +327,19 @@ size_t capp_strspn (const char *s,const char *accept)
 
 /*
 
-   ��������ǰѸ������ַ���ת��Ϊ�������ĺ�����
+   这个函数是把浮点数字符串转换为浮点数的函数。
 
-   �������������ַ����еĿո��ַ��Ͳ���'+'��'-'��'.'��
+   函数将会跳过字符串中的空格字符和不是'+'、'-'、'.'、
 
-   ���ֵ��ַ�������ַ����ǿյĻ��߶����ɿո���ɣ�������
+   数字的字符。如果字符串是空的或者都是由空格组成，将不会
 
-   ���κ�ת���������ǰ��ַ����Ľ�����ַ����endptr�������
+   做任何转换，仅仅是把字符串的结束地址赋给endptr。如果字
 
-   �����Ϸ����������ת���������ַ�������NULL�ĵ�ַ��
+   符串合法，将会进行转换，并把字符串最后的NULL的地址给
 
-   endptr���������ʹ��endptr��������ô��һ��NULLֵ��
+   endptr。如果你想使用endptr参数，那么赋一个NULL值就
 
-   �����ˡ�
+   可以了。
 
 */
 
@@ -359,7 +359,7 @@ double capp_strtod(const char* s, char** endptr)
 
   
 
-    while ( isspace(*p) )//����ǰ��Ŀո�
+    while ( isspace(*p) )//跳过前面的空格
 
       p++;
 
@@ -367,19 +367,19 @@ double capp_strtod(const char* s, char** endptr)
 
     if(*p == '-' || *p == '+')
 
-      sign = *p++;//�ѷ��Ÿ����ַ�sign��ָ����ơ�
+      sign = *p++;//把符号赋给字符sign，指针后移。
 
   
 
-   //���������ַ�
+   //处理数字字符
 
  
 
-    while ( (unsigned int)(*p - '0') < 10u )//ת����������
+    while ( (unsigned int)(*p - '0') < 10u )//转换整数部分
 
       value = value*10 + (*p++ - '0');
 
-   //����������ı�ʾ��ʽ���磺1234.5678��
+   //如果是正常的表示方式（如：1234.5678）
 
    if ( *p == '.' )
 
@@ -401,7 +401,7 @@ double capp_strtod(const char* s, char** endptr)
 
     }
 
-   //�����IEEE754��׼�ĸ�ʽ���磺1.23456E+3��
+   //如果是IEEE754标准的格式（如：1.23456E+3）
 
     if ( (*p | 32) == 'e' )
 

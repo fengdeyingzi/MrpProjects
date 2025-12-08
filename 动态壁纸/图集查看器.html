@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BMAS图集查看器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(30, 30, 46, 0.9);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(90deg, #0f3460 0%, #1a1a2e 100%);
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #00adb5;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00adb5, #a8e6cf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            color: #88c7dc;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+        }
+
+        .file-upload {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin: 20px auto;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            overflow: hidden;
+            margin: 10px;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            height: 100%;
+            width: 100%;
+        }
+
+        .custom-file-btn {
+            background: linear-gradient(90deg, #00adb5 0%, #0077b6 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .custom-file-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 173, 181, 0.4);
+        }
+
+        .current-file {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #88c7dc;
+        }
+
+        .main-content {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+            min-height: 600px;
+        }
+
+        .image-viewer {
+            flex: 3;
+            background: rgba(20, 20, 35, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 173, 181, 0.3);
+        }
+
+        .image-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .image-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #a8e6cf;
+        }
+
+        .image-details {
+            font-size: 0.9rem;
+            color: #88c7dc;
+            display: flex;
+            gap: 15px;
+        }
+
+        .navigation {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background: rgba(0, 173, 181, 0.2);
+            border: 1px solid #00adb5;
+            color: #e6e6e6;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .nav-btn:hover {
+            background: rgba(0, 173, 181, 0.4);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .image-display {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(10, 10, 20, 0.7);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            min-height: 400px;
+        }
+
+        #mainCanvas {
+            max-width: 100%;
+            max-height: 100%;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+        }
+
+        .no-image {
+            color: #666;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+
+        .image-list {
+            flex: 1;
+            background: rgba(20, 20, 35, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            min-width: 300px;
+            max-height: calc(100vh - 320px);
+            overflow: hidden;
+        }
+
+        .list-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0, 173, 181, 0.3);
+        }
+
+        .list-header h3 {
+            color: #a8e6cf;
+            font-size: 1.2rem;
+        }
+
+        .image-grid {
+            flex: 1;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+            padding-right: 5px;
+        }
+
+        .image-item {
+            background: rgba(30, 30, 50, 0.7);
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            text-align: center;
+        }
+
+        .image-item:hover {
+            background: rgba(40, 40, 70, 0.8);
+            transform: translateY(-3px);
+        }
+
+        .image-item.active {
+            border-color: #00adb5;
+            background: rgba(0, 173, 181, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 173, 181, 0.3);
+        }
+
+        .thumb-canvas {
+            width: 100%;
+            height: 80px;
+            background: rgba(10, 10, 20, 0.7);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            image-rendering: pixelated;
+        }
+
+        .thumb-name {
+            font-size: 0.85rem;
+            color: #e6e6e6;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .controls {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(0, 173, 181, 0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .play-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .play-btn {
+            background: linear-gradient(90deg, #00adb5 0%, #0077b6 100%);
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 173, 181, 0.4);
+        }
+
+        .play-btn.playing {
+            background: linear-gradient(90deg, #ff9a00 0%, #ff6b6b 100%);
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #88c7dc;
+            font-size: 0.9rem;
+        }
+
+        .speed-input {
+            width: 70px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #00adb5;
+            color: white;
+            padding: 5px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .stats {
+            color: #88c7dc;
+            font-size: 0.9rem;
+            text-align: right;
+        }
+
+        .key-hint {
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #00adb5;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #0097a7;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .image-list {
+                min-width: auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .image-grid {
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            }
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: #00adb5;
+            font-size: 1.5rem;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔬 BMAS图集查看器</h1>
+            <p class="subtitle">支持RGB565(MAP5)和ARGB8888(MAP8)格式的BMA图集文件查看</p>
+        </header>
+
+        <div class="file-upload">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" accept=".bmas">
+                <button class="custom-file-btn">📁 选择BMAS图集文件</button>
+            </div>
+            <p class="current-file" id="currentFile">未选择文件</p>
+            <p class="key-hint">快捷键: ← 上一张 | → 下一张 | 空格 播放/暂停</p>
+        </div>
+
+        <div class="main-content">
+            <div class="image-viewer">
+                <div class="viewer-header">
+                    <div class="image-info">
+                        <div class="image-name" id="currentImageName">未加载图片</div>
+                        <div class="image-details" id="currentImageDetails">尺寸: - × - | 格式: - | 透明色: -</div>
+                    </div>
+                    <div class="navigation">
+                        <button class="nav-btn" id="prevBtn" disabled>◀ 上一张</button>
+                        <button class="nav-btn" id="nextBtn" disabled>下一张 ▶</button>
+                    </div>
+                </div>
+                <div class="image-display">
+                    <canvas id="mainCanvas"></canvas>
+                    <div class="no-image" id="noImage">请选择一个BMAS图集文件</div>
+                </div>
+            </div>
+
+            <div class="image-list">
+                <div class="list-header">
+                    <h3>📋 图片列表 (<span id="imageCount">0</span>)</h3>
+                </div>
+                <div class="image-grid" id="imageGrid">
+                    <!-- 图片缩略图将通过JavaScript动态生成 -->
+                </div>
+                <div class="controls">
+                    <div class="play-controls">
+                        <button class="play-btn" id="playBtn">
+                            <span>▶ 播放</span>
+                        </button>
+                        <div class="speed-control">
+                            <label for="speedInput">间隔 (ms):</label>
+                            <input type="number" id="speedInput" class="speed-input" value="33" min="1" max="1000">
+                        </div>
+                    </div>
+                    <div class="stats">
+                        <div id="playStatus">未播放</div>
+                        <div>当前: <span id="currentIndex">0</span>/<span id="totalImages">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>BMAS图集查看器 v1.0 | 支持MAP5(RGB565)和MAP8(ARGB8888)格式</p>
+        </footer>
+    </div>
+
+    <div class="loading" id="loading">
+        <div>正在加载图集文件...</div>
+    </div>
+
+    <script>
+        class BmasViewer {
+            constructor() {
+                this.currentFile = null;
+                this.images = [];
+                this.currentIndex = -1;
+                this.isPlaying = false;
+                this.playInterval = null;
+                this.playSpeed = 33;
+
+                this.initElements();
+                this.bindEvents();
+                this.bindKeyboardEvents();
+            }
+
+            initElements() {
+                this.fileInput = document.getElementById('fileInput');
+                this.currentFileElement = document.getElementById('currentFile');
+                this.mainCanvas = document.getElementById('mainCanvas');
+                this.mainCtx = this.mainCanvas.getContext('2d');
+                this.noImageElement = document.getElementById('noImage');
+                this.imageGrid = document.getElementById('imageGrid');
+                this.imageCountElement = document.getElementById('imageCount');
+                this.currentImageName = document.getElementById('currentImageName');
+                this.currentImageDetails = document.getElementById('currentImageDetails');
+                this.prevBtn = document.getElementById('prevBtn');
+                this.nextBtn = document.getElementById('nextBtn');
+                this.playBtn = document.getElementById('playBtn');
+                this.speedInput = document.getElementById('speedInput');
+                this.currentIndexElement = document.getElementById('currentIndex');
+                this.totalImagesElement = document.getElementById('totalImages');
+                this.playStatus = document.getElementById('playStatus');
+                this.loading = document.getElementById('loading');
+            }
+
+            bindEvents() {
+                this.fileInput.addEventListener('change', (e) => this.loadFile(e));
+                this.prevBtn.addEventListener('click', () => this.previousImage());
+                this.nextBtn.addEventListener('click', () => this.nextImage());
+                this.playBtn.addEventListener('click', () => this.togglePlay());
+                this.speedInput.addEventListener('change', (e) => {
+                    this.playSpeed = parseInt(e.target.value);
+                    if (this.isPlaying) {
+                        this.stopPlay();
+                        this.startPlay();
+                    }
+                });
+            }
+
+            bindKeyboardEvents() {
+                document.addEventListener('keydown', (e) => {
+                    if (!this.images.length) return;
+
+                    switch(e.key) {
+                        case 'ArrowLeft':
+                            e.preventDefault();
+                            this.previousImage();
+                            break;
+                        case 'ArrowRight':
+                            e.preventDefault();
+                            this.nextImage();
+                            break;
+                        case ' ':
+                            e.preventDefault();
+                            this.togglePlay();
+                            break;
+                    }
+                });
+            }
+
+            async loadFile(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                this.showLoading(true);
+                this.currentFile = file;
+                this.currentFileElement.textContent = `当前文件: ${file.name} (${this.formatFileSize(file.size)})`;
+
+                try {
+                    const buffer = await this.readFileAsArrayBuffer(file);
+                    this.parseBmasFile(buffer);
+                    this.showLoading(false);
+                } catch (error) {
+                    console.error('加载文件失败:', error);
+                    alert('加载文件失败: ' + error.message);
+                    this.showLoading(false);
+                }
+            }
+
+            readFileAsArrayBuffer(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject(new Error('读取文件失败'));
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            parseBmasFile(buffer) {
+                const dataView = new DataView(buffer);
+                let offset = 0;
+
+                // 检查头信息
+                const header = this.readString(dataView, offset, 4);
+                if (header !== 'IMGS') {
+                    throw new Error('无效的BMAS文件: 头信息不正确');
+                }
+                offset += 4;
+
+                // 读取图片数量
+                const imageCount = dataView.getUint32(offset, true);
+                offset += 4;
+
+                // 清空现有数据
+                this.images = [];
+                this.imageGrid.innerHTML = '';
+                this.currentIndex = -1;
+
+                // 读取图片信息表
+                const imageInfos = [];
+                for (let i = 0; i < imageCount; i++) {
+                    // 读取图片名 (32字节，以\0结尾)
+                    const nameBytes = new Uint8Array(buffer, offset, 32);
+                    const name = this.readStringFromBytes(nameBytes);
+                    offset += 32;
+
+                    // 读取魔数
+                    const magic = this.readString(dataView, offset, 4);
+                    offset += 4;
+
+                    // 读取尺寸
+                    const width = dataView.getUint32(offset, true);
+                    offset += 4;
+                    const height = dataView.getUint32(offset, true);
+                    offset += 4;
+
+                    // 读取透明色
+                    const transparentColor = dataView.getUint16(offset, true);
+                    offset += 2;
+
+                    // 读取数据偏移
+                    const dataOffset = dataView.getUint32(offset, true);
+                    offset += 4;
+
+                    imageInfos.push({
+                        index: i,
+                        name,
+                        magic,
+                        width,
+                        height,
+                        transparentColor,
+                        dataOffset
+                    });
+                }
+
+                // 解析每张图片的像素数据
+                for (const info of imageInfos) {
+                    const pixelData = new Uint8Array(buffer, info.dataOffset);
+                    const imageData = this.decodeBmaData(pixelData, info);
+                    
+                    this.images.push({
+                        ...info,
+                        imageData
+                    });
+
+                    // 创建缩略图
+                    this.createThumbnail(info.index, imageData, info);
+                }
+
+                // 更新UI
+                this.imageCountElement.textContent = imageCount;
+                this.totalImagesElement.textContent = imageCount;
+
+                // 显示第一张图片
+                if (this.images.length > 0) {
+                    this.showImage(0);
+                    this.prevBtn.disabled = false;
+                    this.nextBtn.disabled = false;
+                }
+            }
+
+            decodeBmaData(pixelData, info) {
+                const canvas = document.createElement('canvas');
+                canvas.width = info.width;
+                canvas.height = info.height;
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.createImageData(info.width, info.height);
+                const data = imageData.data;
+
+                const isMap8 = info.magic === 'MAP8';
+                const dataView = new DataView(pixelData.buffer, pixelData.byteOffset, pixelData.byteLength);
+                let pixelOffset = 0;
+
+                if (isMap8) {
+                    // ARGB8888 格式
+                    for (let i = 0; i < info.width * info.height; i++) {
+                        const argb = dataView.getUint32(pixelOffset, true);
+                        pixelOffset += 4;
+
+                        const a = (argb >> 24) & 0xFF;
+                        const r = (argb >> 16) & 0xFF;
+                        const g = (argb >> 8) & 0xFF;
+                        const b = argb & 0xFF;
+
+                        const dataIdx = i * 4;
+                        data[dataIdx] = r;
+                        data[dataIdx + 1] = g;
+                        data[dataIdx + 2] = b;
+                        data[dataIdx + 3] = a;
+                    }
+                } else {
+                    // RGB565 格式
+                    for (let i = 0; i < info.width * info.height; i++) {
+                        const rgb565 = dataView.getUint16(pixelOffset, true);
+                        pixelOffset += 2;
+
+                        const r = ((rgb565 >> 11) & 0x1F) * 8;
+                        const g = ((rgb565 >> 5) & 0x3F) * 4;
+                        const b = (rgb565 & 0x1F) * 8;
+
+                        const dataIdx = i * 4;
+                        data[dataIdx] = r;
+                        data[dataIdx + 1] = g;
+                        data[dataIdx + 2] = b;
+                        data[dataIdx + 3] = 255; // 完全不透明
+                    }
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+                return canvas;
+            }
+
+            createThumbnail(index, imageData, info) {
+                const item = document.createElement('div');
+                item.className = 'image-item';
+                item.dataset.index = index;
+                item.addEventListener('click', () => this.showImage(index));
+
+                const thumbCanvas = document.createElement('canvas');
+                thumbCanvas.className = 'thumb-canvas';
+                
+                // 创建缩略图
+                const thumbCtx = thumbCanvas.getContext('2d');
+                const maxSize = 80;
+                let width = info.width;
+                let height = info.height;
+                
+                if (width > maxSize || height > maxSize) {
+                    const ratio = Math.min(maxSize / width, maxSize / height);
+                    width = Math.floor(width * ratio);
+                    height = Math.floor(height * ratio);
+                }
+                
+                thumbCanvas.width = width;
+                thumbCanvas.height = height;
+                thumbCtx.drawImage(imageData, 0, 0, width, height);
+
+                const nameSpan = document.createElement('div');
+                nameSpan.className = 'thumb-name';
+                nameSpan.textContent = info.name;
+
+                item.appendChild(thumbCanvas);
+                item.appendChild(nameSpan);
+                this.imageGrid.appendChild(item);
+            }
+
+            showImage(index) {
+                if (index < 0 || index >= this.images.length) return;
+
+                const image = this.images[index];
+                this.currentIndex = index;
+
+                // 更新主画布
+                this.mainCanvas.width = image.width;
+                this.mainCanvas.height = image.height;
+                this.mainCtx.clearRect(0, 0, this.mainCanvas.width, this.mainCanvas.height);
+                this.mainCtx.drawImage(image.imageData, 0, 0);
+
+                // 更新UI
+                this.noImageElement.style.display = 'none';
+                this.mainCanvas.style.display = 'block';
+                this.currentImageName.textContent = image.name;
+                this.currentImageDetails.textContent = 
+                    `尺寸: ${image.width} × ${image.height} | 格式: ${image.magic} | 透明色: 0x${image.transparentColor.toString(16).padStart(4, '0')}`;
+                
+                this.currentIndexElement.textContent = index + 1;
+
+                // 更新缩略图选中状态
+                document.querySelectorAll('.image-item').forEach((item, i) => {
+                    item.classList.toggle('active', i === index);
+                });
+
+                // 如果正在播放，更新状态
+                if (this.isPlaying) {
+                    this.playStatus.textContent = `播放中: ${index + 1}/${this.images.length}`;
+                }
+            }
+
+            previousImage() {
+                if (this.images.length === 0) return;
+                const newIndex = (this.currentIndex - 1 + this.images.length) % this.images.length;
+                this.showImage(newIndex);
+            }
+
+            nextImage() {
+                if (this.images.length === 0) return;
+                const newIndex = (this.currentIndex + 1) % this.images.length;
+                this.showImage(newIndex);
+            }
+
+            togglePlay() {
+                if (this.isPlaying) {
+                    this.stopPlay();
+                } else {
+                    this.startPlay();
+                }
+            }
+
+            startPlay() {
+                if (this.images.length === 0) return;
+
+                this.isPlaying = true;
+                this.playBtn.classList.add('playing');
+                this.playBtn.innerHTML = '<span>⏸ 暂停</span>';
+                this.playStatus.textContent = `播放中: ${this.currentIndex + 1}/${this.images.length}`;
+
+                this.playInterval = setInterval(() => {
+                    this.nextImage();
+                }, this.playSpeed);
+            }
+
+            stopPlay() {
+                this.isPlaying = false;
+                this.playBtn.classList.remove('playing');
+                this.playBtn.innerHTML = '<span>▶ 播放</span>';
+                this.playStatus.textContent = '已停止';
+                
+                if (this.playInterval) {
+                    clearInterval(this.playInterval);
+                    this.playInterval = null;
+                }
+            }
+
+            showLoading(show) {
+                this.loading.classList.toggle('active', show);
+            }
+
+            readString(dataView, offset, length) {
+                let str = '';
+                for (let i = 0; i < length; i++) {
+                    const charCode = dataView.getUint8(offset + i);
+                    if (charCode === 0) break;
+                    str += String.fromCharCode(charCode);
+                }
+                return str;
+            }
+
+            readStringFromBytes(bytes) {
+                let str = '';
+                for (let i = 0; i < bytes.length; i++) {
+                    if (bytes[i] === 0) break;
+                    str += String.fromCharCode(bytes[i]);
+                }
+                return str;
+            }
+
+            formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+        }
+
+        // 初始化查看器
+        document.addEventListener('DOMContentLoaded', () => {
+            window.viewer = new BmasViewer();
+            
+            // 示例：可以在这里添加一个示例文件的加载逻辑（如果需要）
+            // console.log('BMAS图集查看器已初始化');
+        });
+    </script>
+</body>
+</html>

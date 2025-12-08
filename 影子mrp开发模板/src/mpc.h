@@ -88,17 +88,17 @@ enum{_MIDI=1,_WAVE,_MP3,_AMR,_PCM,_M4A,_AMR_WB};
 #define setplaypos( type, pos)         mrc_setPlayPos(type,*(T_DSM_AUDIO_POS*)pos)
 #define setplaytime( type, pos)         mrc_setPlayTime(type,*(T_DSM_AUDIO_POS*)pos)
 #define getdevicestate        mrc_getDeviceState
-#define strrcmp mrc_strrcmp
-#define strlen mrc_strlen
-#define wstrlen mrc_wstrlen
-#define strcpy mrc_strcpy
-#define strncat mrc_strncat
+// #define strrcmp mrc_strrcmp
+// #define strlen mrc_strlen
+// #define wstrlen mrc_wstrlen
+// #define strcpy mrc_strcpy
+// #define strncat mrc_strncat
 
-#define malloc mrc_malloc
-#define free mrc_free
-#define memcpy mrc_memcpy
-#define memmove mrc_memmove
-#define memset mrc_memset
+// #define malloc mrc_malloc
+// #define free mrc_free
+// #define memcpy mrc_memcpy
+// #define memmove mrc_memmove
+// #define memset mrc_memset
 
 
 

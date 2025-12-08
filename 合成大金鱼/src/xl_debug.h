@@ -5,7 +5,13 @@
 #define DEBUG_FILE "debug.txt"
 #define DEBUG_CHECK_FILE "风的影子"
 
+// 简单直接的调试宏
+#define LOG_HERE() mrc_printf("[DEBUG] %s:%d (%s)\n", __FILE__, __LINE__, __func__)
+#define LOG_MSG(msg) mrc_printf("[DEBUG] %s:%d - %s\n", __FILE__, __LINE__, msg)
+#define LOG_VAR(fmt, var) mrc_printf("[DEBUG] %s:%d - " #var " = " fmt "\n", __FILE__, __LINE__, var)
+
 extern void debug_printf(char *text,...);
+extern char* toCharEx(float num, char *text);
 #define debug_log(...) \
 	do{\
 		int32 h31415926len;\

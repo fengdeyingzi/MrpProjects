@@ -59,7 +59,7 @@ typedef struct LUA_TIMERDATA
 
 
 void lua_timerCB(int32 data){
-	// printf("¶¨Ê±Æ÷»Øµ÷");
+	// printf("å®šæ—¶å™¨å›è°ƒ");
 	LUA_TIMERDATA *lua_timerdata = (LUA_TIMERDATA*) data;
 	int lua_data = lua_timerdata -> data;
 	lua_State *L = lua_timerdata -> L;
@@ -83,7 +83,7 @@ static int lua_timerStart(lua_State *L){
 	lua_timerdata->data = data;
 	mrc_printf("timerstart");
 	mrc_timerStart(timer, time, (int32)lua_timerdata, lua_timerCB, 0);
-	mrc_printf("¶¨Ê±Æ÷Æô¶¯");
+	mrc_printf("å®šæ—¶å™¨å¯åŠ¨");
 	return 1;
 }
 

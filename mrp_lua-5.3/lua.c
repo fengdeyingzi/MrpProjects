@@ -147,7 +147,7 @@ int32 lua_app_main(int argc, char *argv[]) {
   mrc_printf("init:%ld\n", lua_tointeger(lua_state, -1));
   lua_pop(lua_state, 1);
   mrc_printf("lua_app_main %d",5);
-  /* Çå³ýLua */
+  /* æ¸…é™¤Lua */
   lua_close(lua_state);
   return 0;
 }

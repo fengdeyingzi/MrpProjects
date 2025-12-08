@@ -6,11 +6,11 @@ typedef unsigned int size_t;
 
 typedef struct _iobuf_capp
 {
-    // char*    _ptr; //ÎÄ¼şÃû£¿£¿
+    // char*    _ptr; //æ–‡ä»¶åï¼Ÿï¼Ÿ
     // int  _cnt;
     // char*    _base;
     // int  _flag;
-    int32 _file; //½ø³Ì¼¶ÎÄ¼ş±í ¼ÇÂ¼ÎÄ¼ş´ò¿ªÊı
+    int32 _file; //è¿›ç¨‹çº§æ–‡ä»¶è¡¨ è®°å½•æ–‡ä»¶æ‰“å¼€æ•°
     int32 len;
     // int  _charbuf;
     // int  _bufsiz;

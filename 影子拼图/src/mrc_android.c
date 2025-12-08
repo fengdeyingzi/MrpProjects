@@ -15,12 +15,12 @@ char *assets_dir;
 }
 
 #ifdef C_RUN
-void *mrc_readFileFromAssets(char *filename, int32 *len){
+void *mrc_readFileFromAssets(const char *filename, int32 *len){
  int32 f = 0;
  char path[300];
  void *buf = NULL;
  mrc_sprintf(path,"%s/%s",getAssetsDir(),filename);
-//  debug_printf("∂¡»°assets");
+//  debug_printf("ËØªÂèñassets");
 //  debug_printf(path);
  *len = (int32)mrc_getLen((const char*)path);
  buf = (void*)mrc_malloc(*len);
@@ -39,11 +39,11 @@ void mrc_freeFileFromAssets(void *data,int32 len){
 
 #else
 
-void *mrc_readFileFromAssets(char *filename, int32 *len){
+void *mrc_readFileFromAssets(const char *filename, int32 *len){
 	uint8 *buf = NULL;
 	int32 re = 0;
- re = mrc_readFileFromMrpEx(NULL,(const char*)filename,&buf,len,0);
- if(re == MR_SUCCESS){
+ buf = mrc_readFileFromMrp((const char*)filename,len,0);
+ if(buf != NULL){
 	 return buf;
  }
  return NULL;

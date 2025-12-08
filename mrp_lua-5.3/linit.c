@@ -60,7 +60,7 @@ static const luaL_Reg loadedlibs[] = {
 };
 
 
-//xldebug º”»Îlibs
+//xldebug Âä†ÂÖ•libs
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib;
 

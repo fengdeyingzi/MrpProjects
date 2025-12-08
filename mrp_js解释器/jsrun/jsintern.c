@@ -1,5 +1,6 @@
 #include "jsi.h"
 #include <mrc_base.h>
+#include "xl_debug.h"
 
 /* Dynamically grown string buffer */
 
@@ -130,12 +131,12 @@ const char *js_intern(js_State *J, const char *s)
 {
 	const char *result;
 
-	if (s) mrc_printf("js_intern: s='%s'\n", s);
-	mrc_printf("js_intern: J->strings=%p\n", J->strings);
+	if (s) LOG_VAR("js_intern: s='%s'\n", s);
+	LOG_VAR("js_intern: J->strings=%p\n", J->strings);
 	if (!J->strings)
 		J->strings = &jsS_sentinel;
 	J->strings = jsS_insert(J, J->strings, s, &result);
-	mrc_printf("js_intern: done, result=%p\n", result);
+	LOG_VAR("js_intern: done, result=%p\n", result);
 	return result;
 }
 

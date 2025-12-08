@@ -1,4 +1,4 @@
-mrpbuilder -t build -o test.mrp -Isrc -I. -i src/ assets/ base.c jsrun/mrc_math.c ^
+mrpbuilder -t build -map mapfile.txt -cache "obj" -o test.mrp -Isrc -I. -i src/ assets/ base.c jsrun/mrc_math.c ^
 jsrun/hello.c ^
 jsrun/jscapp.c ^
 jsrun/jsarray.c ^
@@ -27,4 +27,4 @@ jsrun/jsvalue.c ^
 jsrun/jsrun.c ^
 jsrun/regexp.c ^
 jsrun/utf.c ^
-jsrun/utftype.c  
+jsrun/utftype.c 

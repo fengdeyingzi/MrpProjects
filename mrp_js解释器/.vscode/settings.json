@@ -12,6 +12,7 @@
         "mpc.h": "c",
         "opnames.h": "c",
         "astnames.h": "c",
-        "jscompile.h": "c"
+        "jscompile.h": "c",
+        "mrc_math.h": "c"
     }
 }

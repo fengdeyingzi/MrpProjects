@@ -1,6 +1,7 @@
 #ifndef js_value_h
 #define js_value_h
 
+#include "jsi.h"
 typedef struct js_Property js_Property;
 typedef struct js_Iterator js_Iterator;
 

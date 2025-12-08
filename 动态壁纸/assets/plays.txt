@@ -1,0 +1,7 @@
+24.dfa
+19.dfa
+16.dfa
+20.dfa
+08.dfa
+25.dfa
+04.dfa

@@ -3,11 +3,11 @@
 
 #include "mujs.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <stddef.h>
+#include <mrc_base.h>
+// #include <stdlib.h>
+// #include <stddef.h>
 #include <stdarg.h>
-#include <string.h>
+// #include <string.h>
 #include <setjmp.h> //xldebug
 #include <math.h> //xldebug
 #include <float.h>

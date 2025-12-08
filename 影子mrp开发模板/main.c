@@ -3,6 +3,7 @@
 #include "uc3_font.h"
 #include "mpc.h"
 #include "mrc_graphics.h"
+#include "xl_debug.h"
 
 int32 timer_cd;
 extern void drawGame(void);
@@ -21,7 +22,11 @@ void drawGame(void)
 
   // mrc_printf("uc3 draw");
   uc3_drawText("测试字体 风的影子，制作", 10, 10, 255, 255, 255, 0);
-
+  LOG_MSG("11");
+  uc3_drawGradientText("测试渐变文字", 10, 40, 200,200,200, 90, 128, 240, 0);
+  LOG_MSG("11");
+  uc3_drawTextInRect("多行文本绘制\n测试测试\n这是多行文本哈哈哈哈哈哈哈",0, -8,   10, 60, 120, 32,   200, 120, 250, 0);
+  LOG_MSG("11");
   
 
   text_exit = "退出";
@@ -32,22 +37,22 @@ void drawGame(void)
 
 int32 mrc_init(void)
 {
-  int i = 0;
-  char temp[30];
-  BITMAPINFO bitmapinfo;
 
+  LOG_MSG("mpc init");
   mpc_init();
 
-
+  LOG_MSG("uc3 init");
   uc3_init();
+  
+  LOG_MSG("getuptime");
   sand(getuptime());
 
-
+  LOG_MSG("draw....");
   drawGame();
 
-  mrc_printf("图片宽度:%d 高度:%d\n", bitmapinfo.width, bitmapinfo.height);
-  timer_cd = timercreate();
-  timerstart(timer_cd, 33, 0, timer_run, 1);
+  LOG_MSG("创建定时器");
+  timer_cd = mrc_timerCreate();
+  mrc_timerStart(timer_cd, 33, 0, timer_run, 0);
 
   return 0;
 }
@@ -72,8 +77,8 @@ int32 mrc_resume() { return 0; }
 int32 mrc_exitApp()
 {
   int i = 0;
-  timerstop(timer_cd);
-  timerdel(timer_cd);
+  mrc_timerStop(timer_cd);
+  mrc_timerDelete(timer_cd);
   // 释放字体
   uc3_free();
 

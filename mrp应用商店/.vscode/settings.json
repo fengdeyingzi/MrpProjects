@@ -10,5 +10,6 @@
         "files.encoding": "utf8"
     },
     "files.associations": {
+        "mrc_base.h": "c"
     }
 }

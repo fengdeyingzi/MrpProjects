@@ -9,6 +9,8 @@
 #include "mrc_android.h"
 #include "mpc.h"
 #include "xl_coding.h"
+#include "xl_debug.h"
+#include "jsvalue.h"
 
 
 /* 声明在jslex.c中定义的keywords相关变量 */
@@ -138,7 +140,7 @@ void js_clearScreen(js_State *J){
     int g = js_toint32(J,2);
     int b = js_toint32(J,3);
     mrc_printf("js_clearScreen");
-    // gl_clearScreen(r, g, b);
+    gl_clearScreen(r, g, b);
     js_pushundefined(J);
 }
 
@@ -657,7 +659,8 @@ int32 mrc_init()
 {
     js_State *J = NULL;
     int i;
-
+    char *temp = NULL;
+    LOG_VAR("%d", i);
     /* ===== 最重要：先初始化字符串内部化系统 ===== */
     jsV_init();
     jsS_init();
@@ -733,7 +736,7 @@ int32 mrc_init()
     mpc_init();
 
 	mrc_clearScreen(255,255,255);
-	mrc_drawText("helloworld",0,0, 20,20,20, 0, 1);
+	mrc_drawText("this is hello",0,0, 20,20,20, 0, 1);
 	mrc_refreshScreen(0,0,SCRW,SCRH);
     mrc_sleep(100);
 
@@ -876,8 +879,10 @@ int32 mrc_init()
     js_newcfunction(J, js_clearScreen, "clearScreen", 3);
     js_setglobal(J, "clearScreen");
 
+    LOG_MSG("js_dostring");
+    temp[0] = 12; //测试异常
 	/* 测试简单的代码 */
-	js_dostring(J, "clearScreen(1, 1, 1);");
+	js_dostring(J, "clearScreen(1, 1, 1); ref(0, 0, 32, 32);");
 
 	js_freestate(J);
 
