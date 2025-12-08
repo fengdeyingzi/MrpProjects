@@ -6,6 +6,7 @@
 #define O_RDONLY MR_FILE_RDONLY
 #define O_WRONLY MR_FILE_WRONLY
 #define O_CREAT MR_FILE_CREATE
+#define O_RDWR MR_FILE_RDWR
 
 FILE *fopen(const char *path, const char *mode)
 {
@@ -20,15 +21,15 @@ FILE *fopen(const char *path, const char *mode)
     }
     else if (strcmp(mode, "r+") == 0)
     { //以读/写方式打开文件，该文件必须存在。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
     }
     else if (strcmp(mode, "rb+") == 0)
     { //以读/写方式打开一个二进制文件，只允许读/写数据。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
     }
     else if (strcmp(mode, "rt+") == 0)
     { //以读/写方式打开一个文本文件，允许读和写。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
     }
     else if (strcmp(mode, "w") == 0)
     { //打开只写文件，若文件存在则长度清为0，即该文件内容消失，若不存在则创建该文件。
@@ -37,7 +38,7 @@ FILE *fopen(const char *path, const char *mode)
     }
     else if (strcmp(mode, "w+") == 0)
     { //打开可读/写文件，若文件存在则文件长度清为零，即该文件内容会消失。若文件不存在则建立该文件。
-        file_mode = O_RDONLY | O_WRONLY | O_CREAT;
+        file_mode = MR_FILE_RDWR | O_CREAT;
         remove(path);
     }
     else if (strcmp(mode, "a") == 0)
@@ -47,7 +48,7 @@ FILE *fopen(const char *path, const char *mode)
     }
     else if (strcmp(mode, "a+") == 0)
     { //以附加方式打开可读/写的文件。若文件不存在，则会建立该文件，如果文件存在，则写入的数据会被加到文件尾后，即文件原先的内容会被保留（原来的EOF符 不保留)。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
         seek_mode = MR_SEEK_END;
     }
     else if (strcmp(mode, "wb") == 0)
@@ -56,20 +57,20 @@ FILE *fopen(const char *path, const char *mode)
     }
     else if (strcmp(mode, "wb+") == 0)
     { //以读/写方式打开或建立一个二进制文件，允许读和写。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
     }
     else if (strcmp(mode, "wt+") == 0)
     { //以读/写方式打开或建立一个文本文件，允许读写。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
     }
     else if (strcmp(mode, "at+") == 0)
     { //以读/写方式打开一个文本文件，允许读或在文本末追加数据。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
         seek_mode = MR_SEEK_END;
     }
     else if (strcmp(mode, "ab+") == 0)
     { //以读/写方式打开一个二进制文件，允许读或在文件末追加数据。
-        file_mode = O_RDONLY | O_WRONLY;
+        file_mode = MR_FILE_RDWR;
         seek_mode = MR_SEEK_END;
     }
     filelen = mrc_getLen(path);
