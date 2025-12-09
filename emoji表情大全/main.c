@@ -187,10 +187,9 @@ int extractResources(void) {
     /* 检查是否已解压 */
     if (mrc_fileState(outputPath) == MR_IS_FILE) {
         LOG_MSG("资源已存在，跳过解压");
-        return 0;
     }
-
-    /* 打开输出文件 */
+    else{
+        /* 打开输出文件 */
     LOG_MSG("创建输出文件");
     outFile = fopen(outputPath, "w+");
     if (!outFile) {
@@ -234,6 +233,9 @@ int extractResources(void) {
     fclose(outFile);
 
     mrc_printf("[DEBUG] 资源解压完成，共 %d 个分片，总大小: %d 剩余内存：%d", index - 1, totalWritten, mrc_getMemoryRemain());
+    }
+
+    
 
     /* 加载bmas文件 */
     if (loadBmasFile(outputPath) != 0) {
