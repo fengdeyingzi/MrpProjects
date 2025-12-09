@@ -71,8 +71,7 @@ typedef struct {
     FILE *file;                /* dfa文件指针 */
     DFA_HEADER header;         /* DFA文件头 */
     DFA_FRAME_INFO *frameInfos; /* 帧信息表 */
-    uint16 *frameBuffer;       /* 当前帧缓冲区 (RGB565格式) */
-    uint16 *prevFrameBuffer;   /* 前一帧缓冲区 */
+    uint16 *frameBuffer;       /* 当前帧缓冲区 (RGB565格式)，也用作前一帧数据 */
     BITMAP_565 *currentBitmap; /* 当前帧bitmap */
     uint32 currentFrame;       /* 当前帧索引 */
     int isPaused;              /* 是否暂停 */

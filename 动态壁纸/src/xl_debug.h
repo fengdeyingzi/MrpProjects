@@ -1,14 +1,15 @@
 #ifndef _DEBUG_H_
 #define _DEBUG_H_
+#include <mrc_base.h>
 
 //用于调试
 #define DEBUG_FILE "debug.txt"
-#define DEBUG_CHECK_FILE "风的影子"
+#define DEBUG_CHECK_FILE "debug.txt"
 
 // 简单直接的调试宏
-#define LOG_HERE() mrc_printf("[DEBUG] %s:%d (%s)\n", __FILE__, __LINE__, __func__)
-#define LOG_MSG(msg) mrc_printf("[DEBUG] %s:%d - %s\n", __FILE__, __LINE__, msg)
-#define LOG_VAR(...) mrc_printf("[DEBUG] %s:%d - ", __FILE__, __LINE__); mrc_printf(__VA_ARGS__); mrc_printf("\n")
+#define LOG_HERE() debug_log("[DEBUG] %s:%d (%s)\n", __FILE__, __LINE__, __func__)
+#define LOG_MSG(msg) debug_log("%s", msg)
+#define LOG_VAR(...) mrc_printf("[DEBUG] %s:%d - ", __FILE__, __LINE__); debug_log(__VA_ARGS__); mrc_printf("\n")
 
 extern void debug_printf(char *text,...);
 extern void toCharEx(float num, char *text);
@@ -27,6 +28,8 @@ extern void toCharEx(float num, char *text);
 			p = msgBuffer + h31415926len; \
 			h31415926len += sprintf(p, __VA_ARGS__);\
 			mrc_write(h31415926, msgBuffer, h31415926len);\
+			h31415926len = sprintf(msgBuffer, " memoryRemain:%d", mrc_getMemoryRemain()); \
+			mrc_write(h31415926, msgBuffer, h31415926len); \
 			mrc_write(h31415926, "\r\n\r\n", 4);\
 			mrc_close(h31415926);\
 		}\

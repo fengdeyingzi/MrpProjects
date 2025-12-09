@@ -13,6 +13,7 @@ void drawCenterUI(char *text){
   textWidth = uc3_getWidth(text, 0);
   uc3_drawText(text, (SCRW - textWidth) / 2, (SCRH - 16) / 2, 0, 0, 0, 0);
   mrc_refreshScreen(0, 0, SCRW, SCRH);
+  mrc_sleep(100);
 }
 
 /* 资源解压：读取plays.txt并解压所有壁纸 */
@@ -107,7 +108,6 @@ int wallpaper_init(WALLPAPER_PLAYER *player) {
     player->file = NULL;
     player->frameInfos = NULL;
     player->frameBuffer = NULL;
-    player->prevFrameBuffer = NULL;
     player->currentBitmap = NULL;
     /* list 成员已经通过 mrc_memset 清零 */
 
@@ -123,7 +123,7 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
     uint32 currentOffset;
     uint32 totalPixels;
 
-    mrc_printf("[DEBUG] 加载dfa文件: %s", filename);
+    LOG_VAR("[DEBUG] 加载dfa文件: %s", filename);
 
     /* 打开文件 */
     player->file = fopen(filename, "rb");
@@ -216,7 +216,7 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
     /* 保存文件头信息 */
     player->header = header;
 
-    mrc_printf("DFA信息: %dx%d, 总帧数: %d", header.width, header.height, header.totalFrames);
+    LOG_VAR("DFA信息: %dx%d, 总帧数: %d", header.width, header.height, header.totalFrames);
 
     /* 计算总像素数 */
     totalPixels = header.width * header.height;
@@ -229,11 +229,8 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
 
     /* 分配帧缓冲区 */
     player->frameBuffer = (uint16*)mrc_malloc(totalPixels * sizeof(uint16));
-    player->prevFrameBuffer = (uint16*)mrc_malloc(totalPixels * sizeof(uint16));
-    if (!player->frameBuffer || !player->prevFrameBuffer) {
+    if (!player->frameBuffer) {
         LOG_MSG("分配帧缓冲区失败");
-        if (player->frameBuffer) mrc_free(player->frameBuffer);
-        if (player->prevFrameBuffer) mrc_free(player->prevFrameBuffer);
         fclose(player->file);
         player->file = NULL;
         return -6;
@@ -241,14 +238,12 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
 
     /* 初始化缓冲区 */
     mrc_memset(player->frameBuffer, 0, totalPixels * sizeof(uint16));
-    mrc_memset(player->prevFrameBuffer, 0, totalPixels * sizeof(uint16));
 
     /* 分配帧信息表 */
     player->frameInfos = (DFA_FRAME_INFO*)mrc_malloc(sizeof(DFA_FRAME_INFO) * header.totalFrames);
     if (!player->frameInfos) {
         LOG_MSG("分配帧信息表失败");
         mrc_free(player->frameBuffer);
-        mrc_free(player->prevFrameBuffer);
         fclose(player->file);
         player->file = NULL;
         return -7;
@@ -266,7 +261,6 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
             LOG_VAR("读取帧类型失败: 帧 %d", i);
             mrc_free(player->frameInfos);
             mrc_free(player->frameBuffer);
-            mrc_free(player->prevFrameBuffer);
             fclose(player->file);
             player->file = NULL;
             return -8;
@@ -277,7 +271,6 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
             LOG_VAR("读取保留字段失败: 帧 %d", i);
             mrc_free(player->frameInfos);
             mrc_free(player->frameBuffer);
-            mrc_free(player->prevFrameBuffer);
             fclose(player->file);
             player->file = NULL;
             return -8;
@@ -288,7 +281,6 @@ int wallpaper_loadDfa(WALLPAPER_PLAYER *player, const char *filename) {
             LOG_VAR("读取数据大小失败: 帧 %d", i);
             mrc_free(player->frameInfos);
             mrc_free(player->frameBuffer);
-            mrc_free(player->prevFrameBuffer);
             fclose(player->file);
             player->file = NULL;
             return -8;
@@ -323,8 +315,9 @@ int loadCurrentFrame(WALLPAPER_PLAYER *player) {
     DFA_FRAME_HEADER frameHeader;
     uint8 *frameData;
     int32 readSize;
+    int32 useScreenBufer;
     int ret;
-
+    useScreenBufer = FALSE;
     if (!player->file || !player->frameInfos || player->currentFrame >= player->header.totalFrames) {
         return -1;
     }
@@ -359,26 +352,38 @@ int loadCurrentFrame(WALLPAPER_PLAYER *player) {
         mrc_printf("帧类型不匹配: 预期 %d, 实际 %d", frameInfo->frameType, frameHeader.frameType);
         return -3;
     }
-
-    /* 分配帧数据缓冲区 */
-    frameData = (uint8*)mrc_malloc(frameHeader.dataSize);
-    if (!frameData) {
-        LOG_MSG("分配帧数据缓冲区失败");
-        return -4;
+    switch (frameHeader.frameType)
+    {
+    case 0:
+        useScreenBufer = FALSE;
+        break;
+    default:
+        useScreenBufer = TRUE;
+        break;
     }
+    /* 分配帧数据缓冲区 */
+    if(useScreenBufer){
+         frameData = (uint8*)w_getScreenBuffer();
+         LOG_MSG("使用屏幕缓存区");
+    }
+    else{
+        frameData = (uint8*)player->frameBuffer;
+        LOG_MSG("使用帧缓存区");
+    }
+    
 
     /* 读取帧数据 */
     readSize = fread(frameData, 1, frameHeader.dataSize, player->file);
     if (readSize != frameHeader.dataSize) {
         mrc_printf("读取帧数据失败: 预期 %d, 实际 %d", frameHeader.dataSize, readSize);
-        mrc_free(frameData);
+        // mrc_free(frameData);
         return -5;
     }
 
     /* 根据帧类型解码 */
     switch (frameHeader.frameType) {
-        case 0: /* 关键帧 */
-            ret = dfa_decodeKeyFrame(player, frameData, frameHeader.dataSize);
+        case 0: /* 关键帧 因为直接read进了frameBuffer，所以无需处理*/
+            ret = 0; //dfa_decodeKeyFrame(player, frameData, frameHeader.dataSize);
             break;
         case 1: /* 差分帧 */
             ret = dfa_decodeDiffFrame(player, frameData, frameHeader.dataSize);
@@ -396,7 +401,7 @@ int loadCurrentFrame(WALLPAPER_PLAYER *player) {
     }
 
     /* 释放帧数据缓冲区 */
-    mrc_free(frameData);
+    // mrc_free(frameData);
 
     if (ret != 0) {
         mrc_printf("帧解码失败: 类型 %d, 错误 %d", frameHeader.frameType, ret);
@@ -463,26 +468,10 @@ int copyFrameToImage(WALLPAPER_PLAYER *player) {
             return -2;
         }
         mrc_memset(player->currentBitmap, 0, sizeof(BITMAP_565));
-        player->currentBitmap->bitmap = NULL;
+        player->currentBitmap->bitmap = player->frameBuffer;
         player->currentBitmap->buflen = 0;
     }
 
-    /* 检查bitmap缓存是否够用，不够则重新申请 */
-    if (!player->currentBitmap->bitmap || player->currentBitmap->buflen < imageSize) {
-        /* 释放旧的bitmap缓存 */
-        if (player->currentBitmap->bitmap) {
-            mrc_freeFileData(player->currentBitmap->bitmap, player->currentBitmap->buflen);
-        }
-        mrc_printf("开始申请图像内存：%d 剩余内存：%d", imageSize, mrc_getMemoryRemain());
-        /* 申请新的bitmap缓存 */
-        player->currentBitmap->bitmap = (uint16*)mr_malloc(imageSize);
-        if (!player->currentBitmap->bitmap) {
-            mrc_printf("[DEBUG] 申请bitmap缓存失败，大小: %d", imageSize);
-            mrc_printf("剩余内存：%d", mrc_getMemoryRemain());
-            return -3;
-        }
-        player->currentBitmap->buflen = imageSize;
-    }
 
     /* 更新bitmap属性 */
     player->currentBitmap->width = player->header.width;
@@ -491,13 +480,8 @@ int copyFrameToImage(WALLPAPER_PLAYER *player) {
     player->currentBitmap->transcolor = 0;
     player->currentBitmap->mode = BM_COPY;
 
-    /* 将解码后的帧缓冲区复制到bitmap */
-    mrc_memcpy(player->currentBitmap->bitmap, player->frameBuffer, imageSize);
 
-    /* 将当前帧复制到前一帧缓冲区，为下一帧做准备 */
-    if (player->prevFrameBuffer) {
-        mrc_memcpy(player->prevFrameBuffer, player->frameBuffer, imageSize);
-    }
+    /* 注意：frameBuffer现在保持当前帧数据，为下一帧（差分帧）做准备 */
     return 0;
 }
 
@@ -553,10 +537,6 @@ void wallpaper_free(WALLPAPER_PLAYER *player) {
         player->frameBuffer = NULL;
     }
 
-    if (player->prevFrameBuffer) {
-        mrc_free(player->prevFrameBuffer);
-        player->prevFrameBuffer = NULL;
-    }
 
     /* 关闭文件 */
     if (player->file) {
@@ -915,8 +895,7 @@ int dfa_decodeDiffFrame(WALLPAPER_PLAYER *player, uint8 *data, uint32 dataSize) 
 
     totalPixels = player->header.width * player->header.height;
 
-    /* 复制前一帧作为基础 */
-    mrc_memcpy(player->frameBuffer, player->prevFrameBuffer, totalPixels * 2);
+    /* frameBuffer已经包含前一帧数据，直接在其基础上更新 */
 
     /* 读取压缩模式 */
     compressionMode = data[0];
@@ -998,13 +977,7 @@ int dfa_decodeDiffFrame(WALLPAPER_PLAYER *player, uint8 *data, uint32 dataSize) 
 
 /* 解码跳过帧 */
 int dfa_decodeSkipFrame(WALLPAPER_PLAYER *player) {
-    uint32 totalPixels;
-
-    totalPixels = player->header.width * player->header.height;
-
-    /* 直接复制前一帧 */
-    mrc_memcpy(player->frameBuffer, player->prevFrameBuffer, totalPixels * 2);
-
+    /* 跳过帧：frameBuffer已经包含前一帧数据，什么都不用做 */
     return 0;
 }
 
@@ -1022,8 +995,7 @@ int dfa_decodeRectFrame(WALLPAPER_PLAYER *player, uint8 *data, uint32 dataSize) 
 
     totalPixels = player->header.width * player->header.height;
 
-    /* 复制前一帧作为基础 */
-    mrc_memcpy(player->frameBuffer, player->prevFrameBuffer, totalPixels * 2);
+    /* frameBuffer已经包含前一帧数据，直接在其基础上更新矩形区域 */
 
     /* 读取矩形数量 */
     rectCount = data[0];

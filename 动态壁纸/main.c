@@ -121,9 +121,10 @@ void switchWindow(int windex, int level)
 
       /* 构造dfa文件路径 */
       mrc_sprintf(bmasPath, "%s/%s", packName, wallpaperPlayer.list.wallpapers[0].dfaName);
-
+      LOG_MSG("开始加载壁纸...");
       /* 检查文件是否存在，如果不存在则解压 */
       if (mrc_fileState(bmasPath) != MR_IS_FILE) {
+        LOG_MSG("文件不存在");
         ret = wallpaper_extractWallpaper(wallpaperPlayer.list.wallpapers[0].dfaName);
         if (ret != 0) {
           LOG_MSG("解压壁纸失败");
@@ -142,7 +143,7 @@ void switchWindow(int windex, int level)
         switchWindow(0, 0);
         return;
       }
-
+      LOG_MSG("加载并绘制第一帧");
       /* 加载并绘制第一帧（第0帧） */
       wallpaperPlayer.currentFrame = -1;
       wallpaper_nextFrame(&wallpaperPlayer);

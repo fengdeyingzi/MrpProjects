@@ -29,16 +29,26 @@ void debug_printf(char *text,...){
 	//mrc_drawText(text, 0,0, 20,20,20, 0, 1);
 	//mrc_refreshScreen(0,0,240,320);
 	//mrc_sleep(200);
-	if(len>=0){
+	// if(len>=0){
 		va_start(args, text);  
 		mrc_sprintf(temp,text,args);
+        
 		va_end(args); 
-		f = mrc_open(DEBUG_FILE, 2);
+        // va_start(args, text);  
+        // mrc_printf(text, args);
+        // va_end(args); 
+		f = mrc_open(DEBUG_FILE, MR_FILE_WRONLY|MR_FILE_CREATE);
 		mrc_seek(f,0,MR_SEEK_END);
 		mrc_write(f, temp, mrc_strlen(temp));
 		mrc_write(f, "\r\n", 2);
 		mrc_close(f);
-	}
+	// }
+    // else{
+    //     va_start(args, text);  
+	// 	mrc_printf(text, args);
+	// 	va_end(args); 
+    // }
+    
 }
 
 /*

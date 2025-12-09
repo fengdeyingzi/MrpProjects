@@ -11,6 +11,9 @@
     },
     "files.associations": {
         "mrc_graphics.h": "c",
-        "mrc_base.h": "c"
+        "mrc_base.h": "c",
+        "fopen.h": "c",
+        "wallpaper.h": "c",
+        "mrc_android.h": "c"
     }
 }
