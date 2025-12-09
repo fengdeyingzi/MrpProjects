@@ -13,7 +13,7 @@
 
 // ==================== 常量定义 ====================
 #define MAX_FISH 50        // 最大鱼数量
-#define FISH_TYPES_COUNT 9 // 鱼类型数量
+#define FISH_TYPES_COUNT 10 // 鱼类型数量
 #define GAME_WIDTH 240     // 游戏区域宽度
 int32 GAME_HEIGHT = 0;    // 游戏区域高度
 #define LIMIT_LINE_Y 80    // 警戒线高度（按比例从150缩放）
@@ -49,6 +49,7 @@ typedef struct {
     float vx, vy;    // 速度
     int dangerTime;  // 在警戒线上方的时间
     int mergeFlag;   // 合成标记（防止重复合成）
+    int removeTimer; // 移除计时器（用于level 9鱼）
 } Fish;
 
 // 游戏状态
@@ -88,9 +89,11 @@ Fish fishes[MAX_FISH];           // 所有鱼对象
 GameState gameState;             // 游戏状态
 BITMAP_565* fishBitmaps[FISH_TYPES_COUNT]; // 鱼图片资源
 BITMAP_565* bgBitmap;            // 背景图片
+BITMAP_565* dnumBitmap;          // dnum计数图标
 
 int32 timer_cd;
 uint32 randomSeed;
+int dnum;                        // 合成到level 8鱼的计数
 
 // 窗口管理
 int currentWindow;               // 当前窗口
@@ -311,6 +314,7 @@ void initGame(void) {
     gameState.canDrop = 1;
     gameState.dropperX = GAME_WIDTH / 2;
     gameState.dropDelay = 0;
+    dnum = 0; // 初始化dnum计数
 
     // 设置第一个鱼
     gameState.nextFishType = getRandom(5); // 只生成前5种
@@ -322,13 +326,15 @@ void initGame(void) {
 void loadAssets(void) {
     int i;
     BITMAPINFO info;
-
+    LOG_MSG("开始加载图片....");
     // 加载背景图片
     bgBitmap = readBitmap565FromAssets("bg_240.png");
-
+    LOG_MSG("加载鱼");
     // 加载鱼图片并获取尺寸
     for (i = 0; i < FISH_TYPES_COUNT; i++) {
+        
         fishBitmaps[i] = readBitmap565FromAssets(fishTypes[i].imgName);
+        LOG_VAR("load %s", fishTypes[i].imgName);
         // bitmap565Rotate(fishBitmaps[i], 1, 0);
         // 获取图片宽度并设置半径
         if (fishBitmaps[i] != NULL) {
@@ -336,7 +342,11 @@ void loadAssets(void) {
                 fishTypes[i].radius = info.width / 2;
             }
         }
+        LOG_MSG("getInfo Success");
     }
+    LOG_MSG("load dnum.png");
+    // 加载dnum计数图标
+    dnumBitmap = readBitmap565FromAssets("dnum.png");
 }
 
 // 添加分数
@@ -360,6 +370,7 @@ int createFish(float x, float y, int level) {
             fishes[i].vy = 0;
             fishes[i].dangerTime = 0;
             fishes[i].mergeFlag = 0;
+            fishes[i].removeTimer = 0;
             return i;
         }
     }
@@ -406,6 +417,16 @@ void updatePhysics(void) {
 
         type = &fishTypes[fishes[i].level];
 
+        // 更新level 9鱼的移除计时器
+        if (fishes[i].level == 9 && fishes[i].removeTimer > 0) {
+            fishes[i].removeTimer--;
+            if (fishes[i].removeTimer == 0) {
+                // 时间到，移除鱼
+                removeFish(i);
+                continue;
+            }
+        }
+
         // 应用重力
         fishes[i].vy += GRAVITY;
 
@@ -450,12 +471,13 @@ void updatePhysics(void) {
 // 碰撞检测和合成
 void checkCollisions(void) {
     int i, j;
-    FishType *typeA, *typeB, *newType;
+    FishType *typeA, *typeB;
     float dist, minDist;
     float midX, midY;
     float dx, dy;
     float overlap;
     float nx, ny;
+    int newFishIndex;
 
     // 重置合成标记
     for (i = 0; i < MAX_FISH; i++) {
@@ -491,7 +513,13 @@ void checkCollisions(void) {
                     fishes[j].mergeFlag = 1;
 
                     // 创建新鱼
-                    createFish(midX, midY, fishes[i].level + 1);
+                    newFishIndex = createFish(midX, midY, fishes[i].level + 1);
+
+                    // 如果合成到level 9，增加dnum计数并设置移除计时器
+                    if (fishes[i].level + 1 == 9 && newFishIndex != -1) {
+                        dnum++;
+                        fishes[newFishIndex].removeTimer = 30; // 30帧 ≈ 1秒 (30fps)
+                    }
 
                     // 加分
                     addScore(typeA->val * 2);
@@ -535,7 +563,6 @@ void checkGameOver(void) {
     int i;
     FishType* type;
     
-    char temp[30];
     float speed = 0.0f;
     float vxvy = 0.0f;
 
@@ -601,6 +628,8 @@ void drawGame(void) {
     FishType* type;
     char scoreText[32];
     char bestText[32];
+    // 在左下角显示dnum计数（图片+数字）
+    char dnumText[32];
 
     // 绘制背景图片
     if (bgBitmap != NULL) {
@@ -653,12 +682,27 @@ void drawGame(void) {
     mrc_sprintf(bestText, "Best: %d", gameState.bestScore);
     drawTextWithStroke(bestText, 10, 30);
 
+    
+    mrc_sprintf(dnumText, "%d", dnum);
+
+    if (dnumBitmap != NULL) {
+        // 绘制dnum图标（32*30）
+        drawBitmap(dnumBitmap, 4, SCRH - dnumBitmap->height - 2);
+        // 在图标右侧显示数字
+        drawTextWithStroke(dnumText, dnumBitmap->width + 6, SCRH - dnumBitmap->height/2 - 8);
+    } else {
+        // 降级方案：显示文字
+        char fallbackText[32];
+        mrc_sprintf(fallbackText, "合成: %d", dnum);
+        drawTextWithStroke(fallbackText, 10, SCRH - 20);
+    }
+
     // 绘制下一个预览
     drawTextWithStroke("Next:", GAME_WIDTH - 60, 10);
     if (fishBitmaps[gameState.nextFishType] != NULL) {
         type = &fishTypes[gameState.nextFishType];
-        drawBitmap(fishBitmaps[gameState.nextFishType],
-                  GAME_WIDTH - 40, 30);
+        drawBitmapEx(fishBitmaps[gameState.nextFishType],
+                  GAME_WIDTH - 40, 30, 26, 26, 0, 0, fishBitmaps[gameState.nextFishType]->width, fishBitmaps[gameState.nextFishType]->height);
     }
 
     // 游戏结束提示
@@ -683,7 +727,7 @@ int32 mrc_init(void) {
     mrc_printf("[GAME]init...");
     /* 初始化随机数种子 */
     randomSeed = mrc_getUptime();
-
+    LOG_MSG("getUpTime");
     /* 初始化窗口状态 */
     currentWindow = WINDOW_MENU;
     gameInited = 0;
@@ -698,6 +742,7 @@ int32 mrc_init(void) {
     fishTypes[6].level = 6; fishTypes[6].radius = 59; fishTypes[6].val = 28; fishTypes[6].imgName = "fish_07_240.png";
     fishTypes[7].level = 7; fishTypes[7].radius = 70; fishTypes[7].val = 36; fishTypes[7].imgName = "fish_08_240.png";
     fishTypes[8].level = 8; fishTypes[8].radius = 83; fishTypes[8].val = 45; fishTypes[8].imgName = "fish_09_240.png";
+    fishTypes[9].level = 9; fishTypes[9].radius = 83; fishTypes[9].val = 50; fishTypes[9].imgName = "fish_10_240.png";
 
     mrc_printf("[GAME]mpc_init...");
     /* 初始化MPC */
@@ -830,6 +875,11 @@ int32 mrc_exitApp() {
         if (fishBitmaps[i] != NULL) {
             bitmapFree(fishBitmaps[i]);
         }
+    }
+
+    /* 释放dnum计数图标 */
+    if (dnumBitmap != NULL) {
+        bitmapFree(dnumBitmap);
     }
 
     /* 释放字体 */
