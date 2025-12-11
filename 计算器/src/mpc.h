@@ -5,32 +5,32 @@
 **
 ** Version: 1.0
 **
-** ×¢£º¡°Ã°Åİ¿ª·¢ÊµÑéÏµÍ³¡±ÒÔÏÂ¼ò³Æmpc
-** Îª·½±ãmpcÖĞ´´½¨µÄÔ´³ÌĞòÔÚ¼ÆËã»úÖĞµ÷ÊÔ»òÉú³É¶ø´´½¨
-** ´ËÎÄ¼şÖ»ÊÊÓÃÓÚºËĞÄ°æ±¾ºÅÎª1001µÄ¡°Ã°Åİ¿ª·¢ÊµÑéÏµÍ³¡±ËùÉú³ÉµÄÔ´´úÂë
+** æ³¨ï¼šâ€œå†’æ³¡å¼€å‘å®éªŒç³»ç»Ÿâ€ä»¥ä¸‹ç®€ç§°mpc
+** ä¸ºæ–¹ä¾¿mpcä¸­åˆ›å»ºçš„æºç¨‹åºåœ¨è®¡ç®—æœºä¸­è°ƒè¯•æˆ–ç”Ÿæˆè€Œåˆ›å»º
+** æ­¤æ–‡ä»¶åªé€‚ç”¨äºæ ¸å¿ƒç‰ˆæœ¬å·ä¸º1001çš„â€œå†’æ³¡å¼€å‘å®éªŒç³»ç»Ÿâ€æ‰€ç”Ÿæˆçš„æºä»£ç 
 **
-** ÒÆÖ²²½Öè£º
-**     1.ÕûÀíËùÓĞÔ´³ÌĞòÖĞµÄincludeºÍÎÄ¼şÂ·¾¶£¬ Í¬Ê±½«"base.h"¡¢"sound.h"¡¢"ctype.h"É¾³ı
-**     2.Ìí¼Ó ¡¾#include "mpc.h"¡¿£¬Ìí¼Ómpc.cÎÄ¼ş
-**     3.½«timerstartµÄµÚËÄ¸ö²ÎÊıÈ¥³ıË«ÒıºÅ£¬Èç:timerstart(timer,100,p1,"updown",1);
-**         ¸ÄÎªtimerstart(timer,100,p1,updown,1);
-**     4.ÔÚÔ´³ÌĞòinitÈë¿Ú´¦Ìí¼Ó ¡¾mpc_init();¡¿×¢Òâ£¬±ØĞë×îÏÈÔÚinitº¯ÊıÖĞµ÷ÓÃ
+** ç§»æ¤æ­¥éª¤ï¼š
+**     1.æ•´ç†æ‰€æœ‰æºç¨‹åºä¸­çš„includeå’Œæ–‡ä»¶è·¯å¾„ï¼Œ åŒæ—¶å°†"base.h"ã€"sound.h"ã€"ctype.h"åˆ é™¤
+**     2.æ·»åŠ  ã€#include "mpc.h"ã€‘ï¼Œæ·»åŠ mpc.cæ–‡ä»¶
+**     3.å°†timerstartçš„ç¬¬å››ä¸ªå‚æ•°å»é™¤åŒå¼•å·ï¼Œå¦‚:timerstart(timer,100,p1,"updown",1);
+**         æ”¹ä¸ºtimerstart(timer,100,p1,updown,1);
+**     4.åœ¨æºç¨‹åºinitå…¥å£å¤„æ·»åŠ  ã€mpc_init();ã€‘æ³¨æ„ï¼Œå¿…é¡»æœ€å…ˆåœ¨initå‡½æ•°ä¸­è°ƒç”¨
 **
-** ³£¼ûÎÊÌâ£º
-**     1.mpcÖĞËùÓĞºêºÍº¯ÊıµÈ¶¼ÊÇÈ«¾ÖµÄ£¬Òò´Ëµ±ÊÖ»ú¿ª·¢ÕßµÄÔ´Âë²»×ñÊØÓÎÏ·¹æÔòÊ±±àÒë½«»á³öÏÖ´óÁ¿´íÎó
-**        ÕâÊ±¾ÍĞèÒªÒÆÖ²ÕßÊÖ¹¤ÕûÀíÕâĞ©ºê¡¢º¯Êı¡£¡£¡£µÄÉùÃ÷£¨--!£©
-**     2.ÊÖ»ú¿ª·¢ÕßÔÚÔ´ÂëÖĞÊ¹ÓÃÁËÖ»ÓĞmpc²ÅÖ§³ÖµÄ½Å±¾Ä£Ê½£¨ÀàËÆbat½Å±¾µÄ¹¦ÄÜ£©£¬Ê¹µÃ±àÒë³öÏÖÓï·¨´íÎó
-**        ÕâĞ©½Å±¾µÄ¹¦ÄÜ¿ÉÒÔ¿´×÷ÊÇ³õÊ¼»¯¹¦ÄÜ£¬ÒòÎªÔÚmpcÖĞÊ×ÏÈ±»Ö´ĞĞµÄ²¢²»ÊÇinitº¯Êı¶øÊÇÕâĞ©½Å±¾£¬Ëù
-**        ÒÔ£¬Ö»Òª°ÑÕâĞ©½Å±¾·Åµ½initº¯ÊıÖĞ¼´¿É
-**     3.¾Ö²¿±äÁ¿»òÈ«¾Ö±äÁ¿Î´³õÊ¼»¯£¬mpcÖĞËùÓĞ±äÁ¿¶¼»á±»³õÊ¼»¯Îª0£¬µ±ÊÖ»ú¿ª·¢ÕßÃ»ÓĞ×¢Òâµ½ÕâÒ»µãÊ±£¬»á¸ø
-**        ÒÆÖ²´øÀ´ºÜ´óµÄÂé·³
-**     4.ÀàĞÍ²»Ò»ÖÂ£¬µ¼ÖÂmrpbuilderÊ§°Ü£¬¡°#define open mrc_open ¡±¿ÉÒÔ¿´³ö£¬mpcÓëAPIÖ®¼ä¼¸ºõÊÇÎŞ²î±ğµÄ
-**          µ±³öÏÖ´óÁ¿ÀàĞÍ²»Ò»ÖÂÊ±£¬¿ÉÒÔĞŞ¸Äºê¶¨ÒåÊ¹Æä½øĞĞÇ¿ÖÆÀàĞÍ×ª»»(²Î¿¼u2c)
-**     5.¾Ö²¿±äÁ¿¶¨ÒåµÄÎÊÌâ£¬mpcÖ§³Ö²»ÔÚÓï¾ä¿é¿ªÍ·´¦¶¨Òå±äÁ¿µÄ¹¦ÄÜ£¨C99)£¬ÕâÒ»¹¦ÄÜÊ¹µÃ³ÌĞò±äµÃÒ×¶Á¡¢·½±ã£¬µ«ÊÇ
-**         Õâ»áµ¼ÖÂÒ»Ğ©±àÒëÆ÷ÎŞ·¨±àÒë£¬´ËÊ±ĞèÒª½«ÕâĞ©±äÁ¿ÌáÉıµ½Óï¾ä¿éµÄÍ·²¿
+** å¸¸è§é—®é¢˜ï¼š
+**     1.mpcä¸­æ‰€æœ‰å®å’Œå‡½æ•°ç­‰éƒ½æ˜¯å…¨å±€çš„ï¼Œå› æ­¤å½“æ‰‹æœºå¼€å‘è€…çš„æºç ä¸éµå®ˆæ¸¸æˆè§„åˆ™æ—¶ç¼–è¯‘å°†ä¼šå‡ºç°å¤§é‡é”™è¯¯
+**        è¿™æ—¶å°±éœ€è¦ç§»æ¤è€…æ‰‹å·¥æ•´ç†è¿™äº›å®ã€å‡½æ•°ã€‚ã€‚ã€‚çš„å£°æ˜ï¼ˆ--!ï¼‰
+**     2.æ‰‹æœºå¼€å‘è€…åœ¨æºç ä¸­ä½¿ç”¨äº†åªæœ‰mpcæ‰æ”¯æŒçš„è„šæœ¬æ¨¡å¼ï¼ˆç±»ä¼¼batè„šæœ¬çš„åŠŸèƒ½ï¼‰ï¼Œä½¿å¾—ç¼–è¯‘å‡ºç°è¯­æ³•é”™è¯¯
+**        è¿™äº›è„šæœ¬çš„åŠŸèƒ½å¯ä»¥çœ‹ä½œæ˜¯åˆå§‹åŒ–åŠŸèƒ½ï¼Œå› ä¸ºåœ¨mpcä¸­é¦–å…ˆè¢«æ‰§è¡Œçš„å¹¶ä¸æ˜¯initå‡½æ•°è€Œæ˜¯è¿™äº›è„šæœ¬ï¼Œæ‰€
+**        ä»¥ï¼Œåªè¦æŠŠè¿™äº›è„šæœ¬æ”¾åˆ°initå‡½æ•°ä¸­å³å¯
+**     3.å±€éƒ¨å˜é‡æˆ–å…¨å±€å˜é‡æœªåˆå§‹åŒ–ï¼Œmpcä¸­æ‰€æœ‰å˜é‡éƒ½ä¼šè¢«åˆå§‹åŒ–ä¸º0ï¼Œå½“æ‰‹æœºå¼€å‘è€…æ²¡æœ‰æ³¨æ„åˆ°è¿™ä¸€ç‚¹æ—¶ï¼Œä¼šç»™
+**        ç§»æ¤å¸¦æ¥å¾ˆå¤§çš„éº»çƒ¦
+**     4.ç±»å‹ä¸ä¸€è‡´ï¼Œå¯¼è‡´mrpbuilderå¤±è´¥ï¼Œâ€œ#define open mrc_open â€å¯ä»¥çœ‹å‡ºï¼Œmpcä¸APIä¹‹é—´å‡ ä¹æ˜¯æ— å·®åˆ«çš„
+**          å½“å‡ºç°å¤§é‡ç±»å‹ä¸ä¸€è‡´æ—¶ï¼Œå¯ä»¥ä¿®æ”¹å®å®šä¹‰ä½¿å…¶è¿›è¡Œå¼ºåˆ¶ç±»å‹è½¬æ¢(å‚è€ƒu2c)
+**     5.å±€éƒ¨å˜é‡å®šä¹‰çš„é—®é¢˜ï¼Œmpcæ”¯æŒä¸åœ¨è¯­å¥å—å¼€å¤´å¤„å®šä¹‰å˜é‡çš„åŠŸèƒ½ï¼ˆC99)ï¼Œè¿™ä¸€åŠŸèƒ½ä½¿å¾—ç¨‹åºå˜å¾—æ˜“è¯»ã€æ–¹ä¾¿ï¼Œä½†æ˜¯
+**         è¿™ä¼šå¯¼è‡´ä¸€äº›ç¼–è¯‘å™¨æ— æ³•ç¼–è¯‘ï¼Œæ­¤æ—¶éœ€è¦å°†è¿™äº›å˜é‡æå‡åˆ°è¯­å¥å—çš„å¤´éƒ¨
 **
-** ÆäËû½¨Òé£º
-**     ÊÖ»ú¿ª·¢ÕßÓ¦¾¡Á¿×ñÊØCÓïÑÔ£¨C89£©¹æ·¶£¬¹ı¶ÈÊ¹ÓÃmpcÌØÓĞ¹¦ÄÜµ¼ÖÂµÄºó¹ûÊÇµÃ²»³¥Ê§µÄ
+** å…¶ä»–å»ºè®®ï¼š
+**     æ‰‹æœºå¼€å‘è€…åº”å°½é‡éµå®ˆCè¯­è¨€ï¼ˆC89ï¼‰è§„èŒƒï¼Œè¿‡åº¦ä½¿ç”¨mpcç‰¹æœ‰åŠŸèƒ½å¯¼è‡´çš„åæœæ˜¯å¾—ä¸å¿å¤±çš„
 */
 
 #ifndef _MPC_H__
@@ -49,7 +49,7 @@ extern "C" {
 
 
 
-#define _VERSION 1001  //¡°Ã°Åİ¿ª·¢ÊµÑéÏµÍ³¡±ÄÚ²¿ºËĞÄ°æ±¾ºÅ
+#define _VERSION 1001  //â€œå†’æ³¡å¼€å‘å®éªŒç³»ç»Ÿâ€å†…éƒ¨æ ¸å¿ƒç‰ˆæœ¬å·
 #ifndef size_t
 typedef uint32 size_t;
 #endif
@@ -88,19 +88,18 @@ enum{_MIDI=1,_WAVE,_MP3,_AMR,_PCM,_M4A,_AMR_WB};
 #define setplaypos( type, pos)         mrc_setPlayPos(type,*(T_DSM_AUDIO_POS*)pos)
 #define setplaytime( type, pos)         mrc_setPlayTime(type,*(T_DSM_AUDIO_POS*)pos)
 #define getdevicestate        mrc_getDeviceState
-/*
-#define strrcmp mrc_strrcmp
-#define strlen mrc_strlen
-#define wstrlen mrc_wstrlen
-#define strcpy mrc_strcpy
-#define strncat mrc_strncat
+// #define strrcmp mrc_strrcmp
+// #define strlen mrc_strlen
+// #define wstrlen mrc_wstrlen
+// #define strcpy mrc_strcpy
+// #define strncat mrc_strncat
 
-#define malloc mrc_malloc
-#define free mrc_free
-#define memcpy mrc_memcpy
-#define memmove mrc_memmove
-#define memset mrc_memset
-*/
+// #define malloc mrc_malloc
+// #define free mrc_free
+// #define memcpy mrc_memcpy
+// #define memmove mrc_memmove
+// #define memset mrc_memset
+
 
 
 //base
@@ -110,58 +109,58 @@ extern int16 SCRW;
 extern int16  SCRH ;
 
 
-//»ù±¾°´¼üÖµ£¨Î´¶¨ÒåµÄÆäËû°´¼üÒ²¿ÉÒÔÊ¹ÓÃ£¬µ«ĞèÖªµÀÆä¼üÖµ£©
+//åŸºæœ¬æŒ‰é”®å€¼ï¼ˆæœªå®šä¹‰çš„å…¶ä»–æŒ‰é”®ä¹Ÿå¯ä»¥ä½¿ç”¨ï¼Œä½†éœ€çŸ¥é“å…¶é”®å€¼ï¼‰
 enum {  
-   _0,           //°´¼ü 0
-   _1,           //°´¼ü 1
-   _2,           //°´¼ü 2
-   _3,           //°´¼ü 3
-   _4,           //°´¼ü 4
-   _5,           //°´¼ü 5
-   _6,           //°´¼ü 6
-   _7,           //°´¼ü 7
-   _8,           //°´¼ü 8
-   _9,           //°´¼ü 9
-   _STAR,        //°´¼ü *
-   _POUND,       //°´¼ü #
-   _UP,          //°´¼ü ÉÏ
-   _DOWN,        //°´¼ü ÏÂ
-   _LEFT,        //°´¼ü ×ó
-   _RIGHT,       //°´¼ü ÓÒ
-   _SLEFT=17,    //°´¼ü ×óÈí¼ü
-   _SRIGHT,      //°´¼ü ÓÒÈí¼ü
-   _SEND,        //°´¼ü ½ÓÌı¼ü
-   _SELECT       //°´¼ü È·ÈÏ/Ñ¡Ôñ£¨Èô·½Ïò¼üÖĞ¼äÓĞÈ·ÈÏ¼ü£¬½¨ÒéÉèÎª¸Ã¼ü£©
+   _0,           //æŒ‰é”® 0
+   _1,           //æŒ‰é”® 1
+   _2,           //æŒ‰é”® 2
+   _3,           //æŒ‰é”® 3
+   _4,           //æŒ‰é”® 4
+   _5,           //æŒ‰é”® 5
+   _6,           //æŒ‰é”® 6
+   _7,           //æŒ‰é”® 7
+   _8,           //æŒ‰é”® 8
+   _9,           //æŒ‰é”® 9
+   _STAR,        //æŒ‰é”® *
+   _POUND,       //æŒ‰é”® #
+   _UP,          //æŒ‰é”® ä¸Š
+   _DOWN,        //æŒ‰é”® ä¸‹
+   _LEFT,        //æŒ‰é”® å·¦
+   _RIGHT,       //æŒ‰é”® å³
+   _SLEFT=17,    //æŒ‰é”® å·¦è½¯é”®
+   _SRIGHT,      //æŒ‰é”® å³è½¯é”®
+   _SEND,        //æŒ‰é”® æ¥å¬é”®
+   _SELECT       //æŒ‰é”® ç¡®è®¤/é€‰æ‹©ï¼ˆè‹¥æ–¹å‘é”®ä¸­é—´æœ‰ç¡®è®¤é”®ï¼Œå»ºè®®è®¾ä¸ºè¯¥é”®ï¼‰
 };
 
-//»ù±¾ÊÂ¼ş£¨ÆäËûÊÂ¼şĞè×Ô¼º¶¨Òå£©
+//åŸºæœ¬äº‹ä»¶ï¼ˆå…¶ä»–äº‹ä»¶éœ€è‡ªå·±å®šä¹‰ï¼‰
 enum {
-    KY_DOWN, 	 //°´¼ü°´ÏÂ
-    KY_UP,       //°´¼üÊÍ·Å
-    MS_DOWN, 	 //Êó±ê°´ÏÂ
-    MS_UP, 	     //Êó±êÊÍ·Å
-    MN_SLT, //²Ëµ¥Ñ¡Ôñ
-    MN_RET, //²Ëµ¥·µ»Ø
-    MR_DIALOG, //¶Ô»°¿ò
-    MS_MOVE=12   //Êó±êÒÆ¶¯
+    KY_DOWN, 	 //æŒ‰é”®æŒ‰ä¸‹
+    KY_UP,       //æŒ‰é”®é‡Šæ”¾
+    MS_DOWN, 	 //é¼ æ ‡æŒ‰ä¸‹
+    MS_UP, 	     //é¼ æ ‡é‡Šæ”¾
+    MN_SLT, //èœå•é€‰æ‹©
+    MN_RET, //èœå•è¿”å›
+    MR_DIALOG, //å¯¹è¯æ¡†
+    MS_MOVE=12   //é¼ æ ‡ç§»åŠ¨
 };
 
 enum {
-    DLG_OK,         //¶Ô»°¿ò/ÎÄ±¾¿òµÈµÄ"È·¶¨"¼ü±»µã»÷(Ñ¡Ôñ)
-    DLG_CANCEL  //¶Ô»°¿ò/ÎÄ±¾¿òµÈµÄ"È¡Ïû"("·µ»Ø")¼ü±»µã»÷(Ñ¡Ôñ)
+    DLG_OK,         //å¯¹è¯æ¡†/æ–‡æœ¬æ¡†ç­‰çš„"ç¡®å®š"é”®è¢«ç‚¹å‡»(é€‰æ‹©)
+    DLG_CANCEL  //å¯¹è¯æ¡†/æ–‡æœ¬æ¡†ç­‰çš„"å–æ¶ˆ"("è¿”å›")é”®è¢«ç‚¹å‡»(é€‰æ‹©)
 };
 
 enum
 {
-    SEEK_SET,             //´ÓÎÄ¼şÆğÊ¼¿ªÊ¼
-    SEEK_CUR,             //´Óµ±Ç°Î»ÖÃ¿ªÊ¼
-    SEEK_END             //´ÓÎÄ¼şÄ©Î²¿ªÊ¼
+    SEEK_SET,             //ä»æ–‡ä»¶èµ·å§‹å¼€å§‹
+    SEEK_CUR,             //ä»å½“å‰ä½ç½®å¼€å§‹
+    SEEK_END             //ä»æ–‡ä»¶æœ«å°¾å¼€å§‹
 };
 enum
 {
-    IS_FILE=1,      //ÎÄ¼ş
-    IS_DIR=2,      //Ä¿Â¼
-    IS_INVALID=8  //ÎŞĞ§(·ÇÎÄ¼ş¡¢·ÇÄ¿Â¼)
+    IS_FILE=1,      //æ–‡ä»¶
+    IS_DIR=2,      //ç›®å½•
+    IS_INVALID=8  //æ— æ•ˆ(éæ–‡ä»¶ã€éç›®å½•)
 };
 
 typedef struct {
@@ -186,23 +185,23 @@ typedef struct {
     #define ABS(VAL) (((VAL)>0)?(VAL):(-(VAL)))
 #endif
 
-/********************************C¿âº¯Êı********************************/
+/********************************Cåº“å‡½æ•°********************************/
 
 #define  printf(...)
 
 #define strrchr mrc_strrchr
 
 #define wstrlen mrc_wstrlen
-/********************************C¿âº¯Êı½áÊø****************/
+/********************************Cåº“å‡½æ•°ç»“æŸ****************/
 
 
-/*******************************Èë¿Úº¯Êı*********************/
+/*******************************å…¥å£å‡½æ•°*********************/
 
 #define init            MRC_EXT_INIT
 #define event           mrc_appEvent
 #define pause            mrc_appPause
 #define resume         mrc_appResume
-////////////////////////////ÒÔÉÏÎªÆ½Ì¨±ØĞèÊµÏÖµÄÈë¿Úº¯Êı//////////////////////////////
+////////////////////////////ä»¥ä¸Šä¸ºå¹³å°å¿…éœ€å®ç°çš„å…¥å£å‡½æ•°//////////////////////////////
 
 #define open mrc_open
 
@@ -230,7 +229,7 @@ typedef struct {
 
 #define findnext mrc_findGetNext
 #define findstop mrc_findStop
-/********************************»æÍ¼½Ó¿Ú********************************/
+/********************************ç»˜å›¾æ¥å£********************************/
 
 #define dtext mrc_drawText
 #define dtextex( pcText,  x,  y, rect, color,  flag,  font)\
@@ -265,7 +264,7 @@ typedef struct {
 
 
 
-/********************************±¾µØ»¯UI½Ó¿Ú********************************/
+/********************************æœ¬åœ°åŒ–UIæ¥å£********************************/
 
 
 #define menucreate mrc_menuCreate
@@ -287,7 +286,7 @@ typedef struct {
 #define editdel mrc_editRelease
 
 #define editget mrc_editGetText
-/********************************ÆäËû½Ó¿Ú********************************/
+/********************************å…¶ä»–æ¥å£********************************/
 #define exit  mrc_exit
 
 #define getuptime mrc_getUptime
@@ -312,13 +311,15 @@ int32 mrc_runMrp(char* mrp_name,char* file_name,char* parameter);
 #define getparentpath mrc_GetParentPath
 
 #define sand mrc_sand
+#define srand mrc_sand
+#define time(x) mrc_getUptime()
 #define rand mrc_rand
 extern int32 mrc_sendSms(char* pNumber, char*pContent, int32 flags);
 #define sms mrc_sendSms
 #define lcd mrc_LCDCanSleep
 extern int32 mrc_sleep(uint32 ms);
 #define sleep mrc_sleep
-// ÒÔÏÂº¯Êı¶¨ÒåÔÚmrc_bmp.hÎÄ¼şÖĞ//////////////////////////////////////
+// ä»¥ä¸‹å‡½æ•°å®šä¹‰åœ¨mrc_bmp.hæ–‡ä»¶ä¸­//////////////////////////////////////
 
 
 #define getscrbuf w_getScreenBuffer
@@ -335,7 +336,7 @@ extern int32 mrc_sleep(uint32 ms);
 extern void mrc_connectWAP(char* wap);
 #define wap mrc_connectWAP
 
-/********************************¶¨Ê±Æ÷½Ó¿Ú********************************/
+/********************************å®šæ—¶å™¨æ¥å£********************************/
 
 #define timercreate mrc_timerCreate
 
@@ -346,13 +347,13 @@ extern void mrc_connectWAP(char* wap);
 #define timerstart mrc_timerStart
 
 #define timersettime mrc_timerSetTimeEx
-///////////////////ÒÔÏÂº¯ÊıÎªÏµÍ³À©Õ¹º¯Êı////////////////////
+///////////////////ä»¥ä¸‹å‡½æ•°ä¸ºç³»ç»Ÿæ‰©å±•å‡½æ•°////////////////////
 
 #define img DrawIMG
 
 #define shaderect DrawShadeRect
 
-////////////////Ë½ÓĞ//////////////
+////////////////ç§æœ‰//////////////
 void mpc_init(void);
 
 //int32 my_readAllEx(char* filename, char* buf, int32 *len);
@@ -363,14 +364,13 @@ void mpc_init(void);
 
 #define readFileFromAssets mrc_readFileFromAssets
 
-#define readBitmap(filename) ((int32)readBitmap565(filename))
-#define drawBitmapFlip(buf,  x,  y,  w,  h,  sx,  sy) drawBitmap565Flip((BITMAP_565 *)buf, x,y,w,h,sx,sy)
-#define drawBitmap(buf,x,y) drawBitmap565((BITMAP_565 *)buf, x, y)
-#define bitmapFree(buf) bitmap565Free((BITMAP_565 *)buf)
+// #define readBitmap(filename) ((int32)readBitmap565(filename))
+// #define drawBitmapFlip(buf,  x,  y,  w,  h,  sx,  sy) drawBitmap565Flip((BITMAP_565 *)buf, x,y,w,h,sx,sy)
+// #define bitmapFree(buf) bitmap565Free((BITMAP_565 *)buf)
 #define readBitmapFromAssets(filename) ((int32)readBitmap565FromAssets(filename))
 #define drawRect gl_drawRect
 #define drawCir gl_drawCir
-#define drawBitmapEx( bmp,  x, y, w, h,  tx,  ty, tw, th) drawBitmap565Ex((BITMAP_565*)bmp,x,y,w,h,tx,ty,tw,th)
+// #define drawBitmapEx( bmp,  x, y, w, h,  tx,  ty, tw, th) drawBitmap565Ex((BITMAP_565*)bmp,x,y,w,h,tx,ty,tw,th)
 #define bitmapGetInfo(bitmap, info) bitmap565getInfo((BITMAP_565*)bitmap, info)
 
 #ifdef __cplusplus

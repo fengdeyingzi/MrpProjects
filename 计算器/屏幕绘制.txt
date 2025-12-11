@@ -1,0 +1,11 @@
+功能机屏幕是一块内存区域，颜色值RGB565，通过uint16 *w_getScreenBuffer()获得屏幕缓冲区，通过mrc_getScreenInfo获得屏幕宽度和屏幕高度。
+功能机使用C语言编写程序，采用C98标准。
+下面，为以下文字绘制库添加一个多行绘制函数
+
+```c
+// 在矩形区域内绘制多行uc3字体 y坐标可为负数
+int32 uc3_drawTextInRect(const char *pcText, int16 x, int16 y, int16 width, int16 height, uint8 r, uint8 g, uint8 b, int is_unicode);
+
+// 绘制上下渐变文字效果（单行绘制）
+int32 uc3_drawGradientText(const char *pcText, int16 x, int16 y, uint8 r1, uint8 g1, uint8 b1, uint8 r2, uint8 g2, uint8 b2, int is_unicode);
+```
