@@ -1,6 +1,5 @@
-#include <mrc_base.h>
+#include "base.h"
 #include "xl_bmp.h"
-#include "xl_debug.h"
 
 
 char *assets_dir;
@@ -19,11 +18,11 @@ void *mrc_readFileFromAssets(const char *filename, int32 *len){
  int32 f = 0;
  char path[300];
  void *buf = NULL;
- mrc_sprintf(path,"%s/%s",getAssetsDir(),filename);
-//  debug_printf("读取assets");
+ sprintf(path,"%s/%s",getAssetsDir(),filename);
+//  debug_printf("¶ÁÈ¡assets");
 //  debug_printf(path);
- *len = (int32)mrc_getLen((const char*)path);
- buf = (void*)mrc_malloc(*len);
+ *len = (int32)getlen((const char*)path);
+ buf = (void*)malloc(*len);
  f = mrc_open(path, 1);
  if(f>0){
  mrc_read(f, buf, *len);
@@ -34,7 +33,7 @@ void *mrc_readFileFromAssets(const char *filename, int32 *len){
 }
 
 void mrc_freeFileFromAssets(void *data,int32 len){
-	mrc_free(data);
+	free(data);
 }
 
 #else
@@ -42,8 +41,12 @@ void mrc_freeFileFromAssets(void *data,int32 len){
 void *mrc_readFileFromAssets(const char *filename, int32 *len){
 	uint8 *buf = NULL;
 	int32 re = 0;
- buf = mrc_readFileFromMrp((const char*)filename,len,0);
- if(buf != NULL){
+//  re = mrc_readFileFromMrpEx(NULL,(const char*)filename,&buf,len,0);
+ void* temp = mrc_readFileFromMrp((const char*)filename, len,0);
+ buf = mrc_malloc(*len);
+ mrc_memcpy(buf,temp,*len);
+ mrc_freeFileData(temp,*len);
+ if(re == MR_SUCCESS){
 	 return buf;
  }
  return NULL;
@@ -51,12 +54,6 @@ void *mrc_readFileFromAssets(const char *filename, int32 *len){
 }
 
 void mrc_freeFileFromAssets(void *data,int32 len){
-
-	//mrc_freeFileData(data,len);
-	#ifdef C_RUN
-	mrc_free(data);
-	#else
-	mrc_freeFileData(data,len);
-	#endif
+	mrc_freeFileData(data, len);
 }
 #endif

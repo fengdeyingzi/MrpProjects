@@ -41,9 +41,6 @@ extern "C" {
 #endif
 
 #include "mrc_base.h"
-#include "mrc_exb.h"
-#include "mrc_sound.h"
-#include "mrc_bmp.h"
 #include "mrc_android.h"
 #include "mrc_graphics.h"
 
@@ -364,14 +361,11 @@ void mpc_init(void);
 
 #define readFileFromAssets mrc_readFileFromAssets
 
-// #define readBitmap(filename) ((int32)readBitmap565(filename))
-// #define drawBitmapFlip(buf,  x,  y,  w,  h,  sx,  sy) drawBitmap565Flip((BITMAP_565 *)buf, x,y,w,h,sx,sy)
-// #define bitmapFree(buf) bitmap565Free((BITMAP_565 *)buf)
-#define readBitmapFromAssets(filename) ((int32)readBitmap565FromAssets(filename))
+
 #define drawRect gl_drawRect
 #define drawCir gl_drawCir
 // #define drawBitmapEx( bmp,  x, y, w, h,  tx,  ty, tw, th) drawBitmap565Ex((BITMAP_565*)bmp,x,y,w,h,tx,ty,tw,th)
-#define bitmapGetInfo(bitmap, info) bitmap565getInfo((BITMAP_565*)bitmap, info)
+// #define bitmapGetInfo(bitmap, info) bitmap565getInfo((BITMAP_565*)bitmap, info)
 
 #ifdef __cplusplus
 }

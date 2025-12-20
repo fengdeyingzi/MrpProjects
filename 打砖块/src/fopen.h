@@ -4,12 +4,14 @@
 #include "mpc.h"
 typedef struct _iobuf
 {
-    int _file; //½ø³Ì¼¶ÎÄ¼þ±í ¼ÇÂ¼ÎÄ¼þ´ò¿ªÊý
+    int _file; //è¿›ç¨‹çº§æ–‡ä»¶è¡¨ è®°å½•æ–‡ä»¶æ‰“å¼€æ•°
     char *_tmpfname;
+    int len;
 } FILE;
 
 FILE *fopen(const char *path, const char *mode);
 int fseek(FILE *f, long offset, int mode);
+long ftell(FILE *f);
 unsigned int fread(void *buf, size_t size, size_t count, FILE *f);
 unsigned int fwrite(const void *buf, size_t size, size_t count, FILE *f);
 int fflush(FILE *f);

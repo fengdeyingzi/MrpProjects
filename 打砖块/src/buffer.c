@@ -2,12 +2,12 @@
 #include "buffer.h"
 
 
-//ÔÚ×Ö·û´®Ö¸¶¨³¤¶ÈÖĞËÑË÷Ö¸¶¨×Ö·û
+//åœ¨å­—ç¬¦ä¸²æŒ‡å®šé•¿åº¦ä¸­æœç´¢æŒ‡å®šå­—ç¬¦
 char *strstr_x(char* text, int32 len, char *seText){
     char* ptr = text;
     int start = 0;
     int si = 0;
-    int start_se = -1; //µÚÒ»´ÎËÑµ½µÄ½á¹û
+    int start_se = -1; //ç¬¬ä¸€æ¬¡æœåˆ°çš„ç»“æœ
     int32 slen = strlen(seText);
     
     for(start = 0;start<len;start++){
@@ -31,7 +31,7 @@ char *strstr_x(char* text, int32 len, char *seText){
     return NULL;
 }
 
-//http »ñÈ¡µ±Ç°ĞĞµÄÖµ ²¢Ìø¹ı¿Õ¸ñ ĞèÒªÊÍ·ÅÄÚ´æ
+//http è·å–å½“å‰è¡Œçš„å€¼ å¹¶è·³è¿‡ç©ºæ ¼ éœ€è¦é‡Šæ”¾å†…å­˜
 char *getline_value(char *text){
     int start = 0;
     int end = 0;
@@ -72,7 +72,7 @@ type = 1;
     return temp;
 }
 
-//ÅĞ¶ÏContent-LengthÊÇ·ñ»ñÈ¡Íê³É 
+//åˆ¤æ–­Content-Lengthæ˜¯å¦è·å–å®Œæˆ 
 int32 isContentSuccess(char *text,int32 content_len){
     char *body = strstr(text,"\r\n\r\n");
     if(body){

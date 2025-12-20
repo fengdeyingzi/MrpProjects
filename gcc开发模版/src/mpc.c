@@ -1,6 +1,6 @@
 #include <mrc_base.h>
- int16 SCRW;  
- int16 SCRH;
+extern int16 SCRW;  
+extern int16 SCRH;
 
 void mpc_init(void){
 	mr_screeninfo screen;

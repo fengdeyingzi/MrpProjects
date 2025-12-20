@@ -1,8 +1,16 @@
-
-#include <mrc_base.h>
-#include "xl_debug.h"
+#include "mrc_base.h"
 #include "xl_bmp.h"
 
+extern int gl_bitmapShowExTrans(uint16 *p,
+                         int16 x,
+                         int16 y,
+                         int16 mw,
+                         int16 w,
+                         int16 h,
+                         uint16 rop,
+                         int16 sx,
+                         int16 sy,
+                         uint16 transcolor);
 void* mr_malloc(int32 len){
   char *buf = NULL;
   buf = (char*)mrc_malloc(len-4);
@@ -12,7 +20,7 @@ void* mr_malloc(int32 len){
 //构建一个bmp 参数：内存数据，宽度，高度，透明色(0表示不透明)
 BITMAP_565* bmp_create(uint16 *bitmap, int width, int height, int transcolor){
  BITMAP_565* bmp = mrc_malloc(sizeof(BITMAP_565));
- memset(bmp, 0, sizeof(BITMAP_565));
+ mrc_memset(bmp, 0, sizeof(BITMAP_565));
  bmp->bitmap = bitmap;
  bmp->width = width;
  bmp->height = height;
@@ -51,18 +59,14 @@ BITMAP_565* bmp_read(void *buf, int len){
  int wsize;
  int iw;
  BITMAP_565* bmp = mrc_malloc(sizeof(BITMAP_565));
- memset(bmp,0,sizeof(BITMAP_565));
+ mrc_memset(bmp,0,sizeof(BITMAP_565));
  bmp->color_bit = 16;
  bmp->mode = BM_COPY;
  bmp->buflen = len;
-//  debug_log("检测文件头");
-//  debug_log("检测文件头 %c %c",*(bufc+1),*(bufc+2));
  //检测文件头
  if(bufc[0]=='B' && bufc[1]=='M'){
-  // debug_log("BM\n");
   ptr = 10;
   bmpstart = get_int(bufc,ptr);
-  // debug_printf("bmpstart\n");
   ptr = 18;
   w = get_int(bufc,ptr);
   ptr = 22;
@@ -70,29 +74,24 @@ BITMAP_565* bmp_read(void *buf, int len){
   ptr = 28;
   bit = get_short(bufc,ptr);
   if(bit == 16){
-  //  debug_printf("16位图\n");
    ptr = bmpstart;
    bmp->width = w;
    bmp->height = h;
    bmp->bitmap = (uint16*)mrc_malloc(w*h*2);
    bmp->buflen = w*h*2;
    //复制位图数据
-   
    for( iy=0;iy<bmp->height;iy++){
     mrc_memcpy(bmp->bitmap+iy*bmp->width, bufc+ptr+(bmp->height-1-iy)*bmp->width*2, w*2);
-    // mrc_printf("复制位图数据%d %d\n",iy, bmp->height-1-iy);
    }
    
   }
   else if(bit == 24){
-  //  debug_printf("当前位图是24位");
    ptr = bmpstart;
    bmp->width = w;
    bmp->height = h;
    //对齐字节
    wsize = w*3;
    if(wsize%4!=0) wsize = wsize - wsize%4 + 4;
-  //  debug_printf("申请内存\n");
    bmp->bitmap = (uint16*)mr_malloc(w*h*2);
    bmp->buflen = w*h*2;
    
@@ -100,21 +99,16 @@ BITMAP_565* bmp_read(void *buf, int len){
     buf16 = (unsigned short*)mrc_malloc(bmp->width*bmp->height*2);
     buf24 = (bufc+ptr);
    for(i=0;i<h;i++){
-	   for(iw=0;iw<w;iw++){
-		   
+     for(iw=0;iw<w;iw++){
     //BGRA
      tcolor = (((buf24[i*wsize+iw*3]>>3)&0x1f) 
     | ((buf24[i*wsize+iw*3+1]<<3)&0x7e0) 
     | ((buf24[i*wsize+iw*3+2]<<8)&0xf800));
     buf16[i*w+iw] = (uint16)(tcolor&0xffff);
-	
-	   }
+     }
    }
    //复制位图数据
     for(iy=0;iy<bmp->height;iy++){
-		
-     //debug_printf("复制数据 %d %d\n",iy,bmp->height-1-iy);
-	 
      mrc_memcpy (bmp->bitmap + iy*bmp->width, buf16+(bmp->height-1-iy)*bmp->width,w*2);
    }
    mrc_free(buf16);
@@ -122,10 +116,8 @@ BITMAP_565* bmp_read(void *buf, int len){
  }
  else
  {
-	//  debug_printf("不是bmp图片");
   return NULL;
  }
-//  debug_printf("返回bmp\n");
  return bmp;
 }
 
@@ -133,12 +125,8 @@ BITMAP_565* bma_read(void *buf, int len){
  char *bufc = (char*)buf;
  int ptr=0;
 
-
-
-
-
  BITMAP_565* bmp = mrc_malloc(sizeof(BITMAP_565));
- memset(bmp,0,sizeof(BITMAP_565));
+ mrc_memset(bmp,0,sizeof(BITMAP_565));
  
  bmp->mode = BM_COPY;
  bmp->buflen = len;
@@ -158,7 +146,6 @@ BITMAP_565* bma_read(void *buf, int len){
    bmp->bitmap = (uint16*)bufc;
  }
  else if(bufc[0] == 'M' && bufc[1] == 'A' && bufc[2] == 'P' && bufc[3] == '8'){
-  mrc_printf("read ................");
    bmp->color_bit = 32;
     ptr = 4;
    bmp->width = get_int(bufc, ptr);
@@ -170,18 +157,14 @@ BITMAP_565* bma_read(void *buf, int len){
     bmp->mode = BM_TRANSPARENT;
    }
    ptr = 14;
-   mrc_printf("read ................");
    mrc_memmove(bufc, bufc+ptr, bmp->width * bmp->height * 4);
-   mrc_printf("read ................");
    bmp->bitmap = (uint16*)bufc;
  }
  else
  {
   mrc_free(bmp);
-	//  debug_printf("不是bmp图片");
   return NULL;
  }
-//  debug_printf("返回bmp\n");
  return bmp;
 }
 
@@ -198,13 +181,11 @@ void bmp_settranscolor(BITMAP_565* bmp, int color){
 }
 //显示bmp
 void bmp_draw(BITMAP_565* bmp, int x,int y){
-//  mrc_printf("bmpdraw %d \n",bmp->width);
- mrc_bitmapShowExTrans(bmp->bitmap, (int16)x,(int16)y, (uint16)bmp->width, (uint16)bmp->width,(uint16)bmp->height, (uint16)bmp->mode, 0,0,(uint16)bmp->transcolor);
+ gl_bitmapShowExTrans(bmp->bitmap, (int16)x,(int16)y, (uint16)bmp->width, (uint16)bmp->width,(uint16)bmp->height, (uint16)bmp->mode, 0,0,(uint16)bmp->transcolor);
 }
 //区域显示bmp
 void bmp_drawflip(BITMAP_565* bmp, int x,int y,int w,int h,int tx,int ty){
-//  mrc_printf("bmpshowflip width=%d w=%d\n",bmp->width,w);
- mrc_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)w,(uint16)h, (uint16)bmp->mode, (int16)tx,(int16)ty,(uint16)bmp->transcolor);
+ gl_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)w,(uint16)h, (uint16)bmp->mode, (int16)tx,(int16)ty,(uint16)bmp->transcolor);
 }
 //bmp释放
 void bmp_free(BITMAP_565* bmp){

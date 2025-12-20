@@ -3,15 +3,15 @@
 
 #include <mrc_base.h>
 
-#define MAX_BUFFER_LEN 1024*20 //×î´ó±£´æ20kb ¶àÁË¾Í¶ªÆú
+#define MAX_BUFFER_LEN 1024*20 //æœ€å¤§ä¿å­˜20kb å¤šäº†å°±ä¸¢å¼ƒ
 typedef struct STRING_BUFFER
 {
     char *data;
-    char *header; //Í·ĞÅÏ¢
-    char *body; //ÉíÌå
-    int32 body_len; //body³¤¶È
-    int32 len; //ÄÚ´æ³¤¶È
-    int32 max; //ÄÚ´æ´óĞ¡
+    char *header; //å¤´ä¿¡æ¯
+    char *body; //èº«ä½“
+    int32 body_len; //bodyé•¿åº¦
+    int32 len; //å†…å­˜é•¿åº¦
+    int32 max; //å†…å­˜å¤§å°
 } STRING_BUFFER;
 
 STRING_BUFFER* buffer_create(void);

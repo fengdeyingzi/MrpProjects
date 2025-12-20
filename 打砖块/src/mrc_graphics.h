@@ -1,97 +1,143 @@
 #ifndef _MRC_GRAPHICS_H_
 #define _MRC_GRAPHICS_H_
 
-
 #include "xl_bmp.h"
 enum
 {
-_JPG=0,
-_PNG=1,
-_BMP16=2
+    _JPG = 0,
+    _PNG = 1,
+    _BMP16 = 2
 };
-
 
 typedef struct
 {
-uint32 width; //¿í¶È
-uint32 height; //¸ß¶È
-uint32 stride;
-int32 format; //¸ñÊ½
-uint32 flags; // 0 for now
-void *ptr; //»º´æ
+    uint32 width;  // å®½åº¦
+    uint32 height; // é«˜åº¦
+    uint32 stride;
+    int32 format; // æ ¼å¼
+    uint32 flags; // 0 for now
+    void *ptr;    // ç¼“å­˜
 } BITMAPINFO;
 
-typedef struct{
+typedef struct
+{
     int16 A; // A, B, C, and D are fixed point values with an 8-bit integer part
     int16 B; // and an 8-bit fractional part.
     int16 C;
     int16 D;
     uint16 rop;
-}mr_transMatrixSt;
+} mr_transMatrixSt;
+
 
 enum
 {
-	SHADE_UPDOWN,		//´ÓÉÏµ½ÏÂ
-	SHADE_LEFTRIGHT,	//´Ó×óµ½ÓÒ
-	SHADE_DOWNUP,		//´ÓÏÂµ½ÉÏ
-	SHADE_RIGHTLEFT		//´ÓÓÒµ½×ó
+    SHADE_UPDOWN,    // ä»ä¸Šåˆ°ä¸‹
+    SHADE_LEFTRIGHT, // ä»å·¦åˆ°å³
+    SHADE_DOWNUP,    // ä»ä¸‹åˆ°ä¸Š
+    SHADE_RIGHTLEFT  // ä»å³åˆ°å·¦
 };
-//»ìºÏÁ½¸öÑÕÉ«
+
+
+#define GRAPHICS_LEFT 3
+#define GRAPHICS_TOP 48
+#define GRAPHICS_RIGHT 5
+#define GRAPHICS_CENTER 17
+#define GRAPHICS_BOTTOM 80
+
+// æ··åˆä¸¤ä¸ªé¢œè‰²
 uint16 blendColor(uint16 dstColor, uint16 srcColor, int alpha);
-//´ÓÄÚ´æ¿¨¶ÁÈ¡bitmap
-extern BITMAP_565* readBitmap565(char *filename);
-//´´½¨Ò»¸öbitmap
+
+int gl_bitmapShowExTrans8888(uint32 *p, int16 x, int16 y, int16 mw, int16 w, int16 h, int16 sx, int16 sy);
+int gl_bitmapShowExTrans(uint16 *p, int16 x, int16 y, int16 mw, int16 w, int16 h, uint16 rop, int16 sx, int16 sy, uint16 transcolor);
+    // ä»å†…å­˜å¡è¯»å–bitmap
+    extern BITMAP_565 *readBitmap(char *filename);
+// åˆ›å»ºä¸€ä¸ªbitmap
 BITMAP_565 *createBitmap565(int width, int height);
-//»æÖÆbitmapÖ¸¶¨ÇøÓò
-extern int32 drawBitmap565Flip(BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy);
-//»æÖÆbitmap
-extern void drawBitmap565(BITMAP_565 *b,int32 x,int32 y);
-//ÊÍ·Åbitmap
-extern int32 bitmap565Free(BITMAP_565 *b);
-//´ÓmrpÖĞ¶ÁÈ¡bitmap
-extern BITMAP_565 *readBitmap565FromAssets(char *filename);
-// »­¾ØĞÎ
-void gl_drawRect(int32 x,int32 y,int32 w,int32 h,uint32 color);
-//»­Ïß
+// ç»˜åˆ¶bitmapæŒ‡å®šåŒºåŸŸ
+extern int32 drawBitmapFlip(BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy);
+// ç»˜åˆ¶bitmap
+/*
+src: æºå›¾åƒå¯¹è±¡ï¼Œå³è¦ä»ä¸­æå–åŒºåŸŸçš„å›¾åƒã€‚
+x_src: æºå›¾åƒä¸­è¦æå–åŒºåŸŸçš„å·¦ä¸Šè§’çš„xåæ ‡ã€‚
+y_src: æºå›¾åƒä¸­è¦æå–åŒºåŸŸçš„å·¦ä¸Šè§’çš„yåæ ‡ã€‚
+width: è¦æå–åŒºåŸŸçš„å®½åº¦ã€‚
+height:è¦æå–åŒºåŸŸçš„é«˜åº¦ã€‚
+transform:å˜æ¢ç±»å‹
+x_dest: ç›®æ ‡ä½ç½®çš„xåæ ‡ï¼Œå³ç»˜åˆ¶æå–åŒºåŸŸçš„ç›®æ ‡ä½ç½®çš„å·¦ä¸Šè§’çš„xåæ ‡ã€‚
+y_dest: ç›®æ ‡ä½ç½®çš„yåæ ‡ï¼Œå³ç»˜åˆ¶æå–åŒºåŸŸçš„ç›®æ ‡ä½ç½®çš„å·¦ä¸Šè§’çš„yåæ ‡ã€‚
+anchor: é”šç‚¹ï¼ŒæŒ‡å®šç›®æ ‡ä½ç½®çš„å‚è€ƒç‚¹ã€‚å¸¸è§çš„é”šç‚¹åŒ…æ‹¬ï¼šGRAPHICS_LEFT,GRAPHICS_TOP,GRAPHICS_RIGHT,GRAPHICS_BOTTOM,GRAPHICS_CENTER
+*/
+extern void drawBitmapRegion(BITMAP_565 *src, int x_src, int y_src, int width, int height, int transform, int x_dest, int y_dest, int anchor);
+
+extern void drawBitmap565(BITMAP_565 *b, int32 x, int32 y);
+void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y);
+// memcpyç»˜å›¾ä¼˜åŒ–
+extern int32 bitmapAutoMemcpy(BITMAP_565 *b);
+// æ‰©å±•ç»˜åˆ¶bitmap
+void drawBitmapEx(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 tx, int32 ty, int32 tw, int32 th);
+// ç»˜åˆ¶argbé¢œè‰²å€¼çš„bitmap
+void drawBitmap8888(BITMAP_565 *bmp, int32 x, int32 y);
+// é‡Šæ”¾bitmap
+extern int32 bitmapFree(BITMAP_565 *b);
+// ä»mrpä¸­è¯»å–bitmap
+extern BITMAP_565 *readBitmap565FromAssets(const char *filename);
+void gl_drawColor(uint32 color);
+void gl_clearScreen(int32 r, int32 g, int32 b);
+// ç”»çŸ©å½¢
+void gl_drawRect(int32 x, int32 y, int32 w, int32 h, uint32 color);
+void gl_drawHollowRect(int x, int y, int width, int height, uint32 color);
+// ç”»çº¿
 void gl_drawLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color);
-//»æÖÆ¿ÕĞÄÈı½ÇĞÎ
-void gl_drawHollowTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
-//»­Ô²
-void gl_drawCir(int32 x,int32 y,int32 r,uint32 color);
-//»æÖÆĞı×ªµÄ¿ÕĞÄ¾ØĞÎ
-void mrc_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint8 r, uint8 g, uint8 b);
-//»æÖÆ½¥±ä¾ØĞÎ
-void drawShadeRect(int32 x, int32 y, int32 w, int32 h, uint32 colorA, uint32 colorB, int mode);
-//»æÖÆÈı½ÇĞÎ
+// ç»˜åˆ¶ä¸‰è§’å½¢
 void gl_drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
-//À©Õ¹»æÖÆbitmap
-void drawBitmap565Ex(BITMAP_565* bmp, int32 x,int32 y,int32 w,int32 h, int32 tx, int32 ty,int32 tw,int32 th);
-//½«bitmapËõ·Å,Éú³ÉÒ»¸öĞÂµÄBITMAP
+// ç»˜åˆ¶ç©ºå¿ƒä¸‰è§’å½¢
+void gl_drawHollowTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
+// ç»˜åˆ¶å¤šè¾¹å½¢(å¡«å……)
+void gl_drawPolygon(int *points, int count, uint32 color);
+// ç»˜åˆ¶ç©ºå¿ƒå¤šè¾¹å½¢
+void gl_drawHollowPolygon(int *points, int count, uint32 color);
+// ç”»åœ†
+void gl_drawCir(int32 x, int32 y, int32 r, uint32 color);
+// ç»˜åˆ¶ç©ºå¿ƒåœ†
+void gl_drawHollowCir(int x0, int y0, int r, uint32 color);
+// ç»˜åˆ¶æ—‹è½¬çš„çŸ©å½¢
+void gl_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color);
+// ç»˜åˆ¶æ—‹è½¬çš„ç©ºå¿ƒçŸ©å½¢
+void gl_drawRotatedHollowRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color);
+// ç»˜åˆ¶æ¸å˜çŸ©å½¢
+void drawShadeRect(int32 x, int32 y, int32 w, int32 h, uint32 colorA, uint32 colorB, int mode);
+
+// å°†bitmapç¼©æ”¾,ç”Ÿæˆä¸€ä¸ªæ–°çš„BITMAP
 BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height);
-//»ñÈ¡bitmapĞÅÏ¢
-int32 bitmap565getInfo(BITMAP_565* bmp, BITMAPINFO *info);
-//Í¼Æ¬Ğı×ª»æÖÆ
-void drawBitmap565Rotate(BITMAP_565 *b, int32 scrx, int32 scry, int32 bx, int32 by, int32 r);
-//½«bufÍ¼Æ¬Ö¸¶¨ÇøÓò»æÖÆµ½diÖĞ
+// è·å–bitmapä¿¡æ¯
+int32 bitmap565getInfo(BITMAP_565 *bmp, BITMAPINFO *info);
+/*
+å°†bitmapæ—‹è½¬ç»˜åˆ¶åˆ°å±å¹•ä¸Š
+scrx scry ç»˜åˆ¶åˆ°å±å¹•ä¸Šçš„ä¸­å¿ƒä½ç½®
+bx by å›¾ç‰‡æ—‹è½¬ä¸­å¿ƒ
+
+*/
+void drawBitmapRotate(BITMAP_565 *b, int32 scrx, int32 scry, int32 bx, int32 by, int32 r);
+// å°†bufå›¾ç‰‡æŒ‡å®šåŒºåŸŸç»˜åˆ¶åˆ°diä¸­
 void drawBitmap565Old(BITMAP_565 *di, BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy);
-//±£´æbitmapµ½ÎÄ¼ş
+// ä¿å­˜bitmapåˆ°æ–‡ä»¶
 void saveBitmap(BITMAP_565 *bmp, const char *filename);
-//Í¸Ã÷¶È»æÖÆbitmap
+// é€æ˜åº¦ç»˜åˆ¶bitmap
 void drawBitmapAlpha(BITMAP_565 *b, int32 x, int32 y, int32 alpha);
-//Ğı×ª/·­×ªbitmap
+// æ—‹è½¬/ç¿»è½¬bitmap
 void bitmap565Rotate(BITMAP_565 *b, int type, int flip);
-//ÔÚbitmapÄÚ»æÖÆ¿ÕĞÄÈı½ÇĞÎ
+// åœ¨bitmapå†…ç»˜åˆ¶ç©ºå¿ƒä¸‰è§’å½¢
 void bmp_drawHollowTriangle(BITMAP_565 *bmp, int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
-//ÔÚbitmapÄÚ»æÖÆÈı½ÇĞÎ
+// åœ¨bitmapå†…ç»˜åˆ¶ä¸‰è§’å½¢
 void bmp_drawTriangle(BITMAP_565 *bmp, int x1, int y1, int x2, int y2, int x3, int y3, uint32 color);
-// ÔÚbitmapÄÚ»æÖÆ¿ÕĞÄÔ²
+// åœ¨bitmapå†…ç»˜åˆ¶ç©ºå¿ƒåœ†
 void bmp_drawHollowCircle(BITMAP_565 *bmp, int32 centerX, int32 centerY, int32 radius, uint32 color);
-// ÔÚbitmapÄÚ»æÖÆÔ²ĞÎ
+// åœ¨bitmapå†…ç»˜åˆ¶åœ†å½¢
 void bmp_drawCircle(BITMAP_565 *bmp, int32 cx, int32 cy, int32 radius, uint32 color);
-// ÔÚbitmapÄÚ»æÖÆÏß¶Î
+// åœ¨bitmapå†…ç»˜åˆ¶çº¿æ®µ
 void bmp_drawLine(BITMAP_565 *bmp, int32 x1, int32 y1, int32 x2, int32 y2, uint32 color);
-// ÔÚbitmapÄÚ»æÖÆµã
+// åœ¨bitmapå†…ç»˜åˆ¶ç‚¹
 void bmp_drawPoint(BITMAP_565 *bmp, int32 x, int32 y, uint32 color);
-// ÔÚbitmapÄÚ»æÖÆ¾ØĞÎ
+// åœ¨bitmapå†…ç»˜åˆ¶çŸ©å½¢
 void bmp_drawRect(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, uint32 color);
 #endif

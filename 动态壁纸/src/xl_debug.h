@@ -7,9 +7,9 @@
 #define DEBUG_CHECK_FILE "debug.txt"
 
 // 简单直接的调试宏
-#define LOG_HERE() debug_log("[DEBUG] %s:%d (%s)\n", __FILE__, __LINE__, __func__)
-#define LOG_MSG(msg) debug_log("%s", msg)
-#define LOG_VAR(...) mrc_printf("[DEBUG] %s:%d - ", __FILE__, __LINE__); debug_log(__VA_ARGS__); mrc_printf("\n")
+#define LOG_HERE() mrc_printf("[DEBUG] %s:%d (%s)\n", __FILE__, __LINE__, __func__)
+#define LOG_MSG(msg) mrc_printf("%s", msg)
+#define LOG_VAR(...) mrc_printf("[DEBUG] %s:%d - ", __FILE__, __LINE__); mrc_printf(__VA_ARGS__);
 
 extern void debug_printf(char *text,...);
 extern void toCharEx(float num, char *text);

@@ -41,9 +41,10 @@ uc3字体文件结构说明
 // 初始化uc3字体
 int32 uc3_init(void)
 {
-    int32 re = 0;
-    re = mrc_readFileFromMrpEx(NULL, "font.uc3", &uc3_buf, &uc3_buf_len, 0);
-    if (re != MR_SUCCESS)
+    // int32 re = 0;
+    // re = mrc_readFileFromMrpEx(NULL, "font.uc3", &uc3_buf, &uc3_buf_len, 0);
+    uc3_buf = mrc_readFileFromMrp("font.uc3", &uc3_buf_len, 0);
+    if (uc3_buf == NULL)
     {
         mrc_printf("uc3 load error");
         return MR_FAILED;

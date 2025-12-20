@@ -1,6 +1,6 @@
 #include <mrc_base.h>
 #include "xl_debug.h"
-#include <debug.h>
+
 /*
 
 EBUG_FILE
@@ -63,7 +63,7 @@ char *toCharEx(float num, char *text) {
     /* 处理特殊值 - 简化的NaN和Inf检查 */
     if (num != num) {  /* NaN检查 */
         MR_STRCPY(text, "nan");
-        return;
+        return NULL;
     }
 
     /* Inf检查 */
@@ -73,13 +73,13 @@ char *toCharEx(float num, char *text) {
         } else {
             MR_STRCPY(text, "inf");
         }
-        return;
+        return NULL;
     }
 
     /* 处理0 */
     if (num == 0.0f) {
         MR_STRCPY(text, "0.0");
-        return;
+        return NULL;
     }
 
     p = text;

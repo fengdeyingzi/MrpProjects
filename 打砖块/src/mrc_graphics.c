@@ -5,15 +5,16 @@
 #include "xl_debug.h"
 #include "mpc.h"
 #include <math.h>
+#include <armdsp.h>
 
 /*
-ÊµÏÖÒ»Ğ©»æÍ¼º¯Êı
-Ö÷ÒªÊÇÊµÏÖbmpÍ¼Æ¬»æÖÆ
+å®ç°ä¸€äº›ç»˜å›¾å‡½æ•°
+ä¸»è¦æ˜¯å®ç°bmpå›¾ç‰‡ç»˜åˆ¶
 
-·çµÄÓ°×Ó
+é£çš„å½±å­
 
 */
-// ½«rgb888×ªrgb565
+// å°†rgb888è½¬rgb565
 #define MAKECOLOR565(color) ((uint16)((color >> 8) & 0xf800) | (uint16)((color >> 5) & 0x07e0) | (uint16)((color >> 3) & 0x1f))
 #ifndef MAKERGB
 #define MAKERGB(r, g, b) (((uint16)(r >> 3) << 11) | ((uint16)(g >> 2) << 5) | ((uint16)(b >> 3)))
@@ -22,16 +23,18 @@
 #define M_PI 3.14159265358979323846
 #endif
 
-#define BLEND_COLOR(dstColor, srcColor, alpha) \
-    (((((((dstColor) >> 11) & 0x1F) * (255 - (alpha)) + (((srcColor) >> 11) & 0x1F) * (alpha)) / 255) << 11) | \
-     (((((dstColor) >> 5) & 0x3F) * (255 - (alpha)) + (((srcColor) >> 5) & 0x3F) * (alpha)) / 255) << 5) | \
-     ((((dstColor) & 0x1F) * (255 - (alpha)) + ((srcColor) & 0x1F) * (alpha)) / 255)
+#define BLEND_COLOR(dstColor, srcColor, alpha)                                                               \
+  (((((((dstColor) >> 11) & 0x1F) * (255 - (alpha)) + (((srcColor) >> 11) & 0x1F) * (alpha)) / 255) << 11) | \
+   (((((dstColor) >> 5) & 0x3F) * (255 - (alpha)) + (((srcColor) >> 5) & 0x3F) * (alpha)) / 255) << 5) |     \
+      ((((dstColor) & 0x1F) * (255 - (alpha)) + ((srcColor) & 0x1F) * (alpha)) / 255)
 
 extern int pointInTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3, int y3);
 extern uint16 blendColor(uint16 dstColor, uint16 srcColor, int alpha);
+extern uint16 blendColor888(uint16 dstColor, uint32 srcColor);
 BITMAP_565 *createBitmap565(int width, int height)
 {
   BITMAP_565 *bmp = (BITMAP_565 *)mrc_malloc(sizeof(BITMAP_565));
+  mrc_memset(bmp, 0, sizeof(BITMAP_565));
   bmp->bitmap = (uint16 *)mr_malloc(width * height * 2);
   mrc_memset(bmp->bitmap, 0, width * height * 2);
   bmp->color_bit = 16;
@@ -43,7 +46,7 @@ BITMAP_565 *createBitmap565(int width, int height)
   return bmp;
 }
 
-// Í¨¹ıÆÁÄ»»º´æ´´½¨BITMAP
+// é€šè¿‡å±å¹•ç¼“å­˜åˆ›å»ºBITMAP
 BITMAP_565 *createBitmapFromScreen()
 {
   BITMAP_565 *bmp;
@@ -55,23 +58,25 @@ BITMAP_565 *createBitmapFromScreen()
   return bmp;
 }
 
-BITMAP_565 *readBitmap565FromAssets(char *filename)
+BITMAP_565 *readBitmap565FromAssets(const char *filename)
 {
   int32 len = 0;
   void *buf;
   BITMAP_565 *re = NULL;
   char *endName = NULL;
   char *head = NULL;
-  //  debug_printf("¿ªÊ¼¶ÁÈ¡ÎÄ¼ş");
+  //  debug_printf("å¼€å§‹è¯»å–æ–‡ä»¶");
 
   buf = mrc_readFileFromAssets(filename, &len);
+  if (buf == NULL)
+    return NULL;
   head = (char *)buf;
   if (len > 0)
   {
-    //  debug_printf("½âÎöÍ¼Æ¬");
+    //  debug_printf("è§£æå›¾ç‰‡");
     endName = mrc_strrchr(filename, '.');
 
-    if (head[0] == 'M' && head[1] == 'A' && head[2] == 'P' && head[3] == '5')
+    if (head[0] == 'M' && head[1] == 'A' && head[2] == 'P' && (head[3] == '5' || head[3] == '8'))
     {
       re = bma_read(buf, len);
     }
@@ -84,14 +89,14 @@ BITMAP_565 *readBitmap565FromAssets(char *filename)
   return re;
 }
 
-BITMAP_565 *readBitmap565(char *filename)
+BITMAP_565 *readBitmap(char *filename)
 {
   int32 f;
   void *buf;
   int32 len = 0;
   BITMAP_565 *re = NULL;
   char *endName = NULL;
-  //  debug_printf("»ñÈ¡ÎÄ¼ş³¤¶È");
+  //  debug_printf("è·å–æ–‡ä»¶é•¿åº¦");
   len = mrc_getLen(filename);
 
   if (len > 0)
@@ -102,7 +107,7 @@ BITMAP_565 *readBitmap565(char *filename)
     buf = mr_malloc(len);
     if (buf == NULL)
     {
-      mrc_printf("ÉêÇëÄÚ´æÊ§°Ü");
+      mrc_printf("ç”³è¯·å†…å­˜å¤±è´¥");
     }
     if (f > 0)
     {
@@ -114,19 +119,388 @@ BITMAP_565 *readBitmap565(char *filename)
 
       re = bmp_read(buf, len);
     }
-    //  debug_printf("ÊÍ·ÅÄÚ´æ");
+    //  debug_printf("é‡Šæ”¾å†…å­˜");
     mrc_freeFileData(buf, len);
   }
   return re;
 }
-int32 drawBitmap565Flip(BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
+
+int32 drawBitmapFlip(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
 {
-  bmp_drawflip(buf, x, y, w, h, sx, sy);
-  return 0;
+  if(bmp->color_bit == 16){
+    return gl_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)w,(uint16)h, (uint16)bmp->mode, (int16)sx,(int16)sy,(uint16)bmp->transcolor);
+  }else if(bmp->color_bit == 32){
+    return gl_bitmapShowExTrans8888((uint32*)bmp->bitmap, (int16)x, (int16)y, (int16)bmp->width, (int16)w, (int16)h, (int16)sx, (int16)sy);
+  }
+  
+  return MR_FAILED;
 }
-void drawBitmap565(BITMAP_565 *b, int32 x, int32 y)
+
+void drawBitmap(BITMAP_565 *bmp, int32 x, int32 y)
 {
-  bmp_draw(b, x, y);
+  // åˆ¤æ–­ä½æ•°
+  if (bmp->color_bit == 16)
+  {
+    drawBitmap565(bmp, x, y);
+  }
+  else if (bmp->color_bit == 32)
+  {
+    drawBitmap8888(bmp, x, y);
+  }
+}
+void drawBitmapRegion(BITMAP_565 *src, int x_src, int y_src, int width, int height, int transform, int x_dest, int y_dest, int anchor) {
+  int16 sourceX, sourceY;
+  uint16 *screenBuffer;
+  uint16 pixelColor;
+  int16 startX, startY, endX, endY;
+  int16 i,j;
+    if (src == NULL || src->bitmap == NULL || width <= 0 || height <= 0 ||
+        x_src < 0 || y_src < 0 || x_src + width > src->width || y_src + height > src->height) {
+        return; // æ— æ•ˆå‚æ•°å¤„ç†
+    }
+
+    screenBuffer = w_getScreenBuffer(); // è·å–å±å¹•ç¼“å†²
+
+    // æ ¹æ®é”šç‚¹è®¡ç®—ç›®æ ‡ç»˜åˆ¶åŒºåŸŸçš„èµ·å§‹ä½ç½®
+    startX = x_dest;
+    startY = y_dest;
+    if (anchor == GRAPHICS_RIGHT) {
+        startX = x_dest - width;
+    } else if (anchor == GRAPHICS_BOTTOM) {
+        startY = y_dest - height;
+    } else if (anchor == GRAPHICS_CENTER) {
+        startX = x_dest - width / 2;
+        startY = y_dest - height / 2;
+    }
+
+    // è®¡ç®—ç»˜åˆ¶åŒºåŸŸçš„å®é™…è¾¹ç•Œ
+    endX = (startX + width > SCRW) ? SCRW : startX + width;
+    endY = (startY + height > SCRH) ? SCRH : startY + height;
+    startX = (startX < 0) ? 0 : startX;
+    startY = (startY < 0) ? 0 : startY;
+
+    // è®¡ç®—æºå›¾åƒåœ¨ç»˜åˆ¶åŒºåŸŸä¸­çš„å¯¹åº”ä½ç½®
+     sourceX = x_src;
+     sourceY = y_src;
+
+    // æ ¹æ®ç»˜åˆ¶æ¨¡å¼æ‰§è¡Œç»˜åˆ¶
+    if (src->mode == BM_COPY) {
+        for ( i = startY; i < endY; i++) {
+            for ( j = startX; j < endX; j++) {
+                pixelColor = src->bitmap[((sourceY + (i - startY)) * src->width) + (sourceX + (j - startX))];
+                screenBuffer[i * SCRW + j] = pixelColor; // ç›´æ¥ç»˜åˆ¶
+            }
+        }
+    } else if (src->mode == BM_TRANSPARENT) {
+        for ( i = startY; i < endY; i++) {
+            for ( j = startX; j < endX; j++) {
+                pixelColor = src->bitmap[((sourceY + (i - startY)) * src->width) + (sourceX + (j - startX))];
+                if (pixelColor != src->transcolor) { // åˆ¤æ–­æ˜¯å¦ä¸ºé€æ˜è‰²
+                    screenBuffer[i * SCRW + j] = pixelColor; // ç»˜åˆ¶éé€æ˜åƒç´ 
+                }
+            }
+        }
+    }
+}
+/*
+    å°†pç¼“å†²ä¸­çš„å›¾ç‰‡(rgb565æ ¼å¼)ï¼Œä»ç¼“å†²ä¸­çš„å›¾ç‰‡çš„(sx, sy)
+    å¼€å§‹çš„å®½é«˜ä¸ºw, hçš„åŒºåŸŸï¼Œç»˜åˆ¶åˆ°(x, y)å¼€å§‹çš„å±å¹•ç¼“å†²ä¸­ã€‚
+
+è¾“å…¥:
+i                  å›¾ç‰‡ç¼“å†²åºå·
+x,y              å±å¹•ä½ç½®
+rop              é€‰æ‹©å¦‚ä¸‹ï¼š
+   BM_COPY,       //DST = SRC*      è¦†ç›–
+   BM_TRANSPARENT,//é€æ˜è‰²ä¸æ˜¾ç¤º
+
+sx,sy              æºå›¾ç‰‡çš„èµ·å§‹ä½ç½®
+w,h             æ¬²åŠ è½½å›¾ç‰‡çš„å®½é«˜
+transcolor é€æ˜è‰²
+
+è¿”å›:
+      MR_SUCCESS     æˆåŠŸ
+      MR_FAILED         å¤±è´¥
+*/
+int gl_bitmapShowExTrans(uint16 *p,
+                         int16 x,
+                         int16 y,
+                         int16 mw,
+                         int16 w,
+                         int16 h,
+                         uint16 rop,
+                         int16 sx,
+                         int16 sy,
+                         uint16 transcolor)
+{
+  // å®šä¹‰å±€éƒ¨å˜é‡
+  int16 i, j;                                 // ç”¨äºå¾ªç¯è¿­ä»£
+  uint16 *screenBuffer = w_getScreenBuffer(); // è·å–å±å¹•ç¼“å†²åŒº
+  uint16 pixelColor;                          // å½“å‰å¤„ç†çš„åƒç´ é¢œè‰²
+
+  // è®¡ç®—ç»˜åˆ¶åŒºåŸŸå®é™…è¾¹ç•Œ
+  int16 startX = (x < 0) ? 0 : x;             // æˆªå–å¼€å§‹ç»˜åˆ¶çš„Xè¾¹ç•Œ
+  int16 startY = (y < 0) ? 0 : y;             // æˆªå–å¼€å§‹ç»˜åˆ¶çš„Yè¾¹ç•Œ
+  int16 endX = (x + w > SCRW) ? SCRW : x + w; // æˆªå–ç»“æŸç»˜åˆ¶çš„Xè¾¹ç•Œ
+  int16 endY = (y + h > SCRH) ? SCRH : y + h; // æˆªå–ç»“æŸç»˜åˆ¶çš„Yè¾¹ç•Œ
+
+  // è®¡ç®—æºå›¾ç‰‡åœ¨ç»˜åˆ¶åŒºåŸŸä¸­çš„å¯¹åº”ä½ç½®
+  int16 sourceX = (startX - x) + sx; // æ˜ å°„æºå›¾åƒXåæ ‡
+  int16 sourceY = (startY - y) + sy; // æ˜ å°„æºå›¾åƒYåæ ‡
+  int32 sindex, pindex;
+  // æ£€æŸ¥è¾“å…¥å‚æ•°çš„æœ‰æ•ˆæ€§
+  if (p == NULL || screenBuffer == NULL || w <= 0 || h <= 0 ||
+      sx < 0 || sy < 0 || sx + w > mw)
+  {
+    return MR_FAILED; // å‚æ•°æ— æ•ˆï¼Œè¿”å›å¤±è´¥
+  }
+  switch (rop)
+  {
+  case BM_COPY:
+    sourceX = sx; // é‡ç½®æºå›¾åƒçš„Xåæ ‡
+    for (i = startY; i < endY; i++)
+    {
+      // è®¡ç®—æºå›¾åƒçš„æœ‰æ•ˆä½ç§»
+      pindex = (sourceY * mw + sourceX);
+      // è®¡ç®—ç›®æ ‡å±å¹•ä¸­çš„ä½ç½®
+      sindex = (i * SCRW + startX);
+      memcpy(screenBuffer + sindex, p + pindex, (endX - startX) * 2);
+      sourceY++; // ç§»åŠ¨åˆ°æºå›¾åƒçš„ä¸‹ä¸€ä¸ªè¡Œ
+    }
+    break;
+  case BM_TRANSPARENT:
+    // éå†è¦ç»˜åˆ¶çš„åŒºåŸŸ
+    for (i = startY; i < endY; i++)
+    {
+      pindex = (sourceY * mw + sourceX);
+      // sindex = (i * SCRW);
+      sindex = (i * SCRW + startX);
+      for (j = startX; j < endX; j++)
+      {
+        // è®¡ç®—æºå›¾åƒçš„æœ‰æ•ˆä½ç§»
+
+        pixelColor = p[pindex]; // è·å–å½“å‰åƒç´ é¢œè‰²
+
+        // åˆ¤æ–­æ˜¯å¦ä¸ºé€æ˜è‰²
+        if (pixelColor != transcolor)
+        {
+          screenBuffer[sindex] = pixelColor;
+        }
+        sindex++;
+        pindex++;
+      }
+      sourceX = sx; // é‡ç½®æºå›¾åƒçš„Xåæ ‡
+      sourceY++;    // ç§»åŠ¨åˆ°æºå›¾åƒçš„ä¸‹ä¸€ä¸ªè¡Œ
+    }
+  }
+
+  return MR_SUCCESS; // æˆåŠŸå®Œæˆç»˜åˆ¶
+}
+
+int gl_bitmapShowExTrans8888(uint32 *p,
+                             int16 x,
+                             int16 y,
+                             int16 mw,
+                             int16 w,
+                             int16 h,
+                             int16 sx,
+                             int16 sy)
+{
+  // å®šä¹‰å±€éƒ¨å˜é‡
+  int16 i, j;                                 // ç”¨äºå¾ªç¯è¿­ä»£
+  uint16 *screenBuffer = w_getScreenBuffer(); // è·å–å±å¹•ç¼“å†²åŒº
+  uint16 pixelColor;                          // å½“å‰å¤„ç†çš„åƒç´ é¢œè‰²
+  uint32 pixel;                               // å½“å‰å¤„ç†çš„32ä½åƒç´ 
+  uint32 alpha;
+
+  // è®¡ç®—ç»˜åˆ¶åŒºåŸŸå®é™…è¾¹ç•Œ
+  int16 startX = (x < 0) ? 0 : x;             // æˆªå–å¼€å§‹ç»˜åˆ¶çš„Xè¾¹ç•Œ
+  int16 startY = (y < 0) ? 0 : y;             // æˆªå–å¼€å§‹ç»˜åˆ¶çš„Yè¾¹ç•Œ
+  int16 endX = (x + w > SCRW) ? SCRW : x + w; // æˆªå–ç»“æŸç»˜åˆ¶çš„Xè¾¹ç•Œ
+  int16 endY = (y + h > SCRH) ? SCRH : y + h; // æˆªå–ç»“æŸç»˜åˆ¶çš„Yè¾¹ç•Œ
+
+  // è®¡ç®—æºå›¾ç‰‡åœ¨ç»˜åˆ¶åŒºåŸŸä¸­çš„å¯¹åº”ä½ç½®
+  int16 sourceX = (startX - x) + sx; // æ˜ å°„æºå›¾åƒXåæ ‡
+  int16 sourceY = (startY - y) + sy; // æ˜ å°„æºå›¾åƒYåæ ‡
+
+  // æ£€æŸ¥è¾“å…¥å‚æ•°çš„æœ‰æ•ˆæ€§
+  if (p == NULL || screenBuffer == NULL || w <= 0 || h <= 0 ||
+      sx < 0 || sy < 0 || sx + w > mw)
+  {
+    return MR_FAILED; // å‚æ•°æ— æ•ˆï¼Œè¿”å›å¤±è´¥
+  }
+  // éå†è¦ç»˜åˆ¶çš„åŒºåŸŸ
+  for (i = startY; i < endY; i++)
+  {
+    for (j = startX; j < endX; j++)
+    {
+      pixel = p[(sourceY * mw + sourceX)]; // ä»å›¾åƒç¼“å†²åŒºè·å–å½“å‰32ä½åƒç´ 
+      alpha = pixel >> 24;
+      if (alpha != 0) // åˆ¤æ–­æ˜¯å¦ä¸ºé€æ˜è‰²
+      {
+        pixelColor = blendColor888(screenBuffer[i * SCRW + j], pixel); // B
+
+        screenBuffer[i * SCRW + j] = pixelColor; // å†™å…¥å±å¹•ç¼“å†²åŒº
+      }
+      sourceX++; // ç§»åŠ¨åˆ°æºå›¾åƒçš„ä¸‹ä¸€ä¸ªåƒç´ 
+    }
+    sourceX = sx; // é‡ç½®æºå›¾åƒçš„Xåæ ‡
+    sourceY++;    // ç§»åŠ¨åˆ°æºå›¾åƒçš„ä¸‹ä¸€ä¸ªè¡Œ
+  }
+
+  return MR_SUCCESS; // æˆåŠŸå®Œæˆç»˜åˆ¶
+}
+
+void drawBitmap565(BITMAP_565 *bmp, int32 x, int32 y)
+{
+  // int i;
+  // int32 screenIndex;
+  // uint16 *buffer;
+  // int by;
+  // if (bmp->memlen > 0 && x > 0 && y > 0 && bmp->width + x < SCRW && bmp->height + y < SCRH)
+  // {
+  //   buffer = w_getScreenBuffer();
+  //   screenIndex = y * SCRW + x;
+  //   for (i = 0; i < bmp->memlen; i += 12)
+  //   {
+  //     // mrc_printf("inde %d %d", i/3, bmp->memlen);
+  //     // mrc_printf("memcpy %d %d %d ", screenIndex + bmp->memcache[i/4], bmp->memcache[i/4+1], bmp->memcache[i/4+2]);
+  //     // å±å¹•ç‚¹ä½ç½® å›¾ç‰‡ç‚¹ä½ç½® å¤åˆ¶é•¿åº¦
+  //     mrc_memcpy(buffer + screenIndex + bmp->memcache[i >> 2], bmp->bitmap + bmp->memcache[(i >> 2) + 1], bmp->memcache[(i >> 2) + 2]);
+  //   }
+  // }
+  // else
+  // {
+  gl_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)bmp->width, (uint16)bmp->height, (uint16)bmp->mode, 0, 0, (uint16)bmp->transcolor);
+  // }
+
+  // bmp_draw(bmp, x, y);
+}
+
+// è‡ªåŠ¨åˆ†æmemcpyä¼˜åŒ–
+int32 bitmapAutoMemcpy(BITMAP_565 *b)
+{
+  int32 mem_count = 0;
+  int32 ix, iy;
+  int32 m_start = -1, m_end = 0;
+  int32 bx, by;
+  int32 screenIndex;
+
+  if (b->mode == BM_TRANSPARENT)
+  {
+    for (iy = 0; iy < b->height; iy++)
+    {
+      m_start = -1;
+      for (ix = 0; ix < b->width; ix++)
+      {
+        if (b->bitmap[iy * b->width + ix] != b->transcolor)
+        {
+          if (ix == b->width - 1 && m_start >= 0)
+          {
+            goto COUNT_ADD;
+          }
+          if (m_start < 0)
+          {
+            m_start = iy * b->width + ix;
+          }
+        }
+        else
+        {
+          if (m_start >= 0)
+          {
+          COUNT_ADD:
+            m_end = iy * b->width + ix;
+            mem_count++;
+          }
+          m_start = -1;
+        }
+      }
+    }
+    // å¦‚æœmem_countæ•°é‡å°äºå›¾ç‰‡é¢ç§¯/10,åˆ™è¿›è¡Œä¼˜åŒ–
+    if (mem_count < b->width * b->height / 10)
+    {
+      b->memcache = mrc_malloc(mem_count * sizeof(int32) * 3);
+      b->memlen = mem_count * sizeof(int32) * 3;
+      mrc_printf("mem_count: %d\n", mem_count);
+      mem_count = 0;
+      for (iy = 0; iy < b->height; iy++)
+      {
+        m_start = -1;
+        for (ix = 0; ix < b->width; ix++)
+        {
+          if (b->bitmap[iy * b->width + ix] != b->transcolor)
+          {
+            if (ix == b->width - 1 && m_start >= 0)
+            {
+              goto MEM_SET;
+            }
+            if (m_start < 0)
+            {
+              m_start = iy * b->width + ix;
+            }
+          }
+          else
+          {
+            if (m_start >= 0)
+            {
+            MEM_SET:
+              m_end = iy * b->width + ix;
+              by = m_start / b->width;
+              bx = m_start % b->width;
+              screenIndex = SCRW * by + bx;
+              b->memcache[mem_count * 3] = screenIndex;
+              b->memcache[mem_count * 3 + 1] = m_start;
+              b->memcache[mem_count * 3 + 2] = (m_end - m_start) * sizeof(uint16);
+              mrc_printf("%d %d %d", screenIndex, m_start, m_end - m_start);
+              mem_count++;
+            }
+            m_start = -1;
+          }
+        }
+      }
+      mrc_printf("mem_count2: %d\n", mem_count);
+      return MR_SUCCESS;
+    }
+  }
+  return MR_FAILED;
+}
+
+void drawBitmap8888(BITMAP_565 *bmp, int32 x, int32 y)
+{
+  // int32 px, py;
+  int32 sx, sy;
+  int32 w = bmp->width;
+  int32 h = bmp->height;
+  int32 pindex, sindex;
+  int32 minX, maxX, minY, maxY;
+
+  uint32 *buf = (uint32 *)bmp->bitmap;
+  uint16 *buffer = w_getScreenBuffer();
+  int32 ii = 0;
+  minX = MAX(0, x);
+  minY = MAX(0, y);
+  maxY = MIN(y + h, SCRH);
+  maxX = MIN(x + w, SCRW);
+  if (maxX < 0 || maxY < 0)
+    return;
+  for (sy = minY; sy < maxY; sy++)
+  {
+    sindex = SCRW * sy + minX;
+    pindex = y < 0 ? bmp->width * (sy - y) : bmp->width * (sy - y);
+    if (x < 0)
+    {
+      pindex -= x;
+    }
+    for (sx = minX; sx < maxX; sx++)
+    {
+      if (buf[pindex] >> 24 != 0)
+      {
+        buffer[sindex] = blendColor888(buffer[sindex], (buf[pindex]));
+        ii++;
+      }
+      sindex++;
+      pindex++;
+    }
+  }
 }
 
 uint16 getPixelColor(int32 x, int32 y)
@@ -134,72 +508,112 @@ uint16 getPixelColor(int32 x, int32 y)
   return *(getscrbuf() + (SCRW * y + x));
 }
 
-// Í¸Ã÷¶È,È¡Öµ0µ½255
+// é€æ˜åº¦,å–å€¼0åˆ°255
 void drawBitmapAlpha(BITMAP_565 *b, int32 x, int32 y, int32 alpha)
 {
   int32 j, i;
   uint16 color;
   int32 targetX, targetY;
-  int32 minX, minY;
-  int32 maxX, maxY;
+  int32 minX, minY, maxX, maxY;
   uint16 *buffer = w_getScreenBuffer();
-  // ÏŞÖÆ alpha µÄ·¶Î§ÔÚ 0 µ½ 255 Ö®¼ä
+  uint32 *buf32;
+  uint32 color32;
+  int32 alpha32;
+  int32 startX, startY;
+
+  // é™åˆ¶ alpha çš„èŒƒå›´åœ¨ 0 åˆ° 255 ä¹‹é—´
   if (alpha < 0)
     alpha = 0;
   if (alpha > 255)
     alpha = 255;
+
+  if (b == NULL)
+    return;
+
+  // è®¡ç®—æœ‰æ•ˆç»˜åˆ¶åŒºåŸŸ
   minX = MAX(0, x);
   minY = MAX(0, y);
   maxX = MIN(SCRW, x + b->width);
   maxY = MIN(SCRH, y + b->height);
-  // ±éÀúÎ»Í¼µÄÃ¿¸öÏñËØ
-  if (b->mode == BM_TRANSPARENT)
+
+  // å†³å®šéå†çš„èµ·å§‹å’Œç»“æŸåæ ‡
+  startX = MIN(x, 0) + b->width + x;
+  startY = MIN(y, 0) + b->height + y;
+
+  if (maxX <= minX || maxY <= minY)
+    return; // æ²¡æœ‰æœ‰æ•ˆçš„ç»˜åˆ¶åŒºåŸŸ
+
+  if (b->color_bit == 16)
   {
-    for (j = 0; j < b->height; j++)
+    // éå†ä½å›¾çš„æ¯ä¸ªåƒç´ 
+    if (b->mode == BM_TRANSPARENT)
     {
-      for (i = 0; i < b->width; i++)
+      for (j = minY; j < maxY; j++)
       {
-        // ¼ÆËãµ±Ç°ÏñËØµÄÎ»Í¼µÄË÷Òı
-        color = b->bitmap[j * b->width + i];
-
-        // Èç¹ûÊÇÍ¸Ã÷É«£¬ÔòÌø¹ı¸ÃÏñËØ
-        if (color == b->transcolor)
+        for (i = minX; i < maxX; i++)
         {
-          continue;
-        }
+          // è®¡ç®—å½“å‰åƒç´ çš„ä½å›¾çš„ç´¢å¼•
+          color = b->bitmap[(j - y) * b->width + (i - x)];
 
-        // ¼ÆËãÄ¿±êµãµÄÎ»ÖÃ
-        targetX = x + i;
-        targetY = y + j;
-        *(buffer + SCRW * targetY + targetX) = BLEND_COLOR(*(buffer + SCRW * targetY + targetX), color, alpha);
+          // å¦‚æœæ˜¯é€æ˜è‰²ï¼Œåˆ™è·³è¿‡è¯¥åƒç´ 
+          if (color == b->transcolor)
+          {
+            continue;
+          }
+
+          // è®¡ç®—ç›®æ ‡ç‚¹çš„ä½ç½®
+          targetX = i;
+          targetY = j;
+          *(buffer + SCRW * targetY + targetX) = blendColor(*(buffer + SCRW * targetY + targetX), color, alpha);
+        }
+      }
+    }
+    else
+    {
+      for (j = minY; j < maxY; j++)
+      {
+        for (i = minX; i < maxX; i++)
+        {
+          // è®¡ç®—å½“å‰åƒç´ çš„ä½å›¾çš„ç´¢å¼•
+          color = b->bitmap[(j - y) * b->width + (i - x)];
+
+          // è®¡ç®—ç›®æ ‡ç‚¹çš„ä½ç½®
+          targetX = i;
+          targetY = j;
+          *(buffer + SCRW * targetY + targetX) = blendColor(*(buffer + SCRW * targetY + targetX), color, alpha);
+        }
       }
     }
   }
-  else
+  else if (b->color_bit == 32)
   {
-    for (j = 0; j < b->height; j++)
+    buf32 = (uint32 *)(b->bitmap);
+    for (j = minY; j < maxY; j++)
     {
-      for (i = 0; i < b->width; i++)
+      for (i = minX; i < maxX; i++)
       {
-        // ¼ÆËãµ±Ç°ÏñËØµÄÎ»Í¼µÄË÷Òı
-        color = b->bitmap[j * b->width + i];
-
-        // ¼ÆËãÄ¿±êµãµÄÎ»ÖÃ
-        targetX = x + i;
-        targetY = y + j;
-        *(buffer + SCRW * targetY + targetX) = blendColor(*(buffer + SCRW * targetY + targetX), color, alpha);
+        // è®¡ç®—å½“å‰åƒç´ çš„ä½å›¾çš„ç´¢å¼•
+        color32 = buf32[(j - y) * b->width + (i - x)];
+        if ((color32 >> 24) != 0)
+        {
+          alpha32 = ((color32 >> 24) * alpha) >> 8;
+          // è®¡ç®—ç›®æ ‡ç‚¹çš„ä½ç½®
+          targetX = i;
+          targetY = j;
+          buffer[SCRW * targetY + targetX] = blendColor888(buffer[SCRW * targetY + targetX], (color32 & 0xffffff) | (alpha32 << 24));
+        }
       }
     }
   }
 }
 
-// ¸¨Öúº¯Êı£ºÓÃÓÚ·­×ªÍ¼ÏñÊı¾İ
+// è¾…åŠ©å‡½æ•°ï¼šç”¨äºç¿»è½¬å›¾åƒæ•°æ®
 void flipBitmap(uint16 *bitmap, int width, int height, int flip)
 {
   uint16 temp;
   int x, y;
   if (flip == 1)
-  { // ºáÏò·­×ª
+  { // æ¨ªå‘ç¿»è½¬
     for (y = 0; y < height; y++)
     {
       for (x = 0; x < width / 2; x++)
@@ -211,7 +625,7 @@ void flipBitmap(uint16 *bitmap, int width, int height, int flip)
     }
   }
   else if (flip == 2)
-  { // ×İÏò·­×ª
+  { // çºµå‘ç¿»è½¬
     for (y = 0; y < height / 2; y++)
     {
       for (x = 0; x < width; x++)
@@ -224,9 +638,9 @@ void flipBitmap(uint16 *bitmap, int width, int height, int flip)
   }
 }
 
-// ½«bitmapĞı×ª90¶È/180¶È/270¶È,Ğı×ªÖ®ºóĞŞ¸ÄbitmapÄÚbitmap»º´æÊı¾İ
-// typeÈ¡Öµ 1:90 2:180 3:270
-// flipÈ¡Öµ 1ºáÏò·­×ª 2×İÏò·­×ª
+// å°†bitmapæ—‹è½¬90åº¦/180åº¦/270åº¦,æ—‹è½¬ä¹‹åä¿®æ”¹bitmapå†…bitmapç¼“å­˜æ•°æ®
+// typeå–å€¼ 1:90 2:180 3:270
+// flipå–å€¼ 1æ¨ªå‘ç¿»è½¬ 2çºµå‘ç¿»è½¬
 void bitmap565Rotate(BITMAP_565 *b, int type, int flip)
 {
   int newWidth, newHeight;
@@ -234,12 +648,12 @@ void bitmap565Rotate(BITMAP_565 *b, int type, int flip)
   int x, y;
   if (type < 1 || type > 3)
   {
-    return; // ÎŞĞ§µÄĞı×ªÀàĞÍ
+    return; // æ— æ•ˆçš„æ—‹è½¬ç±»å‹
   }
 
   switch (type)
   {
-  case 1: // Ğı×ª90¶È
+  case 1: // æ—‹è½¬90åº¦
     newWidth = b->height;
     newHeight = b->width;
     newBitmap = (uint16 *)mr_malloc(newWidth * newHeight * sizeof(uint16));
@@ -252,7 +666,7 @@ void bitmap565Rotate(BITMAP_565 *b, int type, int flip)
     }
     break;
 
-  case 2: // Ğı×ª180¶È
+  case 2: // æ—‹è½¬180åº¦
     newWidth = b->width;
     newHeight = b->height;
     newBitmap = (uint16 *)mr_malloc(newWidth * newHeight * sizeof(uint16));
@@ -265,7 +679,7 @@ void bitmap565Rotate(BITMAP_565 *b, int type, int flip)
     }
     break;
 
-  case 3: // Ğı×ª270¶È
+  case 3: // æ—‹è½¬270åº¦
     newWidth = b->height;
     newHeight = b->width;
     newBitmap = (uint16 *)mr_malloc(newWidth * newHeight * sizeof(uint16));
@@ -279,17 +693,17 @@ void bitmap565Rotate(BITMAP_565 *b, int type, int flip)
     break;
 
   default:
-    return; // ²»Ó¦µ½´ï´ËĞĞ
+    return; // ä¸åº”åˆ°è¾¾æ­¤è¡Œ
   }
 
-  // ´¦Àí·­×ª
+  // å¤„ç†ç¿»è½¬
   if (flip == 1 || flip == 2)
   {
     flipBitmap(newBitmap, newWidth, newHeight, flip);
   }
 
-  // ¸üĞÂÔ­Ê¼Î»Í¼Êı¾İ
-  mrc_freeFileData(b->bitmap, b->buflen); // ÊÍ·ÅÔ­ bitmap µÄÄÚ´æ
+  // æ›´æ–°åŸå§‹ä½å›¾æ•°æ®
+  mrc_freeFileData(b->bitmap, b->buflen); // é‡Šæ”¾åŸ bitmap çš„å†…å­˜
 
   b->bitmap = newBitmap;
   b->width = newWidth;
@@ -297,43 +711,43 @@ void bitmap565Rotate(BITMAP_565 *b, int type, int flip)
   b->buflen = newWidth * newHeight * sizeof(uint16);
 }
 /*
-Í¼Æ¬Ğı×ªËõ·Å»æÖÆ
-rop [IN] BM_COPY, //DST = SRC* ¸²¸Ç
+å›¾ç‰‡æ—‹è½¬ç¼©æ”¾ç»˜åˆ¶
+rop [IN] BM_COPY, //DST = SRC* è¦†ç›–
 
-BM_TRANSPARENT, //Í¸Ã÷É«²» ÏÔÊ¾£¬Í¼Æ¬(0£¬0)ÏóËØÊÇÍ¸Ã÷É«
+BM_TRANSPARENT, //é€æ˜è‰²ä¸ æ˜¾ç¤ºï¼Œå›¾ç‰‡(0ï¼Œ0)è±¡ç´ æ˜¯é€æ˜è‰²
 
-ÓÃÔöÇ¿µÄ·½Ê½½«bmpÍ¼Æ¬»æÖÆÓÚÖ¸¶¨Í¼Æ¬ÖĞ¡£
-½«srcbmp µÄbmp»º³åÖĞµÄÍ¼Æ¬£¬´Ó»º³åÖĞµÄÍ¼Æ¬µÄ(sx, sy)¿ª
-Ê¼µÄ¿í¸ßÎªw, hµÄÇøÓò£¬»æÖÆµ½dstbmp´Ó(dx,dy)¿ªÊ¼µÄbmp
-»º³åÖĞ¡£
+ç”¨å¢å¼ºçš„æ–¹å¼å°†bmpå›¾ç‰‡ç»˜åˆ¶äºæŒ‡å®šå›¾ç‰‡ä¸­ã€‚
+å°†srcbmp çš„bmpç¼“å†²ä¸­çš„å›¾ç‰‡ï¼Œä»ç¼“å†²ä¸­çš„å›¾ç‰‡çš„(sx, sy)å¼€
+å§‹çš„å®½é«˜ä¸ºw, hçš„åŒºåŸŸï¼Œç»˜åˆ¶åˆ°dstbmpä»(dx,dy)å¼€å§‹çš„bmp
+ç¼“å†²ä¸­ã€‚
 
-Ä£Ê½ropÑ¡ÔñÈçÏÂ£º
-   BM_COPY,               //DST = SRC*      ¸²¸Ç
-   BM_TRANSPARENT,  //Í¸Ã÷É«²»ÏÔÊ¾
+æ¨¡å¼ropé€‰æ‹©å¦‚ä¸‹ï¼š
+   BM_COPY,               //DST = SRC*      è¦†ç›–
+   BM_TRANSPARENT,  //é€æ˜è‰²ä¸æ˜¾ç¤º
 
-A¡¢B¡¢C¡¢DÓÃÓÚÍ¼Ïñ±ä»¯£¬ÓÃÓÚ¸Ã±ä»¯µÄ±ä»»¾ØÕóÎª£º
+Aã€Bã€Cã€Dç”¨äºå›¾åƒå˜åŒ–ï¼Œç”¨äºè¯¥å˜åŒ–çš„å˜æ¢çŸ©é˜µä¸ºï¼š
 x = A0*x0 + B0*y0
 y = C0*x0 + D0*y0
-ÕâÀïÎªÁË±íÊ¾Ğ¡Êı£¬A, B, C, D¾ù±»³ËÒÔÁË256£¬¼´£º
+è¿™é‡Œä¸ºäº†è¡¨ç¤ºå°æ•°ï¼ŒA, B, C, Då‡è¢«ä¹˜ä»¥äº†256ï¼Œå³ï¼š
 A = A0*256
 B = B0*256
 C = C0*256
 D = D0*256
-¸ù¾İ±ä»»¹«Ê½£¬¿ÉÒÔ»æ³ö²»Í¬Ğ§¹ûµÄÍ¼Ïñ£¬±ÈÈç£º
-Ğı×ªÍ¼Ïñ£º
-A = 256 * cos£¨½Ç¶È£©
-B = 256 * sin£¨½Ç¶È£©
-C = 256 * -sin£¨½Ç¶È£©
-D = 256 * cos£¨½Ç¶È£©
-·Å´ó¡¢ËõĞ¡Í¼Ïñ£º
-A = 256 * ·Å´ó±¶Êı
+æ ¹æ®å˜æ¢å…¬å¼ï¼Œå¯ä»¥ç»˜å‡ºä¸åŒæ•ˆæœçš„å›¾åƒï¼Œæ¯”å¦‚ï¼š
+æ—‹è½¬å›¾åƒï¼š
+A = 256 * cosï¼ˆè§’åº¦ï¼‰
+B = 256 * sinï¼ˆè§’åº¦ï¼‰
+C = 256 * -sinï¼ˆè§’åº¦ï¼‰
+D = 256 * cosï¼ˆè§’åº¦ï¼‰
+æ”¾å¤§ã€ç¼©å°å›¾åƒï¼š
+A = 256 * æ”¾å¤§å€æ•°
 B = 0
 C = 0
-D = 256 * ·Å´ó±¶Êı
+D = 256 * æ”¾å¤§å€æ•°
 
-·µ»Ø:
-      MR_SUCCESS     ³É¹¦
-      MR_FAILED         Ê§°Ü
+è¿”å›:
+      MR_SUCCESS     æˆåŠŸ
+      MR_FAILED         å¤±è´¥
 */
 void _DrawBitmapEx(BITMAP_565 *srcbmp, uint16 sx, uint16 sy, BITMAP_565 *dstbmp, uint16 dx, uint16 dy,
                    uint16 w, uint16 h, mr_transMatrixSt *trans)
@@ -519,12 +933,12 @@ void _DrawBitmapEx(BITMAP_565 *srcbmp, uint16 sx, uint16 sy, BITMAP_565 *dstbmp,
 //   drawBitmap565Ex(b, x, y, w, h, tx, ty, w, h);
 // }
 /*
-½«bitmapĞı×ª»æÖÆµ½ÆÁÄ»ÉÏ
-scrx scry »æÖÆµ½ÆÁÄ»ÉÏµÄÖĞĞÄÎ»ÖÃ
-bx by Í¼Æ¬Ğı×ªÖĞĞÄ
+å°†bitmapæ—‹è½¬ç»˜åˆ¶åˆ°å±å¹•ä¸Š
+scrx scry ç»˜åˆ¶åˆ°å±å¹•ä¸Šçš„ä¸­å¿ƒä½ç½®
+bx by å›¾ç‰‡æ—‹è½¬ä¸­å¿ƒ
 
 */
-void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, int32 by, int32 r)
+void drawBitmapRotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, int32 by, int32 r)
 {
   int32 x, y;
   int32 newX, newY;
@@ -532,8 +946,8 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
   // uint16 color11, color12, color21, color22;
   // double dx, dy;
   uint16 color;
-
-  float radian = r * M_PI / 180.0; // ½«½Ç¶È×ª»»Îª»¡¶È
+  uint32 color32;
+  float radian = r * M_PI / 180.0; // å°†è§’åº¦è½¬æ¢ä¸ºå¼§åº¦
   float cosR = cos(radian);
   float sinR = sin(radian);
   int32 minX = SCRW;
@@ -541,27 +955,28 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
   int32 minY = SCRH;
   int32 maxY = 0;
   int i;
-  // ¼ÆËã¾ØĞÎµÄËÄ¸ö¶¥µã
-  int16 vertices[4][2]; // ÏÈÉùÃ÷²»³õÊ¼»¯
+  // è®¡ç®—çŸ©å½¢çš„å››ä¸ªé¡¶ç‚¹
+  int16 vertices[4][2]; // å…ˆå£°æ˜ä¸åˆå§‹åŒ–
   uint16 *screenBuffer = w_getScreenBuffer();
+  uint32 *bitmap32;
 
-  // ¼ÆËã¶Ô½ÇÏßµÄ³¤¶È
+  // è®¡ç®—å¯¹è§’çº¿çš„é•¿åº¦
   // int32 diagonal = (int)sqrt(b->width * b->width + b->height * b->height);
 
-  // Ê¹ÓÃ¼ÆËãµÄ³£Á¿ÖµÌî³ä vertices
-  vertices[0][0] = centerX - bx; // ×óÉÏ½Ç
+  // ä½¿ç”¨è®¡ç®—çš„å¸¸é‡å€¼å¡«å…… vertices
+  vertices[0][0] = centerX - bx; // å·¦ä¸Šè§’
   vertices[0][1] = centerY - by;
 
-  vertices[1][0] = centerX + b->width - bx; // ÓÒÉÏ½Ç
+  vertices[1][0] = centerX + b->width - bx; // å³ä¸Šè§’
   vertices[1][1] = centerY - (b->height - by);
 
-  vertices[2][0] = centerX + (b->width - bx); // ÓÒÏÂ½Ç
+  vertices[2][0] = centerX + (b->width - bx); // å³ä¸‹è§’
   vertices[2][1] = centerY + (b->height - by);
 
-  vertices[3][0] = centerX - bx; // ×óÏÂ½Ç
+  vertices[3][0] = centerX - bx; // å·¦ä¸‹è§’
   vertices[3][1] = centerY + (b->height - by);
 
-  // Ğı×ªÃ¿¸ö¶¥µã
+  // æ—‹è½¬æ¯ä¸ªé¡¶ç‚¹
   for (i = 0; i < 4; i++)
   {
     x = vertices[i][0] - centerX;
@@ -572,7 +987,7 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
 
   for (i = 0; i < 4; i++)
   {
-    // ¸üĞÂ×îĞ¡ºÍ×î´ó x Öµ
+    // æ›´æ–°æœ€å°å’Œæœ€å¤§ x å€¼
     if (vertices[i][0] < minX)
     {
       minX = vertices[i][0];
@@ -582,7 +997,7 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
       maxX = vertices[i][0];
     }
 
-    // ¸üĞÂ×îĞ¡ºÍ×î´ó y Öµ
+    // æ›´æ–°æœ€å°å’Œæœ€å¤§ y å€¼
     if (vertices[i][1] < minY)
     {
       minY = vertices[i][1];
@@ -599,21 +1014,22 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
   maxY = MIN(maxY, SCRH);
   mrc_printf("minX = %d, minY = %d, maxX = %d, maxY = %d", minX, minY, maxX, maxY);
   // mrc_drawRect(minX, minY, maxX-minX, maxY-minY, 240, 20, 20);
-  // ±éÀúÆÁÄ»µÄÃ¿Ò»¸öÏñËØ
-  if (b->mode == BM_TRANSPARENT)
+  // éå†å±å¹•çš„æ¯ä¸€ä¸ªåƒç´ 
+  if(b->color_bit == 16){
+    if (b->mode == BM_TRANSPARENT)
   {
     for (y = minY; y < maxY; y++)
     {
       for (x = minX; x < maxX; x++)
       {
-        // ¼ÆËãĞı×ªºóµÄ×ø±ê
+        // è®¡ç®—æ—‹è½¬åçš„åæ ‡
         newX = (int32)(bx + (x - centerX) * cosR + (y - centerY) * sinR);
         newY = (int32)(by - (x - centerX) * sinR + (y - centerY) * cosR);
 
-        // ¼ì²é×ø±êÊÇ·ñÔÚÍ¼Æ¬·¶Î§ÄÚ
+        // æ£€æŸ¥åæ ‡æ˜¯å¦åœ¨å›¾ç‰‡èŒƒå›´å†…
         if (newX >= 0 && newX < b->width && newY >= 0 && newY < b->height)
         {
-          // Ê¹ÓÃË«ÏßĞÔ²åÖµ¼ÆËãÑÕÉ«Öµ
+          // ä½¿ç”¨åŒçº¿æ€§æ’å€¼è®¡ç®—é¢œè‰²å€¼
           x1 = newX;
           y1 = newY;
           /*
@@ -638,7 +1054,7 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
           {
             continue;
           }
-          // ½«ÑÕÉ«Ğ´ÈëÆÁÄ»»º³åÇø
+          // å°†é¢œè‰²å†™å…¥å±å¹•ç¼“å†²åŒº
           screenBuffer[y * SCRW + x] = color;
         }
       }
@@ -650,14 +1066,14 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
     {
       for (x = minX; x < maxX; x++)
       {
-        // ¼ÆËãĞı×ªºóµÄ×ø±ê
+        // è®¡ç®—æ—‹è½¬åçš„åæ ‡
         newX = (int32)(bx + (x - centerX) * cosR + (y - centerY) * sinR);
         newY = (int32)(by - (x - centerX) * sinR + (y - centerY) * cosR);
 
-        // ¼ì²é×ø±êÊÇ·ñÔÚÍ¼Æ¬·¶Î§ÄÚ
+        // æ£€æŸ¥åæ ‡æ˜¯å¦åœ¨å›¾ç‰‡èŒƒå›´å†…
         if (newX >= 0 && newX < b->width && newY >= 0 && newY < b->height)
         {
-          // Ê¹ÓÃË«ÏßĞÔ²åÖµ¼ÆËãÑÕÉ«Öµ
+          // ä½¿ç”¨åŒçº¿æ€§æ’å€¼è®¡ç®—é¢œè‰²å€¼
           x1 = newX;
           y1 = newY;
           /*
@@ -677,938 +1093,1449 @@ void drawBitmap565Rotate(BITMAP_565 *b, int32 centerX, int32 centerY, int32 bx, 
                            (1 - dx) * dy * color12 +
                            dx * dy * color22);
           */
-         color = b->bitmap[y1 * b->width + x1];
-          // ½«ÑÕÉ«Ğ´ÈëÆÁÄ»»º³åÇø
+          color = b->bitmap[y1 * b->width + x1];
+          // å°†é¢œè‰²å†™å…¥å±å¹•ç¼“å†²åŒº
           screenBuffer[y * SCRW + x] = color;
         }
       }
     }
-
-    
   }
-  // »æÖÆĞı×ªºóµÄ¾ØĞÎ
-    for (i = 1; i < 4; i++)
+  
+  }else if(b->color_bit == 32){
+    bitmap32 = (uint32*)b->bitmap;
+     for (y = minY; y < maxY; y++)
     {
-      x1 = vertices[i][0];
-      y1 = vertices[i][1];
-      x2 = vertices[(i + 1) % 4][0];
-      y2 = vertices[(i + 1) % 4][1];
-      mrc_drawLine(x1, y1, x2, y2, 23, 22, 22);
+      for (x = minX; x < maxX; x++)
+      {
+        // è®¡ç®—æ—‹è½¬åçš„åæ ‡
+        newX = (int32)(bx + (x - centerX) * cosR + (y - centerY) * sinR);
+        newY = (int32)(by - (x - centerX) * sinR + (y - centerY) * cosR);
+
+        // æ£€æŸ¥åæ ‡æ˜¯å¦åœ¨å›¾ç‰‡èŒƒå›´å†…
+        if (newX >= 0 && newX < b->width && newY >= 0 && newY < b->height)
+        {
+          // ä½¿ç”¨åŒçº¿æ€§æ’å€¼è®¡ç®—é¢œè‰²å€¼
+          x1 = newX;
+          y1 = newY;
+          
+          color32 = bitmap32[y1 * b->width + x1];
+          // å°†é¢œè‰²å†™å…¥å±å¹•ç¼“å†²åŒº
+          screenBuffer[y * SCRW + x] = blendColor888(screenBuffer[y * SCRW + x], color32);
+        }
+      }
     }
+
+  }
+  
+  
+  // ç»˜åˆ¶æ—‹è½¬åçš„çŸ©å½¢
+  for (i = 1; i < 4; i++)
+  {
+    x1 = vertices[i][0];
+    y1 = vertices[i][1];
+    x2 = vertices[(i + 1) % 4][0];
+    y2 = vertices[(i + 1) % 4][1];
+    mrc_drawLine(x1, y1, x2, y2, 23, 22, 22);
+  }
 }
 
-  /*
-   {
-      int32 x, y, newX, newY;
-      int32 screenX, screenY;
-      uint16 *screenBuffer = w_getScreenBuffer();
-      // #define M_PI		3.14159265358979323846
-      // ¼ÆËãĞı×ª½Ç¶ÈµÄ»¡¶ÈÖµ
-      double radian = r * M_PI / 180.0; // ½«½Ç¶È×ª»»Îª»¡¶È
-      double cosR = cos(radian);
-      double sinR = sin(radian);
+/*
+ {
+    int32 x, y, newX, newY;
+    int32 screenX, screenY;
+    uint16 *screenBuffer = w_getScreenBuffer();
+    // #define M_PI		3.14159265358979323846
+    // è®¡ç®—æ—‹è½¬è§’åº¦çš„å¼§åº¦å€¼
+    double radian = r * M_PI / 180.0; // å°†è§’åº¦è½¬æ¢ä¸ºå¼§åº¦
+    double cosR = cos(radian);
+    double sinR = sin(radian);
 
-      // ±éÀúÍ¼Æ¬µÄÃ¿Ò»¸öÏñËØ
-      for (y = 0; y < b->height; y++) {
-          for (x = 0; x < b->width; x++) {
-              // Ô­Ê¼Í¼ÏñµÄÑÕÉ«Öµ
-              uint16 color = b->bitmap[y * b->width + x];
+    // éå†å›¾ç‰‡çš„æ¯ä¸€ä¸ªåƒç´ 
+    for (y = 0; y < b->height; y++) {
+        for (x = 0; x < b->width; x++) {
+            // åŸå§‹å›¾åƒçš„é¢œè‰²å€¼
+            uint16 color = b->bitmap[y * b->width + x];
 
-              // Èç¹ûµ±Ç°ÏñËØÊÇÍ¸Ã÷É«£¬ÔòÌø¹ı
-              if (color == b->transcolor) {
-                  continue;
-              }
+            // å¦‚æœå½“å‰åƒç´ æ˜¯é€æ˜è‰²ï¼Œåˆ™è·³è¿‡
+            if (color == b->transcolor) {
+                continue;
+            }
 
-              // ¼ÆËãĞı×ªºóµÄ×ø±ê
-              newX = (int32)(bx + (x - bx) * cosR - (y - by) * sinR);
-              newY = (int32)(by + (x - bx) * sinR + (y - by) * cosR);
+            // è®¡ç®—æ—‹è½¬åçš„åæ ‡
+            newX = (int32)(bx + (x - bx) * cosR - (y - by) * sinR);
+            newY = (int32)(by + (x - bx) * sinR + (y - by) * cosR);
 
-              // ¼ÆËãÆÁÄ»ÉÏµÄÎ»ÖÃ
-               screenX = scrx + newX;
-               screenY = scry + newY;
+            // è®¡ç®—å±å¹•ä¸Šçš„ä½ç½®
+             screenX = scrx + newX;
+             screenY = scry + newY;
 
-              // ¼ì²é×ø±êÊÇ·ñÔÚÆÁÄ»·¶Î§ÄÚ
-              if (screenX >= 0 && screenX < SCRW && screenY >= 0 && screenY < SCRH) {
-                  // ½«ÑÕÉ«Ğ´ÈëÆÁÄ»»º³åÇø
-                  screenBuffer[screenY * SCRW + screenX] = color;
-              }
-          }
-      }
-  }
-  */
+            // æ£€æŸ¥åæ ‡æ˜¯å¦åœ¨å±å¹•èŒƒå›´å†…
+            if (screenX >= 0 && screenX < SCRW && screenY >= 0 && screenY < SCRH) {
+                // å°†é¢œè‰²å†™å…¥å±å¹•ç¼“å†²åŒº
+                screenBuffer[screenY * SCRW + screenX] = color;
+            }
+        }
+    }
+}
+*/
 
-  // »æÖÆĞı×ª¾ØĞÎ
-  // bx by Ïà¶ÔÓÚ¾ØĞÎµÄĞı×ªÖĞĞÄ
-  void mrc_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint8 r, uint8 g, uint8 b)
+// ç»˜åˆ¶æ—‹è½¬çŸ©å½¢
+// bx by ç›¸å¯¹äºçŸ©å½¢çš„æ—‹è½¬ä¸­å¿ƒ
+void gl_drawRotatedHollowRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color)
+{
+  int16 x1, y1, x2, y2;
+  float radian = angle * M_PI / 180.0; // å°†è§’åº¦è½¬æ¢ä¸ºå¼§åº¦
+  float cosR = cos(radian);
+  float sinR = sin(radian);
+  int16 x, y;
+  int i;
+  // è®¡ç®—çŸ©å½¢çš„å››ä¸ªé¡¶ç‚¹
+  int16 vertices[4][2]; // å…ˆå£°æ˜ä¸åˆå§‹åŒ–
+
+  // ä½¿ç”¨è®¡ç®—çš„å¸¸é‡å€¼å¡«å…… vertices
+  vertices[0][0] = centerX - bx; // å·¦ä¸Šè§’
+  vertices[0][1] = centerY - by;
+
+  vertices[1][0] = centerX + width - bx; // å³ä¸Šè§’
+  vertices[1][1] = centerY - by;
+
+  vertices[2][0] = centerX + (width - bx); // å³ä¸‹è§’
+  vertices[2][1] = centerY + (height - by);
+
+  vertices[3][0] = centerX - bx; // å·¦ä¸‹è§’
+  vertices[3][1] = centerY + (height - by);
+
+  // æ—‹è½¬æ¯ä¸ªé¡¶ç‚¹
+  for (i = 0; i < 4; i++)
   {
-    int16 x1, y1, x2, y2;
-    float radian = angle * M_PI / 180.0; // ½«½Ç¶È×ª»»Îª»¡¶È
-    float cosR = cos(radian);
-    float sinR = sin(radian);
-    int16 x, y;
-    int i;
-    // ¼ÆËã¾ØĞÎµÄËÄ¸ö¶¥µã
-    int16 vertices[4][2]; // ÏÈÉùÃ÷²»³õÊ¼»¯
-
-    // Ê¹ÓÃ¼ÆËãµÄ³£Á¿ÖµÌî³ä vertices
-    vertices[0][0] = centerX - bx; // ×óÉÏ½Ç
-    vertices[0][1] = centerY - by;
-
-    vertices[1][0] = centerX + width - bx; // ÓÒÉÏ½Ç
-    vertices[1][1] = centerY - (height - by);
-
-    vertices[2][0] = centerX + (width - bx); // ÓÒÏÂ½Ç
-    vertices[2][1] = centerY + (height - by);
-
-    vertices[3][0] = centerX - bx; // ×óÏÂ½Ç
-    vertices[3][1] = centerY + (height - by);
-
-    // Ğı×ªÃ¿¸ö¶¥µã
-    for (i = 0; i < 4; i++)
-    {
-      x = vertices[i][0] - centerX;
-      y = vertices[i][1] - centerY;
-      vertices[i][0] = centerX + x * cosR - y * sinR;
-      vertices[i][1] = centerY + x * sinR + y * cosR;
-    }
-
-    // »æÖÆĞı×ªºóµÄ¾ØĞÎ
-    for (i = 0; i < 4; i++)
-    {
-      x1 = vertices[i][0];
-      y1 = vertices[i][1];
-      x2 = vertices[(i + 1) % 4][0];
-      y2 = vertices[(i + 1) % 4][1];
-      mrc_drawLine(x1, y1, x2, y2, r, g, b);
-    }
+    x = vertices[i][0] - centerX;
+    y = vertices[i][1] - centerY;
+    vertices[i][0] = centerX + x * cosR - y * sinR;
+    vertices[i][1] = centerY + x * sinR + y * cosR;
   }
 
-  /*
-  ½«bitmap»æÖÆµ½ÁíÒ»¸öbitmapÉÏ
-  ½«bufÖĞµÄbitmapÍ¼Æ¬, ´Ósx,sy¿ªÊ¼µÄ¿í¸ßÎªw,hµÄÇøÓò,»æÖÆµ½Í¼Æ¬di´Óx,y¿ªÊ¼µÄµØ·½
-  */
-  void drawBitmap565Old(BITMAP_565 * di, BITMAP_565 * buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
+  // ç»˜åˆ¶æ—‹è½¬åçš„çŸ©å½¢
+  for (i = 0; i < 4; i++)
   {
+    x1 = vertices[i][0];
+    y1 = vertices[i][1];
+    x2 = vertices[(i + 1) % 4][0];
+    y2 = vertices[(i + 1) % 4][1];
+    gl_drawLine(x1, y1, x2, y2, color);
+  }
+}
+
+void gl_drawRotatedRect(int16 centerX, int16 centerY, int16 width, int16 height, int32 bx, int32 by, float angle, uint32 color)
+{
+  float radian = angle * M_PI / 180.0; // å°†è§’åº¦è½¬æ¢ä¸ºå¼§åº¦
+  float cosR = cos(radian);
+  float sinR = sin(radian);
+  int16 x, y;
+  int i;
+  // è®¡ç®—çŸ©å½¢çš„å››ä¸ªé¡¶ç‚¹
+  int16 vertices[4][2]; // å…ˆå£°æ˜ä¸åˆå§‹åŒ–
+
+  // ä½¿ç”¨è®¡ç®—çš„å¸¸é‡å€¼å¡«å…… vertices
+  vertices[0][0] = centerX - bx; // å·¦ä¸Šè§’
+  vertices[0][1] = centerY - by;
+
+  vertices[1][0] = centerX + width - bx; // å³ä¸Šè§’
+  vertices[1][1] = centerY - by;
+
+  vertices[2][0] = centerX + (width - bx); // å³ä¸‹è§’
+  vertices[2][1] = centerY + (height - by);
+
+  vertices[3][0] = centerX - bx; // å·¦ä¸‹è§’
+  vertices[3][1] = centerY + (height - by);
+
+  // æ—‹è½¬æ¯ä¸ªé¡¶ç‚¹
+  for (i = 0; i < 4; i++)
+  {
+    x = vertices[i][0] - centerX;
+    y = vertices[i][1] - centerY;
+    vertices[i][0] = centerX + x * cosR - y * sinR;
+    vertices[i][1] = centerY + x * sinR + y * cosR;
+  }
+
+  // ç»˜åˆ¶æ—‹è½¬åçš„çŸ©å½¢
+  gl_drawTriangle(vertices[0][0], vertices[0][1], vertices[1][0], vertices[1][1], vertices[2][0], vertices[2][1], color);
+  gl_drawTriangle(vertices[0][0], vertices[0][1], vertices[3][0], vertices[3][1], vertices[2][0], vertices[2][1], color);
+}
+
+/*
+å°†bitmapç»˜åˆ¶åˆ°å¦ä¸€ä¸ªbitmapä¸Š
+å°†bufä¸­çš„bitmapå›¾ç‰‡, ä»sx,syå¼€å§‹çš„å®½é«˜ä¸ºw,hçš„åŒºåŸŸ,ç»˜åˆ¶åˆ°å›¾ç‰‡diä»x,yå¼€å§‹çš„åœ°æ–¹
+*/
+void drawBitmap565Old(BITMAP_565 *di, BITMAP_565 *buf, int32 x, int32 y, int32 w, int32 h, int32 sx, int32 sy)
+{
     int32 j;
     int32 i;
 
-    // ¼ì²éÄ¿±êÎ»Í¼µÄ±ß½ç
-    if (x < 0 || y < 0 || w <= 0 || h <= 0 || sx < 0 || sy < 0 ||
-        sx + w > buf->width || sy + h > buf->height)
+    // å¤„ç†ç›®æ ‡åæ ‡è¶…å‡ºè¾¹ç•Œçš„æƒ…å†µ
+    if (x < 0)
     {
-      mrc_printf("drawBitmap565Old error\n");
-      return; // ÎŞĞ§²ÎÊı£¬Ö±½Ó·µ»Ø
+        w += x; // å¯¹å®½åº¦è¿›è¡Œè°ƒæ•´
+        sx -= x; // å·¦ç§»æºå›¾ç‰‡çš„èµ·å§‹xåæ ‡
+        x = 0; // è®¾ç½®ç›®æ ‡xä¸º0
+    }
+    if (y < 0)
+    {
+        h += y; // å¯¹é«˜åº¦è¿›è¡Œè°ƒæ•´
+        sy -= y; // ä¸Šç§»æºå›¾ç‰‡çš„èµ·å§‹yåæ ‡
+        y = 0; // è®¾ç½®ç›®æ ‡yä¸º0
     }
     if (x + w > di->width)
     {
-      w = di->width - x;
+        w = di->width - x; // ç¡®ä¿å®½åº¦ä¸è¶…å‡ºç›®æ ‡ä½å›¾
     }
     if (y + h > di->height)
     {
-      h = di->height - y;
+        h = di->height - y; // ç¡®ä¿é«˜åº¦ä¸è¶…å‡ºç›®æ ‡ä½å›¾
     }
-    // ½øĞĞÏñËØ¿½±´
+
+    // å¤„ç†æºå›¾ç‰‡è¶…å‡ºè¾¹ç•Œçš„æƒ…å†µ
+    if (sx < 0)
+    {
+        w += sx; // å¯¹å®½åº¦è¿›è¡Œè°ƒæ•´
+        sx = 0; // è®¾ç½®æºå›¾ç‰‡çš„èµ·å§‹åæ ‡ä¸º0
+    }
+    if (sy < 0)
+    {
+        h += sy; // å¯¹é«˜åº¦è¿›è¡Œè°ƒæ•´
+        sy = 0; // è®¾ç½®æºå›¾ç‰‡çš„èµ·å§‹åæ ‡ä¸º0
+    }
+    if (sx + w > buf->width)
+    {
+        w = buf->width - sx; // ç¡®ä¿å®½åº¦ä¸è¶…å‡ºæºä½å›¾
+    }
+    if (sy + h > buf->height)
+    {
+        h = buf->height - sy; // ç¡®ä¿é«˜åº¦ä¸è¶…å‡ºæºä½å›¾
+    }
+
+    // è¿›è¡Œåƒç´ æ‹·è´
     for (j = 0; j < h; ++j)
     {
-      if (buf->mode == BM_TRANSPARENT)
-      {
-        for (i = 0; i < w; ++i)
+        if (buf->mode == BM_TRANSPARENT)
         {
-          int32 src_x = sx + i;
-          int32 src_y = sy + j;
-          uint16 color = buf->bitmap[src_y * buf->width + src_x]; // ´ÓbufÖĞ»ñÈ¡ÑÕÉ«
+            for (i = 0; i < w; ++i)
+            {
+                int32 src_x = sx + i;
+                int32 src_y = sy + j;
+                uint16 color = buf->bitmap[src_y * buf->width + src_x]; // ä»bufä¸­è·å–é¢œè‰²
 
-          // ½öµ±ÑÕÉ«²»µÈÓÚÍ¸Ã÷É«Ê±£¬²Å½øĞĞ»æÖÆ
+                // ä»…å½“é¢œè‰²ä¸ç­‰äºé€æ˜è‰²æ—¶ï¼Œæ‰è¿›è¡Œç»˜åˆ¶
+                if (color != buf->transcolor)
+                {
+                    int32 dest_x = x + i;
+                    int32 dest_y = y + j;
+                    di->bitmap[dest_y * di->width + dest_x] = color; // ç»˜åˆ¶åˆ°ç›®æ ‡ä½å›¾
+                }
+            }
+        }
+        else
+        {
+            // å¦‚æœä¸éœ€è¦é€æ˜å¤„ç†ï¼Œç›´æ¥ä½¿ç”¨å†…å­˜å¤åˆ¶
+            mrc_memcpy(di->bitmap + (y + j) * di->width + x, 
+                        buf->bitmap + (sy + j) * buf->width + sx, 
+                        w * 2);
+        }
+    }
+}
 
-          if (color != buf->transcolor)
-          {
-            int32 dest_x = x + i;
-            int32 dest_y = y + j;
-            mrc_printf("...");
-            di->bitmap[dest_y * di->width + dest_x] = color; // »æÖÆµ½Ä¿±êÎ»Í¼
-          }
+/*
+å°†bitmapç¼©æ”¾,ç”Ÿæˆä¸€ä¸ªæ–°çš„BITMAP
+width ç”Ÿæˆçš„å›¾ç‰‡å®½åº¦
+height ç”Ÿæˆçš„å›¾ç‰‡é«˜åº¦
+*/
+BITMAP_565 *createBitmapFromBitmap(BITMAP_565 *bmp, int32 width, int32 height)
+{
+  int32 x_ratio;
+  int32 y_ratio;
+  int32 src_x, src_y;
+  int32 x, y;
+  uint32 *bitmap32;
+  uint32 *bitmap32_new;
+  // å˜é‡å£°æ˜
+  BITMAP_565 *new_bmp = (BITMAP_565 *)malloc(sizeof(BITMAP_565)); // åˆ†é…å†…å­˜ç”¨äºæ–°ä½å›¾
+  memset(new_bmp, 0, sizeof(BITMAP_565));
+  if (!new_bmp)
+  {
+    return NULL; // åˆ†é…å¤±è´¥
+  }
+
+  new_bmp->width = width;
+  new_bmp->height = height;
+  new_bmp->color_bit = bmp->color_bit;   // é»˜è®¤é¢œè‰²ä½æ•°
+  new_bmp->transcolor = bmp->transcolor; // é»˜è®¤é€æ˜è‰²
+  new_bmp->mode = bmp->mode;             // é»˜è®¤æ¨¡å¼ï¼ˆè¿™é‡Œç”¨0ä»£æ›¿BM_COPYï¼‰
+
+  // åˆ†é…å†…å­˜ç”¨äºæ–°ä½å›¾æ•°æ®
+  if (bmp->color_bit == 16)
+  {
+    new_bmp->bitmap = (uint16 *)mr_malloc(width * height * sizeof(uint16));
+    new_bmp->buflen = width * height * sizeof(uint16);
+  }
+  else if (bmp->color_bit == 32)
+  {
+    new_bmp->bitmap = (uint16 *)mr_malloc(width * height * sizeof(uint32));
+    new_bmp->buflen = width * height * sizeof(uint32);
+  }
+  else
+  {
+    mrc_printf("Unsupported color depth %d\n", bmp->color_bit);
+    return NULL;
+  }
+
+  if (!new_bmp->bitmap)
+  {
+    free(new_bmp); // é‡Šæ”¾å·²åˆ†é…çš„å†…å­˜
+    mrc_printf("Failed to allocate memory for new bitmap\n");
+    return NULL; // åˆ†é…å¤±è´¥
+  }
+
+  // è¿›è¡Œç¼©æ”¾ï¼ˆç®€å•çš„æœ€è¿‘é‚»æ’å€¼ï¼‰
+  x_ratio = (bmp->width << 16) / width + 1;   // ä½¿ç”¨å›ºå®šç‚¹æ•°è¿›è¡Œè®¡ç®—
+  y_ratio = (bmp->height << 16) / height + 1; // ä½¿ç”¨å›ºå®šç‚¹æ•°è¿›è¡Œè®¡ç®—
+
+  for (y = 0; y < height; y++)
+  {
+    for (x = 0; x < width; x++)
+    {
+      src_x = (x * x_ratio) >> 16; // ä½¿ç”¨ä½ç§»è¿ç®—è·å–æºå›¾xåæ ‡
+      src_y = (y * y_ratio) >> 16; // ä½¿ç”¨ä½ç§»è¿ç®—è·å–æºå›¾yåæ ‡
+      if (src_x >= 0 && src_y >= 0 && src_x < bmp->width && src_y < bmp->height)
+      {
+        if (bmp->color_bit == 16)
+        {
+          new_bmp->bitmap[y * width + x] = bmp->bitmap[src_y * bmp->width + src_x];
+        }
+        else if (bmp->color_bit == 32)
+        {
+          bitmap32 = (uint32 *)bmp->bitmap;
+          bitmap32_new = (uint32 *)new_bmp->bitmap;
+          bitmap32_new[y * width + x] = bitmap32[src_y * bmp->width + src_x];
         }
       }
-      else
-      {
-        mrc_memcpy(di->bitmap, buf->bitmap, w * 2);
-      }
     }
   }
 
-  /*
-  ½«bitmapËõ·Å,Éú³ÉÒ»¸öĞÂµÄBITMAP
-  width Éú³ÉµÄÍ¼Æ¬¿í¶È
-  height Éú³ÉµÄÍ¼Æ¬¸ß¶È
-  */
-  BITMAP_565 *createBitmapFromBitmap(BITMAP_565 * bmp, int32 width, int32 height)
+  return new_bmp; // è¿”å›æ–°ç”Ÿæˆçš„ä½å›¾
+}
+/*
+å°†bitmapä¸Š(tx,ty,tw,th)åŒºåŸŸç¼©æ”¾ç»˜åˆ¶åˆ°å±å¹•(x,y,w,h)åŒºåŸŸä¸Š
+å‚æ•°ï¼š
+x ç»˜åˆ¶åˆ°å±å¹•ä¸Šçš„xåæ ‡
+y ç»˜åˆ¶åˆ°å±å¹•ä¸Šçš„yåæ ‡
+w ç»˜åˆ¶å®½åº¦ h ç»˜åˆ¶é«˜åº¦ tx ty tw th è£å‰ªåŒºåŸŸ
+*/
+void drawBitmapEx(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, int32 tx, int32 ty, int32 tw, int32 th)
+{
+  int px, py; // å±å¹•åŒºåŸŸåæ ‡(ç›¸å¯¹)
+  int32 pindex;
+  uint16 *screenBuffer;
+  int32 temp;
+  uint32 *bitmap32;
+
+  if (w == tw && h == th)
   {
-    int32 x_ratio;
-    int32 y_ratio;
-    int32 src_x, src_y;
-    int32 x, y;
-    // ±äÁ¿ÉùÃ÷
-    BITMAP_565 *new_bmp = (BITMAP_565 *)malloc(sizeof(BITMAP_565)); // ·ÖÅäÄÚ´æÓÃÓÚĞÂÎ»Í¼
-    if (!new_bmp)
+    if (bmp->color_bit == 16)
     {
-      return NULL; // ·ÖÅäÊ§°Ü
+      gl_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)tw, (uint16)th, (uint16)bmp->mode, tx, ty, (uint16)bmp->transcolor);
     }
-
-    new_bmp->width = width;
-    new_bmp->height = height;
-    new_bmp->color_bit = bmp->color_bit;   // Ä¬ÈÏÑÕÉ«Î»Êı
-    new_bmp->transcolor = bmp->transcolor; // Ä¬ÈÏÍ¸Ã÷É«
-    new_bmp->mode = bmp->mode;             // Ä¬ÈÏÄ£Ê½£¨ÕâÀïÓÃ0´úÌæBM_COPY£©
-
-    // ·ÖÅäÄÚ´æÓÃÓÚĞÂÎ»Í¼Êı¾İ
-    new_bmp->bitmap = (uint16 *)malloc(width * height * sizeof(uint16));
-    if (!new_bmp->bitmap)
+    else if (bmp->color_bit == 32)
     {
-      free(new_bmp); // ÊÍ·ÅÒÑ·ÖÅäµÄÄÚ´æ
-      return NULL;   // ·ÖÅäÊ§°Ü
+      gl_bitmapShowExTrans8888((uint32 *)bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)tw, (uint16)th, tx, ty);
     }
-
-    // ½øĞĞËõ·Å£¨¼òµ¥µÄ×î½üÁÚ²åÖµ£©
-    x_ratio = (bmp->width << 16) / width + 1;   // Ê¹ÓÃ¹Ì¶¨µãÊı½øĞĞ¼ÆËã
-    y_ratio = (bmp->height << 16) / height + 1; // Ê¹ÓÃ¹Ì¶¨µãÊı½øĞĞ¼ÆËã
-
-    for (y = 0; y < height; y++)
+  }
+  else
+  {
+    if (x + w > SCRW)
     {
-      for (x = 0; x < width; x++)
+      temp = w;
+      w = SCRW - x;
+      tw = tw * w / temp;
+    }
+    if (y + h > SCRH)
+    {
+      temp = h;
+      h = SCRH - y;
+      th = th * h / temp;
+    }
+    if (tx + tw > bmp->width || ty + th > bmp->height)
+    {
+      mrc_printf("drawBitmapEx error, tw or th err");
+      return;
+    }
+    if (bmp->color_bit == 16)
+    {
+      screenBuffer = w_getScreenBuffer();
+      switch (bmp->mode)
       {
-        src_x = (x * x_ratio) >> 16; // Ê¹ÓÃÎ»ÒÆÔËËã»ñÈ¡Ô´Í¼x×ø±ê
-        src_y = (y * y_ratio) >> 16; // Ê¹ÓÃÎ»ÒÆÔËËã»ñÈ¡Ô´Í¼y×ø±ê
-        new_bmp->bitmap[y * width + x] = bmp->bitmap[src_y * bmp->width + src_x];
+      case BM_COPY:
+        // æ ¹æ®å±å¹•åæ ‡è®¡ç®—å‡ºå›¾ç‰‡ä¸Šçš„ç‚¹
+        for (px = 0; px < w; px++)
+        {
+          for (py = 0; py < h; py++)
+          {
+            pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
+            if (pindex >= 0 && pindex < bmp->width * bmp->height && py + y >= 0 && px + x >= 0)
+            {
+              // mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
+              screenBuffer[SCRW * (py + y) + px + x] = bmp->bitmap[pindex];
+            }
+          }
+        }
+        break;
+      case BM_TRANSPARENT:
+        // æ ¹æ®å±å¹•åæ ‡è®¡ç®—å‡ºå›¾ç‰‡ä¸Šçš„ç‚¹
+        for (px = 0; px < w; px++)
+        {
+          for (py = 0; py < h; py++)
+          {
+            pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
+            if (pindex >= 0 && pindex < bmp->width * bmp->height && py + y >= 0 && px + x >= 0)
+            {
+              // mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
+              if (bmp->bitmap[pindex] != bmp->transcolor)
+                screenBuffer[SCRW * (py + y) + px + x] = bmp->bitmap[pindex];
+            }
+          }
+        }
+      default:
+        break;
       }
     }
-
-    return new_bmp; // ·µ»ØĞÂÉú³ÉµÄÎ»Í¼
-  }
-  /*
-  ½«bitmapÉÏ(tx,ty,tw,th)ÇøÓòËõ·Å»æÖÆµ½ÆÁÄ»(x,y,w,h)ÇøÓòÉÏ
-  ²ÎÊı£º
-  x »æÖÆµ½ÆÁÄ»ÉÏµÄx×ø±ê
-  y »æÖÆµ½ÆÁÄ»ÉÏµÄy×ø±ê
-  w »æÖÆ¿í¶È h »æÖÆ¸ß¶È tx ty tw th ²Ã¼ôÇøÓò
-  */
-  void drawBitmap565Ex(BITMAP_565 * bmp, int32 x, int32 y, int32 w, int32 h, int32 tx, int32 ty, int32 tw, int32 th)
-  {
-    int px, py; // ÆÁÄ»ÇøÓò×ø±ê(Ïà¶Ô)
-    int32 pindex;
-    if (w == tw && h == th)
+    else if (bmp->color_bit == 32)
     {
-      mrc_bitmapShowExTrans(bmp->bitmap, (int16)x, (int16)y, (uint16)bmp->width, (uint16)tw, (uint16)th, (uint16)bmp->mode, tx, ty, (uint16)bmp->transcolor);
-    }
-    else
-    {
-      // ¸ù¾İÆÁÄ»×ø±ê¼ÆËã³öÍ¼Æ¬ÉÏµÄµã
+      screenBuffer = w_getScreenBuffer();
+      bitmap32 = (uint32 *)bmp->bitmap;
+      // æ ¹æ®å±å¹•åæ ‡è®¡ç®—å‡ºå›¾ç‰‡ä¸Šçš„ç‚¹
       for (px = 0; px < w; px++)
       {
         for (py = 0; py < h; py++)
         {
           pindex = bmp->width * (tx + py * th / h) + (ty + px * tw / w);
-          if (pindex < bmp->width * bmp->height)
-            mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
-          //*(getscrbuf() + (SCRW*(x+py)+(px+x))) = *(bmp->bitmap + bmp->width * (tx+py*th/h) + (ty+px*tw/w));
+          if (pindex >= 0 && pindex < bmp->width * bmp->height && py + y >= 0 && px + x >= 0)
+          {
+            // mrc_drawPoint(px + x, py + y, *(bmp->bitmap + pindex));
+            if (bitmap32[pindex] >> 24 != 0)
+              screenBuffer[SCRW * (py + y) + px + x] = blendColor888(screenBuffer[SCRW * (py + y) + px + x], bitmap32[pindex]);
+          }
         }
       }
     }
   }
+}
 
-  int32 bitmap565Free(BITMAP_565 * b)
-  {
-    bmp_free(b);
-    return 0;
-  }
+int32 bitmapFree(BITMAP_565 *b)
+{
+  bmp_free(b);
+  return 0;
+}
 
-  // »ñÈ¡Á½µãÖ®¼äµÄ³¤¶È µÄÆ½·½
-  static int gl_getLineSize(int x, int y, int x2, int y2)
-  {
-    return (x2 - x) * (x2 - x) + (y2 - y) * (y2 - y);
-  }
+// è·å–ä¸¤ç‚¹ä¹‹é—´çš„é•¿åº¦ çš„å¹³æ–¹
+int gl_getLineSize(int x, int y, int x2, int y2)
+{
+  return (x2 - x) * (x2 - x) + (y2 - y) * (y2 - y);
+}
 
-  // »ìºÏÁ½¸öÑÕÉ«
-  int32 gl_getColor(int32 color1, uint32 color2)
-  {
-    // printf("getColor %x %x\n",color1,color2);
-    // int a1 = (color1>>24)&0xff;
-    int r1 = (color1 >> 16) & 0xff;
-    int g1 = (color1 >> 8) & 0xff;
-    int b1 = color1 & 0xff;
-    // printf("a1=%d r1=%d g1=%d b1=%d\n",a1,r1,g1,b1);
-    // int a2 = (color2>>24)&0xff;
-    int r2 = (color2 >> 16) & 0xff;
-    int g2 = (color2 >> 8) & 0xff;
-    int b2 = color2 & 0xff;
-    // printf("a2=%d r2=%d g2=%d b2=%d\n",a2,r2,g2,b2);
-    int draw_a = (color2 >> 24) & 0xff;
-    // int a = a1 * (255-draw_a)/255 + a2 * draw_a/255;
-    int r = r1 * (255 - draw_a) / 255 + r2 * draw_a / 255;
-    // printf("drawa = %d\nr = %d + %d\n",draw_a, r1 * (255-draw_a)/255 , draw_a/255);
-    int g = g1 * (255 - draw_a) / 255 + g2 * draw_a / 255;
-    int b = b1 * (255 - draw_a) / 255 + b2 * draw_a / 255;
-    // printf("a=%d,r=%d,g=%d,b=%d\n",a,r,g,b);
-    return (0xff000000) | (r << 16) | (g << 8) | b;
-  }
+// æ··åˆä¸¤ä¸ªé¢œè‰²
+int32 gl_getColor(int32 color1, uint32 color2)
+{
+  // printf("getColor %x %x\n",color1,color2);
+  // int a1 = (color1>>24)&0xff;
+  int r1 = (color1 >> 16) & 0xff;
+  int g1 = (color1 >> 8) & 0xff;
+  int b1 = color1 & 0xff;
+  // printf("a1=%d r1=%d g1=%d b1=%d\n",a1,r1,g1,b1);
+  // int a2 = (color2>>24)&0xff;
+  int r2 = (color2 >> 16) & 0xff;
+  int g2 = (color2 >> 8) & 0xff;
+  int b2 = color2 & 0xff;
+  // printf("a2=%d r2=%d g2=%d b2=%d\n",a2,r2,g2,b2);
+  int draw_a = (color2 >> 24) & 0xff;
+  // int a = a1 * (255-draw_a)/255 + a2 * draw_a/255;
+  int r = r1 * (255 - draw_a) / 255 + r2 * draw_a / 255;
+  // printf("drawa = %d\nr = %d + %d\n",draw_a, r1 * (255-draw_a)/255 , draw_a/255);
+  int g = g1 * (255 - draw_a) / 255 + g2 * draw_a / 255;
+  int b = b1 * (255 - draw_a) / 255 + b2 * draw_a / 255;
+  // printf("a=%d,r=%d,g=%d,b=%d\n",a,r,g,b);
+  return (0xff000000) | (r << 16) | (g << 8) | b;
+}
 
-  // »ìºÏÁ½¸örgb565ÑÕÉ« ·µ»ØĞÂµÄÑÕÉ«
-  // datColor ÑÕÉ«1
-  // srcColor ÑÕÉ«2
-  // srcColorµÄÍ¸Ã÷¶È
-  uint16 blendColor(uint16 dstColor, uint16 srcColor, int alpha)
-  {
-    uint8 r1 = (dstColor >> 11) & 0x1F; // ÌáÈ¡Ä¿±êÑÕÉ«µÄºìÉ«·ÖÁ¿
-    uint8 g1 = (dstColor >> 5) & 0x3F;  // ÌáÈ¡Ä¿±êÑÕÉ«µÄÂÌÉ«·ÖÁ¿
-    uint8 b1 = dstColor & 0x1F;         // ÌáÈ¡Ä¿±êÑÕÉ«µÄÀ¶É«·ÖÁ¿
-
-    uint8 r2 = (srcColor >> 11) & 0x1F; // ÌáÈ¡Ô´ÑÕÉ«µÄºìÉ«·ÖÁ¿
-    uint8 g2 = (srcColor >> 5) & 0x3F;  // ÌáÈ¡Ô´ÑÕÉ«µÄÂÌÉ«·ÖÁ¿
-    uint8 b2 = srcColor & 0x1F;         // ÌáÈ¡Ô´ÑÕÉ«µÄÀ¶É«·ÖÁ¿
-
-    // ½øĞĞ alpha »ìºÏ
-    uint8 r = (r1 * (255 - alpha) + r2 * alpha) / 255;
-    uint8 g = (g1 * (255 - alpha) + g2 * alpha) / 255;
-    uint8 b = (b1 * (255 - alpha) + b2 * alpha) / 255;
-
-    // ÖØĞÂ×éºÏÎª 16 Î» RGB 565 ¸ñÊ½
+#ifndef USE_DSP
+// æ··åˆä¸¤ä¸ªrgb565é¢œè‰² è¿”å›æ–°çš„é¢œè‰²
+// dstColor é¢œè‰²1
+// srcColor é¢œè‰²2
+// alpha: 5ä½é€æ˜åº¦ (0-31) æˆ–è€… 6ä½é€æ˜åº¦ (0-63)
+uint16 blendColor(uint16 dstColor, uint16 srcColor, int alpha)
+{
+    uint8 a = (uint8)alpha;
+    // æå–ç›®æ ‡é¢œè‰²åˆ†é‡
+    uint8 r1 = (dstColor >> 11) & 0x1F; // 5ä½
+    uint8 g1 = (dstColor >> 5) & 0x3F;   // 6ä½
+    uint8 b1 = dstColor & 0x1F;         // 5ä½
+    
+    // æå–æºé¢œè‰²åˆ†é‡
+    uint8 r2 = (srcColor >> 11) & 0x1F; // 5ä½
+    uint8 g2 = (srcColor >> 5) & 0x3F;   // 6ä½
+    uint8 b2 = srcColor & 0x1F;         // 5ä½
+    
+    // æ–¹æ³•1ï¼šä½¿ç”¨6ä½alpha (0-63)
+    // å¯¹äº5ä½åˆ†é‡ï¼Œéœ€è¦è°ƒæ•´alphaçš„æƒé‡
+    uint8 inv_alpha = 63 - a; // 6ä½alpha
+    
+    // æ··åˆè®¡ç®— - ä½¿ç”¨6ä½alpha
+    uint8 r = ((r1 * inv_alpha) + (r2 * a)) >> 6;
+    uint8 g = ((g1 * inv_alpha) + (g2 * a)) >> 6;
+    uint8 b = ((b1 * inv_alpha) + (b2 * a)) >> 6;
+    
+    // æ–¹æ³•2ï¼šä½¿ç”¨5ä½alpha (0-31) - ç»¿è‰²åˆ†é‡éœ€è¦ç‰¹æ®Šå¤„ç†
+    // uint8_t inv_alpha5 = 31 - alpha; // 5ä½alpha
+    // uint8_t r = ((r1 * inv_alpha5) + (r2 * alpha)) >> 5;
+    // uint8_t g = ((g1 * inv_alpha5 * 2) + (g2 * alpha * 2)) >> 6; // ç»¿è‰²éœ€è¦6ä½ç²¾åº¦
+    // uint8_t b = ((b1 * inv_alpha5) + (b2 * alpha)) >> 5;
+    
+    // é‡æ–°ç»„åˆä¸º16ä½RGB565æ ¼å¼
     return (r << 11) | (g << 5) | b;
-  }
+}
+/*
+uint16 blendColor(uint16 dstColor, uint16 srcColor, int alpha)
+{
+  uint8 r1 = (dstColor >> 11) & 0x1F; // æå–ç›®æ ‡é¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g1 = (dstColor >> 5) & 0x3F;  // æå–ç›®æ ‡é¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b1 = dstColor & 0x1F;         // æå–ç›®æ ‡é¢œè‰²çš„è“è‰²åˆ†é‡
 
-    // »ìºÏÁ½¸örgb565 rgb8888ÑÕÉ« ·µ»ØĞÂµÄÑÕÉ«
-  // datColor ÑÕÉ«1
-  // srcColor ÑÕÉ«2
-  uint16 blendColor888(uint16 dstColor, uint32 srcColor)
+  uint8 r2 = (srcColor >> 11) & 0x1F; // æå–æºé¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g2 = (srcColor >> 5) & 0x3F;  // æå–æºé¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b2 = srcColor & 0x1F;         // æå–æºé¢œè‰²çš„è“è‰²åˆ†é‡
+
+  // è¿›è¡Œ alpha æ··åˆ
+  // uint8 r = (r1 * (255 - alpha) + r2 * alpha) / 255;
+  // uint8 g = (g1 * (255 - alpha) + g2 * alpha) / 255;
+  // uint8 b = (b1 * (255 - alpha) + b2 * alpha) / 255;
+  int inv_alpha = 255 - alpha;
+  uint8 r = (r1 * (inv_alpha) + r2 * alpha) >> 8;
+  uint8 g = (g1 * (inv_alpha) + g2 * alpha) >> 8;
+  uint8 b = (b1 * (inv_alpha) + b2 * alpha) >> 8;
+
+  // é‡æ–°ç»„åˆä¸º 16 ä½ RGB 565 æ ¼å¼
+  return (r << 11) | (g << 5) | b;
+}
+*/
+#else
+// æ··åˆä¸¤ä¸ªrgb565é¢œè‰² è¿”å›æ–°çš„é¢œè‰²
+// datColor é¢œè‰²1
+// srcColor é¢œè‰²2
+// srcColorçš„é€æ˜åº¦
+uint16 blendColor(uint16 dstColor, uint16 srcColor, int alpha)
+{
+  uint8 r1 = (dstColor >> 11) & 0x1F; // æå–ç›®æ ‡é¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g1 = (dstColor >> 5) & 0x3F;  // æå–ç›®æ ‡é¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b1 = dstColor & 0x1F;         // æå–ç›®æ ‡é¢œè‰²çš„è“è‰²åˆ†é‡
+
+  uint8 r2 = (srcColor >> 11) & 0x1F; // æå–æºé¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g2 = (srcColor >> 5) & 0x3F;  // æå–æºé¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b2 = srcColor & 0x1F;         // æå–æºé¢œè‰²çš„è“è‰²åˆ†é‡
+
+  // è®¡ç®—æ··åˆçš„çº¢è‰²åˆ†é‡
+  Word32 tempR = smlabb(r1, (Word32)(r2 * alpha), (Word32)(r1 * (255 - alpha)));
+  uint8 r = tempR >> 8; // ç”±äºä½¿ç”¨äº†128ä½çš„åŠ æ³•ï¼Œæ‰€ä»¥éœ€è¦å³ç§»8ä½
+
+  // è®¡ç®—æ··åˆçš„ç»¿è‰²åˆ†é‡
+  Word32 tempG = smlabb(g1, (Word32)(g2 * alpha), (Word32)(g1 * (255 - alpha)));
+  uint8 g = tempG >> 8; // å³ç§»8ä½
+
+  // è®¡ç®—æ··åˆçš„è“è‰²åˆ†é‡
+  Word32 tempB = smlabb(b1, (Word32)(b2 * alpha), (Word32)(b1 * (255 - alpha)));
+  uint8 b = tempB >> 8; // å³ç§»8ä½
+
+  // é‡æ–°ç»„åˆä¸º16ä½ RGB 565æ ¼å¼
+  return (r << 11) | (g << 5) | b;
+}
+#endif
+
+#ifndef USE_DSP
+// æ··åˆä¸¤ä¸ªrgb565 rgb8888é¢œè‰² è¿”å›æ–°çš„é¢œè‰²
+// datColor é¢œè‰²1
+// srcColor é¢œè‰²2
+uint16 blendColor888(uint16 dstColor, uint32 srcColor)
+{
+  uint8 r1 = (dstColor >> 11) & 0x1F; // æå–ç›®æ ‡é¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g1 = (dstColor >> 5) & 0x3F;  // æå–ç›®æ ‡é¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b1 = dstColor & 0x1F;         // æå–ç›®æ ‡é¢œè‰²çš„è“è‰²åˆ†é‡
+
+  uint8 r2 = (srcColor >> 19) & 0x1F; // æå–æºé¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g2 = (srcColor >> 10) & 0x3F; // æå–æºé¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b2 = (srcColor >> 3) & 0x1F;  // æå–æºé¢œè‰²çš„è“è‰²åˆ†é‡
+  int32 alpha = srcColor >> 24;
+
+  // è¿›è¡Œ alpha æ··åˆ
+  uint8 r = (r1 * (255 - alpha) + r2 * alpha) >> 8;
+  uint8 g = (g1 * (255 - alpha) + g2 * alpha) >> 8;
+  uint8 b = (b1 * (255 - alpha) + b2 * alpha) >> 8;
+
+  // é‡æ–°ç»„åˆä¸º 16 ä½ RGB 565 æ ¼å¼
+  return (r << 11) | (g << 5) | b;
+}
+#else
+
+uint16 blendColor888(uint16 dstColor, uint32 srcColor)
+{
+  uint8 r1 = (dstColor >> 11) & 0x1F; // æå–ç›®æ ‡é¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g1 = (dstColor >> 5) & 0x3F;  // æå–ç›®æ ‡é¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b1 = dstColor & 0x1F;         // æå–ç›®æ ‡é¢œè‰²çš„è“è‰²åˆ†é‡
+
+  uint8 r2 = (srcColor >> 19) & 0x1F; // æå–æºé¢œè‰²çš„çº¢è‰²åˆ†é‡
+  uint8 g2 = (srcColor >> 10) & 0x3F; // æå–æºé¢œè‰²çš„ç»¿è‰²åˆ†é‡
+  uint8 b2 = (srcColor >> 3) & 0x1F;  // æå–æºé¢œè‰²çš„è“è‰²åˆ†é‡
+  int32 alpha = srcColor >> 24;
+
+  // è¿›è¡Œ alpha æ··åˆä½¿ç”¨ armdsp.h æä¾›çš„å‡½æ•°
+  // åœ¨è¿™é‡Œï¼Œ255 æ˜¯ä¸ºäº†é¿å…æº¢å‡ºï¼Œåœ¨è¿›è¡Œè¯¥é¡¹è®¡ç®—çš„æ—¶å€™å¹¶ä¸éœ€è¦é‡åˆ°è´Ÿæ•°
+  uint32 r = smlabb(r1, 255 - alpha, r2 * alpha);
+  uint32 g = smlabb(g1, 255 - alpha, g2 * alpha);
+  uint32 b = smlabb(b1, 255 - alpha, b2 * alpha);
+
+  // ç»“æœéœ€è¦å…ˆå³ç§»ä»¥ç¼©æ”¾åˆ°æ­£ç¡®èŒƒå›´
+  r = (r >> 8) & 0x1F; // ä¿è¯ç»“æœèŒƒå›´åœ¨ 0-31
+  g = (g >> 8) & 0x3F; // ä¿è¯ç»“æœèŒƒå›´åœ¨ 0-63
+  b = (b >> 8) & 0x1F; // ä¿è¯ç»“æœèŒƒå›´åœ¨ 0-31
+
+  // é‡æ–°ç»„åˆä¸º 16 ä½ RGB 565 æ ¼å¼
+  return (r << 11) | (g << 5) | b;
+}
+#endif
+
+// ç”»ç‚¹ å‚æ•°ï¼šx, y, argb
+void gl_drawPoint(int x, int y, uint32 color)
+{
+  uint16 *scr_color;
+  uint16 *buffer;
+  // int32 scr_color = 0;
+  // int32 o_color = 0;
+  // uint16 scr_color16 = 0;
+  // // è·å–å±å¹•é¢œè‰²
+  // if (x < 0 || x >= SCRW)
+  //   return;
+  // if (y < 0 || y >= SCRH)
+  //   return;
+  // scr_color16 = *(getscrbuf() + (SCRW * y + x));
+  // scr_color = ((scr_color16 << 8) & 0xf80000) | ((scr_color16 << 5) & 0xfc00) | (scr_color16 << 3) & 0xff;
+  // // æ··åˆ
+  // o_color = gl_getColor(scr_color, color);
+  if (x < 0 || y < 0 || x >= SCRW || y >= SCRH)
+    return;
+  buffer = w_getScreenBuffer();
+  scr_color = buffer + SCRW * y + x;
+
+  *scr_color = blendColor888(*scr_color, color);
+  // ç”Ÿæˆrgb565
+  //*(getscrbuf()+ (SCRW*y+x)) = MAKECOLOR565(o_color);
+  // mrc_drawPoint(x, y, MAKECOLOR565(o_color));
+  //*(((uint16*)getscrbuf())+ (SCRW*y+x)*2) = 0xffff;
+  // printf("setzcolor %x\n",MAKECOLOR565(o_color));
+}
+void gl_drawColor(uint32 color)
+{
+  uint16 *buffer = w_getScreenBuffer();
+  int32 len = SCRW * SCRH;
+  uint16 upcolor;
+  int i;
+  uint16 upscrcolor = buffer[0];
+  upcolor = blendColor888(upscrcolor, color);
+
+  for (i = 0; i < len; i++)
   {
-    uint8 r1 = (dstColor >> 11) & 0x1F; // ÌáÈ¡Ä¿±êÑÕÉ«µÄºìÉ«·ÖÁ¿
-    uint8 g1 = (dstColor >> 5) & 0x3F;  // ÌáÈ¡Ä¿±êÑÕÉ«µÄÂÌÉ«·ÖÁ¿
-    uint8 b1 = dstColor & 0x1F;         // ÌáÈ¡Ä¿±êÑÕÉ«µÄÀ¶É«·ÖÁ¿
-
-    uint8 r2 = (srcColor >> 16) & 0xFF; // ÌáÈ¡Ô´ÑÕÉ«µÄºìÉ«·ÖÁ¿
-    uint8 g2 = (srcColor >> 8) & 0xFF;  // ÌáÈ¡Ô´ÑÕÉ«µÄÂÌÉ«·ÖÁ¿
-    uint8 b2 = srcColor & 0xFF;         // ÌáÈ¡Ô´ÑÕÉ«µÄÀ¶É«·ÖÁ¿
-    int32 alpha = srcColor >> 24;
-
-    // ½øĞĞ alpha »ìºÏ
-    uint8 r = (r1 * (255 - alpha) + r2 * alpha) / 255;
-    uint8 g = (g1 * (255 - alpha) + g2 * alpha) / 255;
-    uint8 b = (b1 * (255 - alpha) + b2 * alpha) / 255;
-
-    // ÖØĞÂ×éºÏÎª 16 Î» RGB 565 ¸ñÊ½
-    return (r << 11) | (g << 5) | b;
-  }
-
-  // »­µã ²ÎÊı£ºx, y, argb
-  void gl_drawPoint(int x, int y, uint32 color)
-  {
-    uint16 scr_color;
-    uint16 color565;
-    int32 alpha;
-    uint16 *buffer;
-    // int32 scr_color = 0;
-    // int32 o_color = 0;
-    // uint16 scr_color16 = 0;
-    // // »ñÈ¡ÆÁÄ»ÑÕÉ«
-    // if (x < 0 || x >= SCRW)
-    //   return;
-    // if (y < 0 || y >= SCRH)
-    //   return;
-    // scr_color16 = *(getscrbuf() + (SCRW * y + x));
-    // scr_color = ((scr_color16 << 8) & 0xf80000) | ((scr_color16 << 5) & 0xfc00) | (scr_color16 << 3) & 0xff;
-    // // »ìºÏ
-    // o_color = gl_getColor(scr_color, color);
-    if (x < 0 || y < 0 || x >= SCRW || y >= SCRH)
-      return;
-    buffer = w_getScreenBuffer();
-    scr_color = *(buffer + SCRW * y + x);
-    color565 = MAKECOLOR565(color);
-    alpha = color >> 24;
-
-    *(buffer + SCRW * y + x) = blendColor(scr_color, color565, alpha);
-    // Éú³Érgb565
-    //*(getscrbuf()+ (SCRW*y+x)) = MAKECOLOR565(o_color);
-    // mrc_drawPoint(x, y, MAKECOLOR565(o_color));
-    //*(((uint16*)getscrbuf())+ (SCRW*y+x)*2) = 0xffff;
-    // printf("setzcolor %x\n",MAKECOLOR565(o_color));
-  }
-
-  // »­¾ØĞÎ
-  void gl_drawRect(int32 x, int32 y, int32 w, int32 h, uint32 color)
-  {
-    int ix, iy;
-    uint16 color565 = MAKECOLOR565(color);
-    uint16 *buffer = w_getScreenBuffer();
-    int32 maxX, maxY;
-    int32 alpha;
-    uint16 upcolor;
-    uint16 upscrcolor = 0;
-    maxX = MIN(SCRW, x + w);
-    maxY = MIN(SCRH, y + h);
-    x = MAX(0, x);
-    y = MAX(0, y);
-    alpha = color >> 24;
-    upcolor = blendColor(upscrcolor, color565, alpha);
-    if (alpha == 0xff)
+    if (upscrcolor == buffer[i])
     {
-      // mrc_printf("drawRect mrc");
-      mrc_drawRect((int16)x, (int16)y, (int16)w, (int16)h, (uint8)(color >> 16) & 0xff, (uint8)(color >> 8) & 0xff, (uint8)color & 0xff);
+      buffer[i] = upcolor;
     }
     else
     {
-      for (ix = x; ix < maxX; ix++)
-      {
-        for (iy = y; iy < maxY; iy++)
-        {
-          if (upscrcolor == *(buffer + SCRW * iy + ix))
-          {
-            *(buffer + SCRW * iy + ix) = upcolor;
-          }
-          else
-          {
-            upcolor = *(buffer + SCRW * iy + ix) = blendColor(upscrcolor = *(buffer + SCRW * iy + ix), color565, alpha);
-          }
+      upcolor = buffer[i] = blendColor888(upscrcolor = buffer[i], color);
+    }
+  }
+}
 
-          // gl_drawPoint(ix, iy, color);
+void gl_clearScreen(int32 r, int32 g, int32 b)
+{
+  int i;
+  uint16 color = MAKERGB(r, g, b);
+  uint16 *buffer = w_getScreenBuffer();
+  if ((color >> 8) == (color & 0xff))
+  {
+    // mrc_printf("memset screen");
+    mrc_memset(buffer, color, SCRW * SCRH * 2);
+  }
+  else
+  {
+    // mrc_printf("memcpy screen with color");
+    for (i = 0; i < SCRW; i++)
+    {
+      buffer[i] = color;
+    }
+    for (i = 0; i < SCRH / 2; i++)
+    {
+      mrc_memcpy(buffer + i * SCRW, (const void *)buffer, SCRW * 2);
+    }
+    mrc_memcpy(buffer + SCRW * SCRH / 2, buffer, SCRW * SCRH);
+  }
+}
+
+// ç”»çŸ©å½¢
+void gl_drawRect(int32 x, int32 y, int32 w, int32 h, uint32 color)
+{
+  int ix, iy;
+  uint16 *buffer = w_getScreenBuffer();
+  int32 maxX, maxY;
+
+  uint16 upcolor;
+  uint16 upscrcolor = 0;
+  maxX = MIN(SCRW, x + w);
+  maxY = MIN(SCRH, y + h);
+  x = MAX(0, x);
+  y = MAX(0, y);
+
+  upcolor = blendColor888(upscrcolor, color);
+  if ((color >> 24) == 0xff)
+  {
+    // mrc_printf("drawRect mrc");
+    mrc_drawRect((int16)x, (int16)y, (int16)w, (int16)h, (uint8)(color >> 16) & 0xff, (uint8)(color >> 8) & 0xff, (uint8)color & 0xff);
+  }
+  else
+  {
+    for (ix = x; ix < maxX; ix++)
+    {
+      for (iy = y; iy < maxY; iy++)
+      {
+        if (upscrcolor == *(buffer + SCRW * iy + ix))
+        {
+          *(buffer + SCRW * iy + ix) = upcolor;
+        }
+        else
+        {
+          upcolor = *(buffer + SCRW * iy + ix) = blendColor888(upscrcolor = *(buffer + SCRW * iy + ix), color);
         }
       }
     }
   }
+}
 
-  void gl_drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
+//ç»˜åˆ¶ç©ºå¿ƒçŸ©å½¢
+void gl_drawHollowRect(int x, int y, int width, int height, uint32 color){
+  // int ix, iy;
+  // uint16 *buffer = w_getScreenBuffer();
+  int32 maxX, maxY;
+  maxX = MIN(SCRW, x + width);
+  maxY = MIN(SCRH, y + height);
+  x = MAX(0, x);
+  y = MAX(0, y);
+  gl_drawLine(x, y, x + width - 1, y, color);
+  gl_drawLine(x, y + height - 1, x + width - 1, y + height - 1, color);
+  gl_drawLine(x, y, x, y + height - 1, color);
+  gl_drawLine(x + width - 1, y, x + width - 1, y + height - 1, color);
+}
+
+void gl_drawTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
+{
+  int minX, maxX, minY, maxY;
+  int x, y;
+  uint16 *buffer = w_getScreenBuffer();
+  uint16 color565;
+  int32 alpha;
+  uint16 upcolor = 0;
+  uint16 upsrccolor = 0;
+  color565 = MAKECOLOR565(color);
+  alpha = color >> 24;
+  upcolor = blendColor888(upsrccolor, color);
+  // ç”»ä¸‰æ¡è¾¹
+  // bmp_drawLine(bmp, x1, y1, x2, y2, color);
+  // bmp_drawLine(bmp, x2, y2, x3, y3, color);
+  // bmp_drawLine(bmp, x3, y3, x1, y1, color);
+
+  // å¡«å……ä¸‰è§’å½¢
+  // ä½¿ç”¨è¾¹ç•Œå¡«å……ç®—æ³•
+  minX = MIN(MIN(x1, x2), x3);
+  maxX = MAX(MAX(x1, x2), x3);
+  minY = MIN(MIN(y1, y2), y3);
+  maxY = MAX(MAX(y1, y2), y3);
+  minX = MAX(0, minX);
+  maxX = MIN(SCRW, maxX);
+  minY = MAX(0, minY);
+  maxY = MIN(SCRH, maxY);
+
+  for (y = minY; y < maxY; y++)
   {
-    int minX, maxX, minY, maxY;
-    int x, y;
-    uint16 *buffer = w_getScreenBuffer();
-    uint16 color565;
-    int32 alpha;
-    uint16 upcolor;
-    uint16 upsrccolor = 0;
+    for (x = minX; x < maxX; x++)
+    {
+      // æ£€æŸ¥ç‚¹æ˜¯å¦åœ¨ä¸‰è§’å½¢å†…éƒ¨
+      if (pointInTriangle(x, y, x1, y1, x2, y2, x3, y3))
+      {
+        if (upsrccolor == *(buffer + SCRW * y + x))
+        {
+          *(buffer + SCRW * y + x) = upcolor;
+        }
+        else
+        {
+          upcolor = *(buffer + SCRW * y + x) = blendColor888(upsrccolor = *(buffer + SCRW * y + x), color);
+          // gl_drawPoint(x, y, color);
+        }
+      }
+    }
+  }
+}
+
+void gl_drawHLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color)
+{
+  int32 i;
+  uint16 *buffer = w_getScreenBuffer();
+  int32 minX;
+  int32 maxX;
+  uint16 upsrccolor = 0;
+  uint16 upcolor = blendColor888(upsrccolor, color);
+  if (x1 < x2)
+  {
+    minX = MIN(MAX(0, x1), SCRW);
+    maxX = MIN(MAX(0, x2), SCRW);
+  }
+  else
+  {
+    minX = MIN(MAX(0, x2), SCRW);
+    maxX = MIN(MAX(0, x1), SCRW);
+  }
+  if (y1 < 0 || y1 >= SCRH)
+    return;
+  for (i = minX; i < maxX; i++)
+  {
+    if (upsrccolor == buffer[SCRW * y1 + i])
+    {
+      buffer[SCRW * y1 + i] = upcolor;
+    }
+    else
+    {
+      upcolor = buffer[SCRW * y1 + i] = blendColor888(upsrccolor = buffer[SCRW * y1 + i], color);
+    }
+
+    // mrc_drawPoint(x1,y1, MAKECOLOR565(color));
+  }
+}
+
+void gl_drawLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color)
+{
+
+  // uint16 color565 = MAKECOLOR565(color);
+  // int alpha = (color >> 24) & 0xff;
+
+  int dx = abs(x2 - x1);
+  int dy = abs(y2 - y1);
+  int sx = (x1 < x2) ? 1 : -1;
+  int sy = (y1 < y2) ? 1 : -1;
+  int err = dx - dy;
+  int err2;
+  // int32 alpha = (color >> 24);
+  // uint16 color565 = MAKECOLOR565(color);
+  uint16 *buffer = w_getScreenBuffer();
+  while (1)
+  {
+    // gl_drawPoint(x1, y1, color); // ç»˜åˆ¶å½“å‰ç‚¹
+    if (x1 >= 0 && y1 >= 0 && x1 < SCRW && y1 < SCRH)
+    {
+      *(buffer + SCRW * y1 + x1) = blendColor888(*(buffer + SCRW * y1 + x1), color);
+    }
+
+    if (x1 == x2 && y1 == y2)
+      break; // å¦‚æœåˆ°è¾¾ç»ˆç‚¹ï¼Œè·³å‡ºå¾ªç¯
+    err2 = err * 2;
+
+    if (err2 > -dy)
+    {
+      err -= dy;
+      x1 += sx;
+    }
+    if (err2 < dx)
+    {
+      err += dx;
+      y1 += sy;
+    }
+  }
+}
+
+void gl_drawHollowTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
+{
+  // ä»…ç”»ä¸‰æ¡è¾¹
+  gl_drawLine(x1, y1, x2, y2, color);
+  gl_drawLine(x2, y2, x3, y3, color);
+  gl_drawLine(x3, y3, x1, y1, color);
+}
+
+// ç»˜åˆ¶å¡«å……å¤šè¾¹å½¢
+// points: é¡¶ç‚¹æ•°ç»„ï¼Œæ ¼å¼ä¸º[x0, y0, x1, y1, x2, y2, ...]
+// count: é¡¶ç‚¹æ•°é‡
+// color: é¢œè‰²å€¼(ARGBæ ¼å¼)
+void gl_drawPolygon(int *points, int count, uint32 color)
+{
+  int i;
+
+  if (points == NULL || count < 3)
+  {
+    return; // å¤šè¾¹å½¢è‡³å°‘éœ€è¦3ä¸ªé¡¶ç‚¹
+  }
+
+  // ä½¿ç”¨æ‰‡å½¢ä¸‰è§’å‰–åˆ†ç®—æ³•ï¼Œå°†å¤šè¾¹å½¢åˆ†è§£ä¸ºå¤šä¸ªä¸‰è§’å½¢
+  // ä»¥ç¬¬ä¸€ä¸ªé¡¶ç‚¹ä¸ºä¸­å¿ƒï¼Œä¾æ¬¡è¿æ¥ç›¸é‚»é¡¶ç‚¹å½¢æˆä¸‰è§’å½¢
+  for (i = 1; i < count - 1; i++)
+  {
+    gl_drawTriangle(
+      points[0], points[1],           // ç¬¬ä¸€ä¸ªé¡¶ç‚¹
+      points[i * 2], points[i * 2 + 1],     // ç¬¬iä¸ªé¡¶ç‚¹
+      points[(i + 1) * 2], points[(i + 1) * 2 + 1], // ç¬¬i+1ä¸ªé¡¶ç‚¹
+      color
+    );
+  }
+}
+
+// ç»˜åˆ¶ç©ºå¿ƒå¤šè¾¹å½¢
+// points: é¡¶ç‚¹æ•°ç»„ï¼Œæ ¼å¼ä¸º[x0, y0, x1, y1, x2, y2, ...]
+// count: é¡¶ç‚¹æ•°é‡
+// color: é¢œè‰²å€¼(ARGBæ ¼å¼)
+void gl_drawHollowPolygon(int *points, int count, uint32 color)
+{
+  int i;
+
+  if (points == NULL || count < 3)
+  {
+    return; // å¤šè¾¹å½¢è‡³å°‘éœ€è¦3ä¸ªé¡¶ç‚¹
+  }
+
+  // ç»˜åˆ¶å¤šè¾¹å½¢çš„æ‰€æœ‰è¾¹
+  for (i = 0; i < count; i++)
+  {
+    int next = (i + 1) % count; // ä¸‹ä¸€ä¸ªé¡¶ç‚¹çš„ç´¢å¼•ï¼ˆå¾ªç¯åˆ°ç¬¬ä¸€ä¸ªï¼‰
+    gl_drawLine(
+      points[i * 2], points[i * 2 + 1],           // å½“å‰é¡¶ç‚¹
+      points[next * 2], points[next * 2 + 1],     // ä¸‹ä¸€ä¸ªé¡¶ç‚¹
+      color
+    );
+  }
+}
+
+// åœ¨bitmapå†…ç»˜åˆ¶çŸ©å½¢
+void bmp_drawRect(BITMAP_565 *bmp, int32 x, int32 y, int32 w, int32 h, uint32 color)
+{
+  int ix, iy;
+  // ç¡®ä¿åæ ‡åœ¨æœ‰æ•ˆèŒƒå›´å†…
+  uint16 dstColor, newColor;
+  int index;
+  int startX = x < 0 ? 0 : x;
+  int startY = y < 0 ? 0 : y;
+  int endX = (x + w > bmp->width) ? bmp->width : (x + w);
+  int endY = (y + h > bmp->height) ? bmp->height : (y + h);
+  uint16 color565 = MAKECOLOR565(color);
+  int alpha = (color >> 24) & 0xff;
+
+  if (!bmp || bmp->bitmap == NULL)
+  {
+    return; // æ£€æŸ¥æŒ‡é’ˆæœ‰æ•ˆæ€§
+  }
+  // å¾ªç¯éå†çŸ©å½¢çš„æ¯ä¸€ä¸ªåƒç´ å¹¶è¿›è¡Œç»˜åˆ¶
+  for (ix = startX; ix < endX; ix++)
+  {
+    for (iy = startY; iy < endY; iy++)
+    {
+      // è®¡ç®—åœ¨ bitmap ä¸­çš„ä½ç½®
+      index = iy * bmp->width + ix;
+
+      // å–å‡ºå½“å‰åƒç´ é¢œè‰²
+      dstColor = bmp->bitmap[index];
+
+      // å¦‚æœå½“å‰é¢œè‰²æ˜¯é€æ˜è‰²ï¼Œåˆ™è·³è¿‡
+      if (dstColor == bmp->transcolor)
+      {
+        continue;
+      }
+
+      // æ··åˆé¢œè‰²ï¼Œå¹¶æ›´æ–°åˆ° bitmap ä¸­
+      newColor = blendColor(dstColor, (uint16)color565, alpha); // é€æ˜åº¦å¯ä»¥æ ¹æ®éœ€è¦è°ƒæ•´
+      bmp->bitmap[index] = newColor;
+    }
+  }
+}
+
+// åœ¨bitmapå†…ç»˜åˆ¶ç‚¹
+void bmp_drawPoint(BITMAP_565 *bmp, int32 x, int32 y, uint32 color)
+{
+  int index;
+  uint16 dstColor, color565;
+  int alpha;
+  if (!bmp || bmp->bitmap == NULL)
+  {
+    return; // æ£€æŸ¥æŒ‡é’ˆæœ‰æ•ˆæ€§
+  }
+
+  // è®¡ç®—åœ¨ bitmap ä¸­çš„ä½ç½®
+  index = y * bmp->width + x;
+
+  // ç¡®ä¿åæ ‡åœ¨æœ‰æ•ˆèŒƒå›´å†…
+  if (x >= 0 && x < bmp->width && y >= 0 && y < bmp->height)
+  {
+    dstColor = bmp->bitmap[index];
     color565 = MAKECOLOR565(color);
-    alpha = color >> 24;
-    upcolor - blendColor(upsrccolor, color565, alpha);
-    // »­ÈıÌõ±ß
-    // bmp_drawLine(bmp, x1, y1, x2, y2, color);
-    // bmp_drawLine(bmp, x2, y2, x3, y3, color);
-    // bmp_drawLine(bmp, x3, y3, x1, y1, color);
+    alpha = (color >> 24) & 0xff;
 
-    // Ìî³äÈı½ÇĞÎ
-    // Ê¹ÓÃ±ß½çÌî³äËã·¨
-    minX = MIN(MIN(x1, x2), x3);
-    maxX = MAX(MAX(x1, x2), x3);
-    minY = MIN(MIN(y1, y2), y3);
-    maxY = MAX(MAX(y1, y2), y3);
-    minX = MAX(0, minX);
-    maxX = MIN(SCRW, maxX);
-    minY = MAX(0, minY);
-    maxY = MIN(SCRH, maxY);
-
-    for (y = minY; y < maxY; y++)
+    // å¦‚æœå½“å‰é¢œè‰²æ˜¯é€æ˜è‰²ï¼Œåˆ™è·³è¿‡
+    if (dstColor != bmp->transcolor)
     {
-      for (x = minX; x < maxX; x++)
-      {
-        // ¼ì²éµãÊÇ·ñÔÚÈı½ÇĞÎÄÚ²¿
-        if (pointInTriangle(x, y, x1, y1, x2, y2, x3, y3))
-        {
-          if (upsrccolor == *(buffer + SCRW * y + x))
-          {
-            *(buffer + SCRW * y + x) = upcolor;
-          }
-          else
-          {
-            upcolor = *(buffer + SCRW * y + x) = blendColor(upsrccolor = *(buffer + SCRW * y + x), color565, alpha);
-            // gl_drawPoint(x, y, color);
-          }
-        }
+      // æ··åˆé¢œè‰²ï¼Œå¹¶æ›´æ–°åˆ° bitmap ä¸­
+      bmp->bitmap[index] = blendColor(dstColor, color565, alpha);
+    }
+  }
+}
+
+// åœ¨bitmapå†…ç»˜åˆ¶çº¿æ®µ
+void bmp_drawLine(BITMAP_565 *bmp, int32 x1, int32 y1, int32 x2, int32 y2, uint32 color)
+{
+
+  // uint16 color565 = MAKECOLOR565(color);
+  // int alpha = (color >> 24) & 0xff;
+
+  int dx = abs(x2 - x1);
+  int dy = abs(y2 - y1);
+  int sx = (x1 < x2) ? 1 : -1;
+  int sy = (y1 < y2) ? 1 : -1;
+  int err = dx - dy;
+  int err2;
+  if (!bmp || bmp->bitmap == NULL)
+  {
+    return; // æ£€æŸ¥æŒ‡é’ˆæœ‰æ•ˆæ€§
+  }
+
+  while (1)
+  {
+    bmp_drawPoint(bmp, x1, y1, color); // ç»˜åˆ¶å½“å‰ç‚¹
+
+    if (x1 == x2 && y1 == y2)
+      break; // å¦‚æœåˆ°è¾¾ç»ˆç‚¹ï¼Œè·³å‡ºå¾ªç¯
+    err2 = err * 2;
+
+    if (err2 > -dy)
+    {
+      err -= dy;
+      x1 += sx;
+    }
+    if (err2 < dx)
+    {
+      err += dx;
+      y1 += sy;
+    }
+  }
+}
+
+// åœ¨bitmapå†…ç»˜åˆ¶åœ†å½¢
+void bmp_drawCircle(BITMAP_565 *bmp, int32 cx, int32 cy, int32 radius, uint32 color)
+{
+
+  int16 x, y;
+  // uint16 color565 = MAKECOLOR565(color);
+  // int alpha = (color >> 24) & 0xff;
+  if (!bmp || bmp->bitmap == NULL)
+  {
+    return; // æ£€æŸ¥æŒ‡é’ˆæœ‰æ•ˆæ€§
+  }
+
+  for (y = -radius; y <= radius; y++)
+  {
+    for (x = -radius; x <= radius; x++)
+    {
+      if (x * x + y * y <= radius * radius)
+      {                                            // åˆ¤æ–­æ˜¯å¦åœ¨åœ†å†…
+        bmp_drawPoint(bmp, cx + x, cy + y, color); // ç»˜åˆ¶ç‚¹
       }
     }
   }
+}
 
-  void gl_drawLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color)
+// åœ¨bitmapå†…ç»˜åˆ¶ç©ºå¿ƒåœ†
+void bmp_drawHollowCircle(BITMAP_565 *bmp, int32 centerX, int32 centerY, int32 radius, uint32 color)
+{
+  int32 x, y;
+  int32 angle;
+
+  if (!bmp || bmp->bitmap == NULL)
   {
-
-    // uint16 color565 = MAKECOLOR565(color);
-    // int alpha = (color >> 24) & 0xff;
-
-    int dx = abs(x2 - x1);
-    int dy = abs(y2 - y1);
-    int sx = (x1 < x2) ? 1 : -1;
-    int sy = (y1 < y2) ? 1 : -1;
-    int err = dx - dy;
-    int err2;
-    int32 alpha = (color >> 24);
-    uint16 color565 = MAKECOLOR565(color);
-    uint16 *buffer = w_getScreenBuffer();
-    while (1)
-    {
-      // gl_drawPoint(x1, y1, color); // »æÖÆµ±Ç°µã
-      if (x1 >= 0 && y1 >= 0 && x1 < SCRW && y1 < SCRH){
-        *(buffer + SCRW * y1 + x1) = blendColor(*(buffer + SCRW * y1 + x1), color565, alpha);
-      }
-     
-      
-      if (x1 == x2 && y1 == y2)
-        break; // Èç¹ûµ½´ïÖÕµã£¬Ìø³öÑ­»·
-      err2 = err * 2;
-
-      if (err2 > -dy)
-      {
-        err -= dy;
-        x1 += sx;
-      }
-      if (err2 < dx)
-      {
-        err += dx;
-        y1 += sy;
-      }
-    }
+    return; // æ£€æŸ¥æŒ‡é’ˆæœ‰æ•ˆæ€§
   }
 
-  void gl_drawHollowTriangle(int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
+  // uint16 color565 = MAKECOLOR565(color);
+  // int alpha = (color >> 24) & 0xff;
+
+  // è®¡ç®—åœ†çš„å‘¨å›´çš„ç‚¹
+  for (angle = 0; angle < 360; angle++)
   {
-    // ½ö»­ÈıÌõ±ß
-    gl_drawLine(x1, y1, x2, y2, color);
-    gl_drawLine(x2, y2, x3, y3, color);
-    gl_drawLine(x3, y3, x1, y1, color);
-  }
+    // ä½¿ç”¨æåæ ‡è®¡ç®—åœ†å‘¨ä¸Šçš„ç‚¹
+    x = (int32)(centerX + radius * cos(angle * M_PI / 180.0));
+    y = (int32)(centerY + radius * sin(angle * M_PI / 180.0));
 
-  // ÔÚbitmapÄÚ»æÖÆ¾ØĞÎ
-  void bmp_drawRect(BITMAP_565 * bmp, int32 x, int32 y, int32 w, int32 h, uint32 color)
-  {
-    int ix, iy;
-    // È·±£×ø±êÔÚÓĞĞ§·¶Î§ÄÚ
-    uint16 dstColor, newColor;
-    int index;
-    int startX = x < 0 ? 0 : x;
-    int startY = y < 0 ? 0 : y;
-    int endX = (x + w > bmp->width) ? bmp->width : (x + w);
-    int endY = (y + h > bmp->height) ? bmp->height : (y + h);
-    uint16 color565 = MAKECOLOR565(color);
-    int alpha = (color >> 24) & 0xff;
-
-    if (!bmp || bmp->bitmap == NULL)
-    {
-      return; // ¼ì²éÖ¸ÕëÓĞĞ§ĞÔ
-    }
-    // Ñ­»·±éÀú¾ØĞÎµÄÃ¿Ò»¸öÏñËØ²¢½øĞĞ»æÖÆ
-    for (ix = startX; ix < endX; ix++)
-    {
-      for (iy = startY; iy < endY; iy++)
-      {
-        // ¼ÆËãÔÚ bitmap ÖĞµÄÎ»ÖÃ
-        index = iy * bmp->width + ix;
-
-        // È¡³öµ±Ç°ÏñËØÑÕÉ«
-        dstColor = bmp->bitmap[index];
-
-        // Èç¹ûµ±Ç°ÑÕÉ«ÊÇÍ¸Ã÷É«£¬ÔòÌø¹ı
-        if (dstColor == bmp->transcolor)
-        {
-          continue;
-        }
-
-        // »ìºÏÑÕÉ«£¬²¢¸üĞÂµ½ bitmap ÖĞ
-        newColor = blendColor(dstColor, (uint16)color565, alpha); // Í¸Ã÷¶È¿ÉÒÔ¸ù¾İĞèÒªµ÷Õû
-        bmp->bitmap[index] = newColor;
-      }
-    }
-  }
-
-  // ÔÚbitmapÄÚ»æÖÆµã
-  void bmp_drawPoint(BITMAP_565 * bmp, int32 x, int32 y, uint32 color)
-  {
-    int index;
-    uint16 dstColor, color565;
-    int alpha;
-    if (!bmp || bmp->bitmap == NULL)
-    {
-      return; // ¼ì²éÖ¸ÕëÓĞĞ§ĞÔ
-    }
-
-    // ¼ÆËãÔÚ bitmap ÖĞµÄÎ»ÖÃ
-    index = y * bmp->width + x;
-
-    // È·±£×ø±êÔÚÓĞĞ§·¶Î§ÄÚ
+    // ç¡®ä¿ç‚¹åœ¨åˆæ³•èŒƒå›´å†…
     if (x >= 0 && x < bmp->width && y >= 0 && y < bmp->height)
     {
-      dstColor = bmp->bitmap[index];
-      color565 = MAKECOLOR565(color);
-      alpha = (color >> 24) & 0xff;
-
-      // Èç¹ûµ±Ç°ÑÕÉ«ÊÇÍ¸Ã÷É«£¬ÔòÌø¹ı
-      if (dstColor != bmp->transcolor)
-      {
-        // »ìºÏÑÕÉ«£¬²¢¸üĞÂµ½ bitmap ÖĞ
-        bmp->bitmap[index] = blendColor(dstColor, color565, alpha);
-      }
+      bmp_drawPoint(bmp, x, y, color);
     }
   }
+}
 
-  // ÔÚbitmapÄÚ»æÖÆÏß¶Î
-  void bmp_drawLine(BITMAP_565 * bmp, int32 x1, int32 y1, int32 x2, int32 y2, uint32 color)
+#ifndef USE_DSP
+// æ±‚ä¸€ä¸ªä¸‰è§’å½¢é¢ç§¯
+int tri_area(int x1, int y1, int x2, int y2, int x3, int y3)
+{
+  // return (1/2)*(x1*y2+x2*y3+x3*y1-x1*y3-x2*y1-x3*y2);
+  int m = ((x2 - x1) * (y3 - y2)) - ((x3 - x2) * (y2 - y1));
+  return (m > 0) ? m : -m;
+}
+
+// åˆ¤æ–­ç‚¹æ˜¯å¦åœ¨ä¸‰è§’å½¢å…§
+int pointInTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3, int y3)
+{
+  if (tri_area(x, y, x1, y1, x2, y2) + tri_area(x, y, x1, y1, x3, y3) + tri_area(x, y, x2, y2, x3, y3) == tri_area(x1, y1, x2, y2, x3, y3))
+    return TRUE;
+  return FALSE;
+}
+#else
+
+// æ±‚ä¸€ä¸ªä¸‰è§’å½¢é¢ç§¯
+int tri_area(int x1, int y1, int x2, int y2, int x3, int y3)
+{
+  // ä½¿ç”¨ DSP æŒ‡ä»¤ä¼˜åŒ–è®¡ç®—
+  // m = (x2 - x1) * (y3 - y2) - (x3 - x2) * (y2 - y1)
+  Word32 area1, area2, m;
+
+  area1 = smulbb(x2 - x1, y3 - y2); // (x2-x1)*(y3-y2)
+  area2 = smulbb(x3 - x2, y2 - y1); // (x3-x2)*(y2-y1)
+
+  m = qsub(area1, area2); // m = area1 - area2
+
+  return (m > 0) ? m : -m; // æ— éœ€æ”¹å˜æ­¤è¡Œï¼Œä¿æŒè¿”å›æ­£å€¼
+}
+
+// åˆ¤æ–­ç‚¹æ˜¯å¦åœ¨ä¸‰è§’å½¢å†…
+int pointInTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3, int y3)
+{
+  // ä½¿ç”¨ DSP æŒ‡ä»¤ä¼˜åŒ–é¢ç§¯è®¡ç®—
+  Word32 area1 = tri_area(x, y, x1, y1, x2, y2);
+  Word32 area2 = tri_area(x, y, x1, y1, x3, y3);
+  Word32 area3 = tri_area(x, y, x2, y2, x3, y3);
+  Word32 total_area = tri_area(x1, y1, x2, y2, x3, y3);
+
+  return (qadd(area1, qadd(area2, area3)) == total_area) ? TRUE : FALSE; // ä½¿ç”¨ qadd è¿›è¡ŒåŠ æ³•
+}
+
+#endif
+
+// int pointInTriangle(int px, int py, int x1, int y1, int x2, int y2, int x3, int y3)
+// {
+//   // è®¡ç®—é‡å¿ƒåæ ‡æ³•
+//   float area = 0.5 * (-y2 * x3 + y1 * (-x2 + x3) + x1 * (y2 - y3) + x2 * y3);
+//   float s = 1 / (2 * area) * (y1 * x3 - x1 * y3 + (x3 - x1) * py + (x1 - x2) * px);
+//   float t = 1 / (2 * area) * (x1 * y2 - y1 * x2 + (x1 - x2) * py + (y1 - y2) * px);
+//   return (s > 0) && (t > 0) && (1 - s - t > 0);
+// }
+
+void bmp_drawTriangle(BITMAP_565 *bmp, int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
+{
+  int minX, maxX, minY, maxY;
+  int x, y;
+  // ç”»ä¸‰æ¡è¾¹
+  // bmp_drawLine(bmp, x1, y1, x2, y2, color);
+  // bmp_drawLine(bmp, x2, y2, x3, y3, color);
+  // bmp_drawLine(bmp, x3, y3, x1, y1, color);
+
+  // å¡«å……ä¸‰è§’å½¢
+  // ä½¿ç”¨è¾¹ç•Œå¡«å……ç®—æ³•
+  minX = MIN(MIN(x1, x2), x3);
+  maxX = MAX(MAX(x1, x2), x3);
+  minY = MIN(MIN(y1, y2), y3);
+  maxY = MAX(MAX(y1, y2), y3);
+
+  for (y = minY; y < maxY; y++)
   {
-
-    // uint16 color565 = MAKECOLOR565(color);
-    // int alpha = (color >> 24) & 0xff;
-
-    int dx = abs(x2 - x1);
-    int dy = abs(y2 - y1);
-    int sx = (x1 < x2) ? 1 : -1;
-    int sy = (y1 < y2) ? 1 : -1;
-    int err = dx - dy;
-    int err2;
-    if (!bmp || bmp->bitmap == NULL)
+    for (x = minX; x < maxX; x++)
     {
-      return; // ¼ì²éÖ¸ÕëÓĞĞ§ĞÔ
-    }
-
-    while (1)
-    {
-      bmp_drawPoint(bmp, x1, y1, color); // »æÖÆµ±Ç°µã
-
-      if (x1 == x2 && y1 == y2)
-        break; // Èç¹ûµ½´ïÖÕµã£¬Ìø³öÑ­»·
-      err2 = err * 2;
-
-      if (err2 > -dy)
-      {
-        err -= dy;
-        x1 += sx;
-      }
-      if (err2 < dx)
-      {
-        err += dx;
-        y1 += sy;
-      }
-    }
-  }
-
-  // ÔÚbitmapÄÚ»æÖÆÔ²ĞÎ
-  void bmp_drawCircle(BITMAP_565 * bmp, int32 cx, int32 cy, int32 radius, uint32 color)
-  {
-
-    int16 x, y;
-    // uint16 color565 = MAKECOLOR565(color);
-    // int alpha = (color >> 24) & 0xff;
-    if (!bmp || bmp->bitmap == NULL)
-    {
-      return; // ¼ì²éÖ¸ÕëÓĞĞ§ĞÔ
-    }
-
-    for (y = -radius; y <= radius; y++)
-    {
-      for (x = -radius; x <= radius; x++)
-      {
-        if (x * x + y * y <= radius * radius)
-        {                                            // ÅĞ¶ÏÊÇ·ñÔÚÔ²ÄÚ
-          bmp_drawPoint(bmp, cx + x, cy + y, color); // »æÖÆµã
-        }
-      }
-    }
-  }
-
-  // ÔÚbitmapÄÚ»æÖÆ¿ÕĞÄÔ²
-  void bmp_drawHollowCircle(BITMAP_565 * bmp, int32 centerX, int32 centerY, int32 radius, uint32 color)
-  {
-    int32 x, y;
-    int32 angle;
-
-    if (!bmp || bmp->bitmap == NULL)
-    {
-      return; // ¼ì²éÖ¸ÕëÓĞĞ§ĞÔ
-    }
-
-    // uint16 color565 = MAKECOLOR565(color);
-    // int alpha = (color >> 24) & 0xff;
-
-    // ¼ÆËãÔ²µÄÖÜÎ§µÄµã
-    for (angle = 0; angle < 360; angle++)
-    {
-      // Ê¹ÓÃ¼«×ø±ê¼ÆËãÔ²ÖÜÉÏµÄµã
-      x = (int32)(centerX + radius * cos(angle * M_PI / 180.0));
-      y = (int32)(centerY + radius * sin(angle * M_PI / 180.0));
-
-      // È·±£µãÔÚºÏ·¨·¶Î§ÄÚ
-      if (x >= 0 && x < bmp->width && y >= 0 && y < bmp->height)
+      // æ£€æŸ¥ç‚¹æ˜¯å¦åœ¨ä¸‰è§’å½¢å†…éƒ¨
+      if (pointInTriangle(x, y, x1, y1, x2, y2, x3, y3))
       {
         bmp_drawPoint(bmp, x, y, color);
       }
     }
   }
+}
 
-  // ÇóÒ»¸öÈı½ÇĞÎÃæ»ı
-  int tri_area(int x1, int y1, int x2, int y2, int x3, int y3)
+void bmp_drawHollowTriangle(BITMAP_565 *bmp, int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
+{
+  // ä»…ç”»ä¸‰æ¡è¾¹
+  bmp_drawLine(bmp, x1, y1, x2, y2, color);
+  bmp_drawLine(bmp, x2, y2, x3, y3, color);
+  bmp_drawLine(bmp, x3, y3, x1, y1, color);
+}
+
+// ç”»åœ†
+/*
+void gl_drawCir(int32 x, int32 y, int32 r, uint32 color)
+{
+  int ix, iy;
+  uint16 upcolor;
+  uint16 upsrccolor = 0;
+  int32 alpha = color >> 24;
+  uint16 color565 = MAKECOLOR565(color);
+  uint16 *buffer = w_getScreenBuffer();
+  int32 minX = MAX(0, x - r);
+  int32 minY = MAX(0, y - r);
+  int32 maxX = MIN(SCRW, x + r);
+  int32 maxY = MIN(SCRH, y + r);
+  upcolor = blendColor(upsrccolor, color565, alpha);
+  for (ix = minX; ix < maxX; ix++)
   {
-    // return (1/2)*(x1*y2+x2*y3+x3*y1-x1*y3-x2*y1-x3*y2);
-    int m = ((x2 - x1) * (y3 - y2)) - ((x3 - x2) * (y2 - y1));
-    return (m > 0) ? m : -m;
-  }
-
-  // ÅĞ¶ÏµãÊÇ·ñÔÚÈı½ÇĞÎƒÈ
-  int pointInTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3, int y3)
-  {
-    if (tri_area(x, y, x1, y1, x2, y2) + tri_area(x, y, x1, y1, x3, y3) + tri_area(x, y, x2, y2, x3, y3) == tri_area(x1, y1, x2, y2, x3, y3))
-      return TRUE;
-    return FALSE;
-  }
-
-  // int pointInTriangle(int px, int py, int x1, int y1, int x2, int y2, int x3, int y3)
-  // {
-  //   // ¼ÆËãÖØĞÄ×ø±ê·¨
-  //   float area = 0.5 * (-y2 * x3 + y1 * (-x2 + x3) + x1 * (y2 - y3) + x2 * y3);
-  //   float s = 1 / (2 * area) * (y1 * x3 - x1 * y3 + (x3 - x1) * py + (x1 - x2) * px);
-  //   float t = 1 / (2 * area) * (x1 * y2 - y1 * x2 + (x1 - x2) * py + (y1 - y2) * px);
-  //   return (s > 0) && (t > 0) && (1 - s - t > 0);
-  // }
-
-  void bmp_drawTriangle(BITMAP_565 * bmp, int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
-  {
-    int minX, maxX, minY, maxY;
-    int x, y;
-    // »­ÈıÌõ±ß
-    // bmp_drawLine(bmp, x1, y1, x2, y2, color);
-    // bmp_drawLine(bmp, x2, y2, x3, y3, color);
-    // bmp_drawLine(bmp, x3, y3, x1, y1, color);
-
-    // Ìî³äÈı½ÇĞÎ
-    // Ê¹ÓÃ±ß½çÌî³äËã·¨
-    minX = MIN(MIN(x1, x2), x3);
-    maxX = MAX(MAX(x1, x2), x3);
-    minY = MIN(MIN(y1, y2), y3);
-    maxY = MAX(MAX(y1, y2), y3);
-
-    for (y = minY; y < maxY; y++)
+    for (iy = minY; iy < maxY; iy++)
     {
-      for (x = minX; x < maxX; x++)
+      if (gl_getLineSize(ix, iy, x, y) <= r * r)
       {
-        // ¼ì²éµãÊÇ·ñÔÚÈı½ÇĞÎÄÚ²¿
-        if (pointInTriangle(x, y, x1, y1, x2, y2, x3, y3))
+        // è€ƒè™‘æ•ˆç‡é—®é¢˜ï¼Œä¸é€æ˜çš„åœ†å•ç‹¬å¤„ç†
+
+        // if (alpha == 0xff)
+        // {
+        //   mrc_drawPoint(ix, iy, MAKECOLOR565(color));
+        // }
+        // else
+        // {
+        if (*(buffer + SCRW * iy + ix) == upsrccolor)
         {
-          bmp_drawPoint(bmp, x, y, color);
+          *(buffer + SCRW * iy + ix) = upcolor;
         }
+        else
+        {
+          upcolor = *(buffer + SCRW * iy + ix) = blendColor(upsrccolor = *(buffer + SCRW * iy + ix), color565, alpha);
+        }
+
+        // gl_drawPoint(ix, iy, color);
+        // }
       }
     }
   }
+  // printf("color>>24 = %d\n",color>>24);
+}
+*/
+/*
+void gl_drawCir(int32 x,int32 y,int32 r,uint32 color){
+int ix,iy;
 
-  void bmp_drawHollowTriangle(BITMAP_565 * bmp, int x1, int y1, int x2, int y2, int x3, int y3, uint32 color)
-  {
-    // ½ö»­ÈıÌõ±ß
-    bmp_drawLine(bmp, x1, y1, x2, y2, color);
-    bmp_drawLine(bmp, x2, y2, x3, y3, color);
-    bmp_drawLine(bmp, x3, y3, x1, y1, color);
-  }
+for(ix=x-r;ix<x+r;ix++){
+ for(iy=y-r;iy<y+r;iy++){
+  if(gl_getLineSize(ix,iy, x,y)<= r*r){
+   //è€ƒè™‘æ•ˆç‡é—®é¢˜ï¼Œä¸é€æ˜çš„åœ†å•ç‹¬å¤„ç†
 
-  // »­Ô²
-  /*
-  void gl_drawCir(int32 x, int32 y, int32 r, uint32 color)
-  {
-    int ix, iy;
-    uint16 upcolor;
-    uint16 upsrccolor = 0;
-    int32 alpha = color >> 24;
-    uint16 color565 = MAKECOLOR565(color);
-    uint16 *buffer = w_getScreenBuffer();
-    int32 minX = MAX(0, x - r);
-    int32 minY = MAX(0, y - r);
-    int32 maxX = MIN(SCRW, x + r);
-    int32 maxY = MIN(SCRH, y + r);
-    upcolor = blendColor(upsrccolor, color565, alpha);
-    for (ix = minX; ix < maxX; ix++)
-    {
-      for (iy = minY; iy < maxY; iy++)
-      {
-        if (gl_getLineSize(ix, iy, x, y) <= r * r)
-        {
-          // ¿¼ÂÇĞ§ÂÊÎÊÌâ£¬²»Í¸Ã÷µÄÔ²µ¥¶À´¦Àí
-
-          // if (alpha == 0xff)
-          // {
-          //   mrc_drawPoint(ix, iy, MAKECOLOR565(color));
-          // }
-          // else
-          // {
-          if (*(buffer + SCRW * iy + ix) == upsrccolor)
-          {
-            *(buffer + SCRW * iy + ix) = upcolor;
-          }
-          else
-          {
-            upcolor = *(buffer + SCRW * iy + ix) = blendColor(upsrccolor = *(buffer + SCRW * iy + ix), color565, alpha);
-          }
-
-          // gl_drawPoint(ix, iy, color);
-          // }
-        }
-      }
-    }
-    // printf("color>>24 = %d\n",color>>24);
-  }
-  */
- /*
- void gl_drawCir(int32 x,int32 y,int32 r,uint32 color){
- int ix,iy;
-
- for(ix=x-r;ix<x+r;ix++){
-  for(iy=y-r;iy<y+r;iy++){
-   if(gl_getLineSize(ix,iy, x,y)<= r*r){
-    //¿¼ÂÇĞ§ÂÊÎÊÌâ£¬²»Í¸Ã÷µÄÔ²µ¥¶À´¦Àí
-
-    if(color>>24==0xff){
-     mrc_drawPoint(ix,iy, MAKECOLOR565(color));
-    }
-    else{
-    gl_drawPoint(ix,iy, color);
-    }
+   if(color>>24==0xff){
+    mrc_drawPoint(ix,iy, MAKECOLOR565(color));
+   }
+   else{
+   gl_drawPoint(ix,iy, color);
    }
   }
  }
- //printf("color>>24 = %d\n",color>>24);
+}
+//printf("color>>24 = %d\n",color>>24);
 }
 */
 
-void gl_drawCir(int32 x0,int32 y0,int32 r, uint32 color)
+void gl_drawCir(int32 x0, int32 y0, int32 r, uint32 color)
 {
-    //Ê¹ÓÃÕı¸º·¨»­Ô²
-    int x, y, f;//(x,y)Îªµ±Ç°×ø±ê fÎªÎó²îÖµ
-    x = x0;
-    y = y0 + r;
-    f = 0;
+  // ä½¿ç”¨æ­£è´Ÿæ³•ç”»åœ†
+  int x, y, f; //(x,y)ä¸ºå½“å‰åæ ‡ fä¸ºè¯¯å·®å€¼
+  int upy;
+  x = x0;
+  y = y0 + r;
+  f = 0;
+  upy = -1;
 
-    while(y >= y0){//´ÓÔ²ÖÜµÄÓÒÉÏ²¿·Ö¿ªÊ¼
-        gl_drawLine( x, y, 2 * x0 - x, y,color);
-        gl_drawLine( x, 2 * y0 -y, 2 * x0 - x, 2 * y0 -y,color);
-
-        if(f > 0){
-            f = f - 2 * (y - y0) + 1;
-            y--;//ÏòÔ²ÄÚ×ß
-        }
-        else{
-            f = f + 2 * (x - x0) + 1;
-            x++;//ÏòÔ²Íâ×ß
-        }
-    }
-
-    if(y == y0)
-        gl_drawPoint( x, y,color);
-}
-  // »ñÈ¡Á½¸öÑÕÉ«Ö®¼äµÄÖĞ¼äÖµ
-  uint32 getGraColor(uint32 color1, uint32 color2, int32 load, int32 max)
-  {
-    int32 alpha1 = color1 >> 24;
-    int32 r1 = (color1 >> 16) & 0xff;
-    int32 g1 = (color1 >> 8) & 0xff;
-    int32 b1 = color1 & 0xff;
-    int32 alpha2 = color2 >> 24;
-    int32 r2 = (color2 >> 16) & 0xff;
-    int32 g2 = (color2 >> 8) & 0xff;
-    int32 b2 = color2 & 0xff;
-    int32 alpha3 = alpha1 + (alpha2 - alpha1) * load / max;
-    int32 r3 = r1 + (r2 - r1) * load / max;
-    int32 g3 = g1 + (g2 - g1) * load / max;
-    int32 b3 = b1 + (b2 - b1) * load / max;
-    return (alpha3 << 24) | (r3 << 16) | (g3 << 8) | (b3);
-  }
-
-  void drawShadeRect(int32 x, int32 y, int32 w, int32 h, uint32 colorA, uint32 colorB, int mode)
-  {
-    int load;
-    uint32 colortemp;
-    uint16 color565;
-    int32 ix, iy;
-    int32 alpha;
-    int32 ymax;
-    int32 xmax;
-    uint16 *buffer = w_getScreenBuffer();
-
-    switch (mode)
+  while (y >= y0)
+  { // ä»åœ†å‘¨çš„å³ä¸Šéƒ¨åˆ†å¼€å§‹
+    if (upy != y)
     {
-    case SHADE_UPDOWN:
-      xmax = MIN(SCRW, x + w);
-      x = MAX(0, x);
-      y = MAX(0, y);
-      ymax = MIN(SCRH, y + h);
-      load = 0;
-      for (iy = y; iy < ymax; iy++)
+      gl_drawHLine(x, y, 2 * x0 - x, y, color);
+      if (y0 != y)
       {
-        colortemp = getGraColor(colorA, colorB, load++, h);
-        alpha = colortemp >> 24;
-        color565 = MAKECOLOR565(colortemp);
-        for (ix = x; ix < xmax; ix++)
-        {
-          *(buffer + SCRW * iy + ix) = blendColor(*(buffer + SCRW * iy + ix), color565, alpha);
-        }
+        gl_drawHLine(x, 2 * y0 - y, 2 * x0 - x, 2 * y0 - y, color);
       }
-      return;
-    case SHADE_DOWNUP:
-      xmax = MIN(SCRW, x + w);
-      x = MAX(0, x);
-      y = MAX(0, y);
-      ymax = MIN(SCRH, y + h);
-      load = 0;
-      for (iy = y; iy < ymax; iy++)
-      {
-        colortemp = getGraColor(colorB, colorA, load++, h);
-        alpha = colortemp >> 24;
-        color565 = MAKECOLOR565(colortemp);
-        for (ix = x; ix < xmax; ix++)
-        {
-          *(buffer + SCRW * iy + ix) = blendColor(*(buffer + SCRW * iy + ix), color565, alpha);
-        }
-      }
-      return;
-    case SHADE_LEFTRIGHT:
-      xmax = MIN(SCRW, x + w);
-      x = MAX(0, x);
-      y = MAX(0, y);
-      ymax = MIN(SCRH, y + h);
-      load = 0;
-      for (ix = x; ix < xmax; ix++)
-      {
-        colortemp = getGraColor(colorA, colorB, load++, w);
-        alpha = colortemp >> 24;
-        color565 = MAKECOLOR565(colortemp);
-        for (iy = y; iy < ymax; iy++)
-        {
-          *(buffer + SCRW * iy + ix) = blendColor(*(buffer + SCRW * iy + ix), color565, alpha);
-        }
-      }
-      return;
-    case SHADE_RIGHTLEFT:
-      xmax = MIN(SCRW, x + w);
-      x = MAX(0, x);
-      y = MAX(0, y);
-      ymax = MIN(SCRH, y + h);
-      load = 0;
-      for (ix = x; ix < xmax; ix++)
-      {
-        colortemp = getGraColor(colorB, colorA, load++, w);
-        alpha = colortemp >> 24;
-        color565 = MAKECOLOR565(colortemp);
-        for (iy = y; iy < ymax; iy++)
-        {
-          *(buffer + SCRW * iy + ix) = blendColor(*(buffer + SCRW * iy + ix), color565, alpha);
-        }
-      }
-      return;
+
+      upy = y;
+    }
+
+    if (f > 0)
+    {
+      f = f - 2 * (y - y0) + 1;
+      y--; // å‘åœ†å†…èµ°
+    }
+    else
+    {
+      f = f + 2 * (x - x0) + 1;
+      x++; // å‘åœ†å¤–èµ°
     }
   }
 
-  int32 bitmap565getInfo(BITMAP_565 * bmp, BITMAPINFO * info)
-  {
-    mrc_memset(info, 0, sizeof(BITMAPINFO));
-    info->width = bmp->width;
-    info->height = bmp->height;
-    info->format = 16;
-    info->ptr = bmp->bitmap;
-    return 0;
+  if (y == y0)
+    gl_drawPoint(x, y, color);
+}
+
+void gl_drawHollowCir(int x0, int y0, int r, uint32 color)
+{
+  // ä½¿ç”¨æ­£è´Ÿæ³•ç”»åœ†
+  int x, y, f; //(x,y)ä¸ºå½“å‰åæ ‡ fä¸ºè¯¯å·®å€¼
+  x = x0;
+  y = y0 + r;
+  f = 0;
+
+  while (y >= y0)
+  {                            // ä»åœ†å‘¨çš„å³ä¸Šéƒ¨åˆ†å¼€å§‹
+    gl_drawPoint(x, y, color); // å¯¹ç§°åœ°ç”»å‡ºå››ä¸ªè±¡é™å†…çš„åæ ‡ç‚¹
+    gl_drawPoint(2 * x0 - x, y, color);
+    gl_drawPoint(x, 2 * y0 - y, color);
+    gl_drawPoint(2 * x0 - x, 2 * y0 - y, color);
+
+    if (f > 0)
+    {
+      f = f - 2 * (y - y0) + 1;
+      y--; // å‘åœ†å†…èµ°
+    }
+    else
+    {
+      f = f + 2 * (x - x0) + 1;
+      x++; // å‘åœ†å¤–èµ°
+    }
   }
-  // ±£´æÍ¼Æ¬Îªbma¸ñÊ½
-  void saveBitmap(BITMAP_565 * bmp, const char *filename)
+
+  if (y == y0)
+    gl_drawPoint(x, y, color);
+}
+
+// è·å–ä¸¤ä¸ªé¢œè‰²ä¹‹é—´çš„ä¸­é—´å€¼
+uint32 getGraColor(uint32 color1, uint32 color2, int32 load, int32 max)
+{
+  int32 alpha1 = color1 >> 24;
+  int32 r1 = (color1 >> 16) & 0xff;
+  int32 g1 = (color1 >> 8) & 0xff;
+  int32 b1 = color1 & 0xff;
+  int32 alpha2 = color2 >> 24;
+  int32 r2 = (color2 >> 16) & 0xff;
+  int32 g2 = (color2 >> 8) & 0xff;
+  int32 b2 = color2 & 0xff;
+  int32 alpha3 = alpha1 + (alpha2 - alpha1) * load / max;
+  int32 r3 = r1 + (r2 - r1) * load / max;
+  int32 g3 = g1 + (g2 - g1) * load / max;
+  int32 b3 = b1 + (b2 - b1) * load / max;
+  return (alpha3 << 24) | (r3 << 16) | (g3 << 8) | (b3);
+}
+
+void drawShadeRect(int32 x, int32 y, int32 w, int32 h, uint32 colorA, uint32 colorB, int mode)
+{
+  int load;
+  uint32 colortemp;
+  uint16 color565;
+  int32 ix, iy;
+  int32 alpha;
+  int32 ymax;
+  int32 xmax;
+  uint16 *buffer = w_getScreenBuffer();
+
+  switch (mode)
   {
-    int32 f;
-    f = mrc_open(filename, MR_FILE_CREATE | MR_FILE_WRONLY);
-    mrc_write(f, "MAP5", 4);
-    mrc_write(f, (void *)&bmp->width, 4);
-    mrc_write(f, (void *)&bmp->height, 4);
-    mrc_write(f, (void *)((bmp->mode == BM_COPY) ? 0 : bmp->transcolor), 2);
-    mrc_write(f, bmp->bitmap, bmp->width * bmp->height * 2);
-    mrc_close(f);
+  case SHADE_UPDOWN:
+    xmax = MIN(SCRW, x + w);
+    x = MAX(0, x);
+    y = MAX(0, y);
+    ymax = MIN(SCRH, y + h);
+    load = 0;
+    for (iy = y; iy < ymax; iy++)
+    {
+      colortemp = getGraColor(colorA, colorB, load++, h);
+      alpha = colortemp >> 24;
+      color565 = MAKECOLOR565(colortemp);
+      for (ix = x; ix < xmax; ix++)
+      {
+        buffer[SCRW * iy + ix] = blendColor(buffer[SCRW * iy + ix], color565, alpha);
+      }
+    }
+    return;
+  case SHADE_DOWNUP:
+    xmax = MIN(SCRW, x + w);
+    x = MAX(0, x);
+    y = MAX(0, y);
+    ymax = MIN(SCRH, y + h);
+    load = 0;
+    for (iy = y; iy < ymax; iy++)
+    {
+      colortemp = getGraColor(colorB, colorA, load++, h);
+      alpha = colortemp >> 24;
+      color565 = MAKECOLOR565(colortemp);
+      for (ix = x; ix < xmax; ix++)
+      {
+        buffer[SCRW * iy + ix] = blendColor(buffer[SCRW * iy + ix], color565, alpha);
+      }
+    }
+    return;
+  case SHADE_LEFTRIGHT:
+    xmax = MIN(SCRW, x + w);
+    x = MAX(0, x);
+    y = MAX(0, y);
+    ymax = MIN(SCRH, y + h);
+    load = 0;
+    for (ix = x; ix < xmax; ix++)
+    {
+      colortemp = getGraColor(colorA, colorB, load++, w);
+      alpha = colortemp >> 24;
+      color565 = MAKECOLOR565(colortemp);
+      for (iy = y; iy < ymax; iy++)
+      {
+        buffer[SCRW * iy + ix] = blendColor(buffer[SCRW * iy + ix], color565, alpha);
+      }
+    }
+    return;
+  case SHADE_RIGHTLEFT:
+    xmax = MIN(SCRW, x + w);
+    x = MAX(0, x);
+    y = MAX(0, y);
+    ymax = MIN(SCRH, y + h);
+    load = 0;
+    for (ix = x; ix < xmax; ix++)
+    {
+      colortemp = getGraColor(colorB, colorA, load++, w);
+      alpha = colortemp >> 24;
+      color565 = MAKECOLOR565(colortemp);
+      for (iy = y; iy < ymax; iy++)
+      {
+        buffer[SCRW * iy + ix] = blendColor(buffer[SCRW * iy + ix], color565, alpha);
+      }
+    }
+    return;
   }
+}
+
+int32 bitmap565getInfo(BITMAP_565 *bmp, BITMAPINFO *info)
+{
+  mrc_memset(info, 0, sizeof(BITMAPINFO));
+  info->width = bmp->width;
+  info->height = bmp->height;
+  info->format = bmp->color_bit;
+  info->ptr = bmp->bitmap;
+  return 0;
+}
+// ä¿å­˜å›¾ç‰‡ä¸ºbmaæ ¼å¼
+void saveBitmap(BITMAP_565 *bmp, const char *filename)
+{
+  int32 f;
+  f = mrc_open(filename, MR_FILE_CREATE | MR_FILE_WRONLY);
+  mrc_write(f, "MAP5", 4);
+  mrc_write(f, (void *)&bmp->width, 4);
+  mrc_write(f, (void *)&bmp->height, 4);
+  mrc_write(f, (void *)((bmp->mode == BM_COPY) ? 0 : bmp->transcolor), 2);
+  mrc_write(f, bmp->bitmap, bmp->width * bmp->height * 2);
+  mrc_close(f);
+}

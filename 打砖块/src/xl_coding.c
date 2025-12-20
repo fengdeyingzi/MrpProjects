@@ -2,13 +2,13 @@
 #include "xl_coding.h"
 
 
-//ex_codingº¯ÊıÊµÏÖ ÍòÄÜ±àÂë×ª»»º¯Êı
+//ex_codingå‡½æ•°å®ç° ä¸‡èƒ½ç¼–ç è½¬æ¢å‡½æ•°
 char* xl_ex_coding(char* text,int len,char* coding,char* tocoding){
 	char *temp_un = NULL;
 	int32 len_un = 0;
 	char *retext = NULL;
 	int32 relen = len;
-	//ÅĞ¶ÏÎÄ±¾ÊÇ·ñÎªun±àÂë Èç¹û²»ÊÇ ¾Í×ª»»³Éun±àÂë£¨´ó¶Ë£©
+	//åˆ¤æ–­æ–‡æœ¬æ˜¯å¦ä¸ºunç¼–ç  å¦‚æœä¸æ˜¯ å°±è½¬æ¢æˆunç¼–ç ï¼ˆå¤§ç«¯ï¼‰
 	if(strcmp(coding,"UTF16-BE") == 0 || strcmp(coding,"utf16-be") == 0 || strcmp(coding,"UNICODE") == 0|| strcmp(coding,"unicode") == 0){
 		temp_un = text;
 		len_un = len;
@@ -50,7 +50,7 @@ char* xl_ex_coding(char* text,int len,char* coding,char* tocoding){
 	return NULL;
 }
 
-//gb±àÂë×ªunicode ·µ»ØµÄ×Ö·û´®ĞèÒªÊÍ·ÅÄÚ´æ
+//gbç¼–ç è½¬unicode è¿”å›çš„å­—ç¬¦ä¸²éœ€è¦é‡Šæ”¾å†…å­˜
 char *gbToUn(char *text)
 {
  int len;
@@ -58,7 +58,7 @@ char *gbToUn(char *text)
  
 }
 
-//unicode±àÂë×ªgb ·µ»ØµÄ×Ö·û´®ĞèÒªÊÍ·ÅÄÚ´æ
+//unicodeç¼–ç è½¬gb è¿”å›çš„å­—ç¬¦ä¸²éœ€è¦é‡Šæ”¾å†…å­˜
 char *unToGb(char *text)
 {
  char *input= text;
@@ -71,20 +71,20 @@ int input_len= wstrlen(input);
  return output;
 }
 
-//ÅĞ¶Ïutf±àÂë£¬0Îª³É¹¦£¬-1Ê§°Ü
+//åˆ¤æ–­utfç¼–ç ï¼Œ0ä¸ºæˆåŠŸï¼Œ-1å¤±è´¥
 int IsUTF8(void *pBuffer, long size) {
 	int IsUTF8 = 0;
 	unsigned char *start = (unsigned char *)pBuffer;
 	unsigned char *end = (unsigned char *)pBuffer + size;
 	while (start < end) {
-		if (*start < 0x80)	// (10000000): ÖµĞ¡ÓÚ0x80µÄÎªASCII×Ö·û
+		if (*start < 0x80)	// (10000000): å€¼å°äº0x80çš„ä¸ºASCIIå­—ç¬¦
 		{
 			start++;
-		} else if (*start < (0xC0))	 // (11000000): Öµ½éÓÚ0x80Óë0xC0Ö®¼äµÄÎªÎŞĞ§UTF-8×Ö·û
+		} else if (*start < (0xC0))	 // (11000000): å€¼ä»‹äº0x80ä¸0xC0ä¹‹é—´çš„ä¸ºæ— æ•ˆUTF-8å­—ç¬¦
 		{
 			IsUTF8 = -1;
 			break;
-		} else if (*start < (0xE0))	 // (11100000): ´Ë·¶Î§ÄÚÎª2×Ö½ÚUTF-8×Ö·û
+		} else if (*start < (0xE0))	 // (11100000): æ­¤èŒƒå›´å†…ä¸º2å­—èŠ‚UTF-8å­—ç¬¦
 		{
 			if (start >= end - 1)
 				break;
@@ -93,7 +93,7 @@ int IsUTF8(void *pBuffer, long size) {
 				break;
 			}
 			start += 2;
-		} else if (*start < (0xF0))	 // (11110000): ´Ë·¶Î§ÄÚÎª3×Ö½ÚUTF-8×Ö·û
+		} else if (*start < (0xF0))	 // (11110000): æ­¤èŒƒå›´å†…ä¸º3å­—èŠ‚UTF-8å­—ç¬¦
 		{
 			if (start >= end - 2)
 				break;
@@ -122,7 +122,7 @@ int32 isGBK(const char *buf, int size){
         if(!(0x80 & buf[i]))
         {
             ret = FALSE;
-            mrc_printf("GBK±àÂë¼ì²âÊ§°Ü pos:%d, line:%d\n", i,line);
+            mrc_printf("GBKç¼–ç æ£€æµ‹å¤±è´¥ pos:%d, line:%d\n", i,line);
             break;
         }
     }
@@ -148,7 +148,7 @@ int32 isGB2312(const char *buf, int size) {
 				type = 1;
 			} else if (c < 128) {
 			} else {
-                mrc_printf("GBK±àÂë¼ì²âÊ§°Ü pos:%d, line:%d\n", start,line);
+                mrc_printf("GBKç¼–ç æ£€æµ‹å¤±è´¥ pos:%d, line:%d\n", start,line);
 				isGBK = FALSE;
 				goto GBWHILE;
 			}
@@ -158,7 +158,7 @@ int32 isGB2312(const char *buf, int size) {
 				type = 0;
 			} else {
 				isGBK = FALSE;
-                mrc_printf("GBK±àÂë¼ì²âÊ§°Ü pos:%d, line:%d\n", start,line);
+                mrc_printf("GBKç¼–ç æ£€æµ‹å¤±è´¥ pos:%d, line:%d\n", start,line);
 				goto GBWHILE;
 			}
 		}
@@ -170,7 +170,7 @@ GBWHILE:
 	return isGBK;
 }
 
-//¸´ÖÆunicode±àÂë×Ö·û´®£¬·µ»ØµÄ×Ö·û´®ĞèÒªÊÖ¶¯free
+//å¤åˆ¶unicodeç¼–ç å­—ç¬¦ä¸²ï¼Œè¿”å›çš„å­—ç¬¦ä¸²éœ€è¦æ‰‹åŠ¨free
 char *un_copy(char *text)
 {
  int len= wstrlen(text)+2;
@@ -179,7 +179,7 @@ char *un_copy(char *text)
  return temp;
 }
 
-//un±àÂëÊı×Ö×ª»»Îªint
+//unç¼–ç æ•°å­—è½¬æ¢ä¸ºint
 int un_atoi(char *text)
 {
  char *temp=unToGb(text);
@@ -189,7 +189,7 @@ int un_atoi(char *text)
 }
 
 
-// unicode×Ö·û´®±È½Ï
+// unicodeå­—ç¬¦ä¸²æ¯”è¾ƒ
 /*
 int wstrcmp(char *str1, char *str2)
 {
@@ -203,7 +203,7 @@ int wstrcmp(char *str1, char *str2)
 }
 */
 
-// unicode×Ö·û´®¸´ÖÆ
+// unicodeå­—ç¬¦ä¸²å¤åˆ¶
 /*
 char *wstrcpy(char *dst, char *src)
 {
@@ -222,7 +222,7 @@ char *wstrcpy(char *dst, char *src)
 }
 */
 
-// unicode×Ö·û´®¸´ÖÆÖ¸¶¨³¤¶È
+// unicodeå­—ç¬¦ä¸²å¤åˆ¶æŒ‡å®šé•¿åº¦
 /*
 char *wstrncpy(char *dst, char *src, int32 size)
 {
@@ -245,7 +245,7 @@ char *wstrncpy(char *dst, char *src, int32 size)
 }
 */
 
-// unicode×Ö·û´®¸½¼Ó
+// unicodeå­—ç¬¦ä¸²é™„åŠ 
 /*
 char *wstrcat(char *dst, char *src)
 {
@@ -254,7 +254,7 @@ char *wstrcat(char *dst, char *src)
 }
 */
 /*
-// unicode×Ö·û´®¸´ÖÆ
+// unicodeå­—ç¬¦ä¸²å¤åˆ¶
 char *wstrdup( char *str)
 {
     int len = 0;
@@ -273,9 +273,9 @@ char *wstrdup( char *str)
 */
 /*---------------------------------------------------------------------------*/
 
-//UTF8×ª»»ÎªUnicode
-//²ÎÊı£ºUTF8×Ö·û´®£¬Unicode»º³åÇø£¬»º³åÇø´óĞ¡
-//·µ»Ø£º»º³åÇøÊ¹ÓÃ´óĞ¡
+//UTF8è½¬æ¢ä¸ºUnicode
+//å‚æ•°ï¼šUTF8å­—ç¬¦ä¸²ï¼ŒUnicodeç¼“å†²åŒºï¼Œç¼“å†²åŒºå¤§å°
+//è¿”å›ï¼šç¼“å†²åŒºä½¿ç”¨å¤§å°
 int UTF8ToUni( char *utf8str, char *unistr, int size)
 {
     int32 i = 0, u = 0;
@@ -312,9 +312,9 @@ int UTF8ToUni( char *utf8str, char *unistr, int size)
     return u;
 }
 
-//Unicode×ª»»ÎªUTF8
-//²ÎÊı£ºUnicode×Ö·û´®£¬UTF8»º³åÇø£¬»º³åÇø´óĞ¡
-//·µ»Ø£º»º³åÇøÊ¹ÓÃ´óĞ¡
+//Unicodeè½¬æ¢ä¸ºUTF8
+//å‚æ•°ï¼šUnicodeå­—ç¬¦ä¸²ï¼ŒUTF8ç¼“å†²åŒºï¼Œç¼“å†²åŒºå¤§å°
+//è¿”å›ï¼šç¼“å†²åŒºä½¿ç”¨å¤§å°
 int UniToUTF8(char *unistr, char *utf8str, int size)
 {
     int u = 0, i = 0;
@@ -347,7 +347,7 @@ int UniToUTF8(char *unistr, char *utf8str, int size)
     return i;
 }
 
-// ×ª»»ascii×Ö·û´®Îªunicode×Ö·û´®
+// è½¬æ¢asciiå­—ç¬¦ä¸²ä¸ºunicodeå­—ç¬¦ä¸²
 int Asc2Uni(char *input, char *output, int32 outlen)
 {
     int i;
@@ -368,7 +368,7 @@ int Asc2Uni(char *input, char *output, int32 outlen)
     return (i * 2);
 }
 
-// ×ª»»unicode×Ö·û´®Îªascii×Ö·û´®
+// è½¬æ¢unicodeå­—ç¬¦ä¸²ä¸ºasciiå­—ç¬¦ä¸²
 int Uni2Asc(char *input, char *output,int outlen)
 {
     int32 i;
@@ -388,7 +388,7 @@ int Uni2Asc(char *input, char *output,int outlen)
 }
 
 
-//½«utf8±àÂë×ª»»Îªgb£¬ĞèÒªfree
+//å°†utf8ç¼–ç è½¬æ¢ä¸ºgbï¼Œéœ€è¦free
 char *utfToGb(char *text)
 {
 	char *gb_text;
@@ -401,7 +401,7 @@ char *utfToGb(char *text)
 }
 
 
-//½«gb×ªutf£¬ĞèÒªfree
+//å°†gbè½¬utfï¼Œéœ€è¦free
 char *gbToUtf(char *text)
 {
  int len;
