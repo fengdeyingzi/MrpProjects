@@ -1,4 +1,4 @@
-mrpbuilder -t pack -i bin.elf  ./lib/start.mr ./lib/cfunction.ext assets/ -o demo.mrp ^
+mrpbuilder -t build -gcc -bma -i 2048.c game_menu.c src/ lib/start.mr lib/cfunction.ext assets/ -o demo.mrp ^
 -appid 90012 ^
 -version 1000 ^
 -scrw 240 ^
