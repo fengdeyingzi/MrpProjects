@@ -20,7 +20,7 @@ void pmenu_init(PMENU *menu)
     int i;
     
     menu->items = (PMENU_ITEM*)mrc_malloc(4 * sizeof(PMENU_ITEM));
-    menu->logobmp = readBitmap565FromAssets("logo_240.bma");
+    menu->logobmp = readBitmapFromAssets("logo_240.bma");
     
     menu->items[0].text = "开始游戏";
     menu->items[1].text = "游戏帮助";

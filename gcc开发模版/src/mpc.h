@@ -362,8 +362,7 @@ void mpc_init(void);
 #define readFileFromAssets mrc_readFileFromAssets
 
 
-#define drawRect gl_drawRect
-#define drawCir gl_drawCir
+
 // #define drawBitmapEx( bmp,  x, y, w, h,  tx,  ty, tw, th) drawBitmap565Ex((BITMAP_565*)bmp,x,y,w,h,tx,ty,tw,th)
 // #define bitmapGetInfo(bitmap, info) bitmap565getInfo((BITMAP_565*)bitmap, info)
 

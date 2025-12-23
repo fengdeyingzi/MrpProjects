@@ -24,10 +24,10 @@ extern int getUC3Width(int id);
 extern uint8 *getCharUC3(uint16 id, uint32 fontw, uint32 fonth, uint32 *out_size);
 extern int getFontPixel(uint8 *buf, int n);
 
-int tempfontindex;
-int fontWidth;
-int fontHeight;
-int fontCount;
+static int tempfontindex;
+static int fontWidth;
+static int fontHeight;
+static int fontCount;
 /*
 uc3字体文件结构说明
 0-3字节前缀字符串 "FT16"
@@ -56,7 +56,7 @@ int32 uc3_init(void)
     return MR_SUCCESS;
 }
 
-uint16 swap_bytes_shift(uint16 value) {
+static uint16 swap_bytes_shift(uint16 value) {
     return ((value & 0x00FF) << 8) | ((value & 0xFF00) >> 8);
 }
 

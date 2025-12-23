@@ -23,6 +23,7 @@
         "xlocale": "c",
         "stdarg.h": "c",
         "mrc_graphics.h": "c",
-        "tables.h": "c"
+        "tables.h": "c",
+        "display_object.h": "c"
     }
 }

@@ -262,6 +262,8 @@ void mrc_sand(uint32 seed);
 uint32 mrc_rand(void);
 extern uint16 *w_getScreenBuffer();
 
+
+
 /********************************C库函数结束********************************/
 
 /*取得获取unicode码ch指向的字体的点阵信息，并告之

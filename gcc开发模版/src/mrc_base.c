@@ -2,6 +2,10 @@
 #include "mrc_base.h"
 #include <stdarg.h>
 #include <stdlib.h>
+
+// 是否使用UTF-8编码
+#define USE_UTF8 1
+
 extern int32 mrc_init(void);
 extern int32 mrc_event(int32 code, int32 p0, int32 p1);
 extern int32 mrc_exitApp(void);
@@ -47,6 +51,45 @@ void *mrc_malloc(int size){
 }
 void mrc_free(void *address){
     inFuncs->mrc_free(address);
+}
+
+int32 mrc_sleep(uint32 ms){
+    return mr_table -> mr_sleep(ms);
+}
+
+ int32 mrc_platExCP(int32 code, uint8* input, int32 input_len, uint8** output, int32* output_len, MR_PLAT_EX_CB *cb){
+    return mr_table -> mr_platEx(code, input, input_len, output, output_len, cb);
+ }
+ int32 mrc_platCP(int32 code, int32 param){
+    return mr_table -> mr_plat(code, param);
+ }
+
+ // 在代码中添加简单的 memcpy 实现
+void *memcpy(void *dest, const void *src, size_t n) {
+    char *d = dest;
+    const char *s = src;
+    while (n--) {
+        *d++ = *s++;
+    }
+    return dest;
+}
+
+ /*
+功能:
+	打开、关闭LCD定时休眠功能。
+	
+输入:
+	char CanSleep=1 时，允许LCD定时休眠；
+	char CanSleep=0时，不允许LCD定时休眠。
+
+输出：
+MR_SUCCESS ：成功
+MR_FAILED  ：失败
+MR_IGNORE  : 不支持该功能
+*/
+int32 mrc_LCDCanSleep(char CanSleep){
+    int32 input_len = 0;
+    mrc_platExCP(CanSleep ? 1223 : 1222, NULL, input_len, NULL, NULL, NULL);
 }
 
 void mrc_freeFileData(void* data, int32 filelen){
@@ -336,40 +379,295 @@ int32 mrc_drawChar(uint8* chr, int16 x, int16 y, mr_screenRectSt rect, mr_colour
     return MR_FAILED;
 }
 
+static uint16 swap_bytes_shift(uint16 value) {
+    return ((value & 0x00FF) << 8) | ((value & 0xFF00) >> 8);
+}
+
 int32 mrc_drawText(char* pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, int is_unicode, uint16 font) {
-    return inFuncs->mrc_drawText(pcText, x, y, r, g, b, is_unicode, font);
+    // 参照 uc3_drawText 优化，添加 UTF-8 支持
+    if (is_unicode) {
+        // is_unicode 为 1 时，使用 Unicode（大端）
+        return inFuncs->mrc_drawText(pcText, x, y, r, g, b, is_unicode, font);
+    } else {
+        #if USE_UTF8
+        {
+            // 使用 UTF-8 编码，需要转换为 Unicode
+            uint8 *utf8 = (uint8 *)pcText;
+            int32 total_len = mrc_strlen(pcText);
+            // 分配缓冲区存储转换后的 Unicode 字符串
+            uint16 *unicode_buf = (uint16 *)mrc_malloc((total_len + 1) * sizeof(uint16));
+            if (unicode_buf == NULL) {
+                return MR_FAILED;
+            }
+
+            uint16 *ptr = unicode_buf;
+            while (*utf8) {
+                uint16 unicode;
+                // UTF-8 解码
+                if ((*utf8 & 0x80) == 0) {
+                    // 单字节 ASCII
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    // 双字节 UTF-8
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    // 三字节 UTF-8
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                *ptr++ = swap_bytes_shift(unicode); // 存储为大端序
+            }
+            *ptr = 0; // 字符串结束符
+            
+            // 调用底层函数，设置 is_unicode=1
+            int32 result = inFuncs->mrc_drawText((char*)unicode_buf, x, y, r, g, b, 1, font);
+
+            mrc_free(unicode_buf);
+            return result;
+        }
+        #else
+        {
+            // 非 UTF-8 模式，使用 GBK 编码
+            return inFuncs->mrc_drawText(pcText, x, y, r, g, b, is_unicode, font);
+        }
+        #endif
+    }
 }
 
 int32 mrc_drawTextEx(char* pcText, int16 x, int16 y, mr_screenRectSt rect, mr_colourSt colorst, int flag, uint16 font) {
-    return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+    // flag 参数包含 is_unicode 信息（通常 flag & 0x01 表示 is_unicode）
+    int is_unicode = flag & 0x01;
+
+    if (is_unicode) {
+        // is_unicode 为 1 时，使用 Unicode（大端）
+        return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+    } else {
+        #if USE_UTF8
+        {
+            // 使用 UTF-8 编码，需要转换为 Unicode
+            uint8 *utf8 = (uint8 *)pcText;
+            int32 total_len = mrc_strlen(pcText);
+            // 分配缓冲区存储转换后的 Unicode 字符串
+            uint16 *unicode_buf = (uint16 *)mrc_malloc((total_len + 1) * sizeof(uint16));
+            if (unicode_buf == NULL) {
+                return MR_FAILED;
+            }
+
+            uint16 *ptr = unicode_buf;
+            while (*utf8) {
+                uint16 unicode;
+                // UTF-8 解码
+                if ((*utf8 & 0x80) == 0) {
+                    // 单字节 ASCII
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    // 双字节 UTF-8
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    // 三字节 UTF-8
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                *ptr++ = swap_bytes_shift(unicode); // 存储为大端序
+            }
+            *ptr = 0; // 字符串结束符
+
+            // 调用底层函数，设置 is_unicode=1（修改 flag）
+            int new_flag = flag | 0x01; // 设置 Unicode 标志位
+            int32 result = mr_table->_DrawTextEx((char*)unicode_buf, x, y, rect, colorst, new_flag, font);
+
+            mrc_free(unicode_buf);
+            return result;
+        }
+        #else
+        {
+            // 非 UTF-8 模式，使用 GBK 编码
+            return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+        }
+        #endif
+    }
 }
 
 int32 mrc_drawTextExVM(char* pcText, int16 x, int16 y, mr_screenRectSt rect, mr_colourSt colorst, int flag, uint16 font) {
-    // 直接使用VM的函数来画图，这里调用相同的函数
-    return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+    // flag 参数包含 is_unicode 信息（通常 flag & 0x01 表示 is_unicode）
+    int is_unicode = flag & 0x01;
+
+    if (is_unicode) {
+        // is_unicode 为 1 时，使用 Unicode（大端）
+        return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+    } else {
+        #if USE_UTF8
+        {
+            // 使用 UTF-8 编码，需要转换为 Unicode
+            uint8 *utf8 = (uint8 *)pcText;
+            int32 total_len = mrc_strlen(pcText);
+            // 分配缓冲区存储转换后的 Unicode 字符串
+            uint16 *unicode_buf = (uint16 *)mrc_malloc((total_len + 1) * sizeof(uint16));
+            if (unicode_buf == NULL) {
+                return MR_FAILED;
+            }
+
+            uint16 *ptr = unicode_buf;
+            while (*utf8) {
+                uint16 unicode;
+                // UTF-8 解码
+                if ((*utf8 & 0x80) == 0) {
+                    // 单字节 ASCII
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    // 双字节 UTF-8
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    // 三字节 UTF-8
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                *ptr++ = swap_bytes_shift(unicode); // 存储为大端序
+            }
+            *ptr = 0; // 字符串结束符
+
+            // 调用底层函数，设置 is_unicode=1（修改 flag）
+            int new_flag = flag | 0x01; // 设置 Unicode 标志位
+            int32 result = mr_table->_DrawTextEx((char*)unicode_buf, x, y, rect, colorst, new_flag, font);
+
+            mrc_free(unicode_buf);
+            return result;
+        }
+        #else
+        {
+            // 非 UTF-8 模式，使用 GBK 编码
+            return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+        }
+        #endif
+    }
 }
 
 int32 mrc_drawTextLeft(char* pcText, int16 x, int16 y, mr_screenRectSt rect, mr_colourSt colorst, int flag, uint16 font) {
-    // 注意：需要检查是否有专门的函数
-    // 暂时使用_drawTextEx
-    return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+    // flag 参数包含 is_unicode 信息（通常 flag & 0x01 表示 is_unicode）
+    int is_unicode = flag & 0x01;
+
+    if (is_unicode) {
+        // is_unicode 为 1 时，使用 Unicode（大端）
+        return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+    } else {
+        #if USE_UTF8
+        {
+            // 使用 UTF-8 编码，需要转换为 Unicode
+            uint8 *utf8 = (uint8 *)pcText;
+            int32 total_len = mrc_strlen(pcText);
+            // 分配缓冲区存储转换后的 Unicode 字符串
+            uint16 *unicode_buf = (uint16 *)mrc_malloc((total_len + 1) * sizeof(uint16));
+            if (unicode_buf == NULL) {
+                return MR_FAILED;
+            }
+
+            uint16 *ptr = unicode_buf;
+            while (*utf8) {
+                uint16 unicode;
+                // UTF-8 解码
+                if ((*utf8 & 0x80) == 0) {
+                    // 单字节 ASCII
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    // 双字节 UTF-8
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    // 三字节 UTF-8
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                *ptr++ = swap_bytes_shift(unicode); // 存储为大端序
+            }
+            *ptr = 0; // 字符串结束符
+
+            // 调用底层函数，设置 is_unicode=1（修改 flag）
+            int new_flag = flag | 0x01; // 设置 Unicode 标志位
+            int32 result = mr_table->_DrawTextEx((char*)unicode_buf, x, y, rect, colorst, new_flag, font);
+
+            mrc_free(unicode_buf);
+            return result;
+        }
+        #else
+        {
+            // 非 UTF-8 模式，使用 GBK 编码
+            return mr_table->_DrawTextEx(pcText, x, y, rect, colorst, flag, font);
+        }
+        #endif
+    }
 }
 
 int32 mrc_drawTextRight(char* pcText, int16 x, int16 y, mr_screenRectSt rect, mr_colourSt colorst, int flag, uint16 font) {
     if (!pcText) {
         return 0;
     }
-    
+
+    // flag 参数包含 is_unicode 信息（通常 flag & 0x01 表示 is_unicode）
+    int is_unicode = flag & 0x01;
+
     // 将RGB颜色转换为nativecolor格式
     uint16 nativecolor = ((colorst.r & 0xF8) << 8) | ((colorst.g & 0xFC) << 3) | ((colorst.b & 0xF8) >> 3);
-    
-    // 将GB字符串转换为Unicode
-    int32 err = 0, size = 0;
-    uint16* unicode_text = mrc_c2u(pcText, &err, &size);
-    if (!unicode_text) {
-        return 0;
+
+    uint16* unicode_text = NULL;
+    int32 size = 0;
+    int32 err = 0;
+
+    if (is_unicode) {
+        // is_unicode 为 1 时，使用 Unicode（大端）
+        unicode_text = (uint16*)pcText;
+        // 计算 Unicode 字符串长度
+        size = 0;
+        while (unicode_text[size]) {
+            size++;
+        }
+        size++; // 包含结束符
+    } else {
+        #if USE_UTF8
+        {
+            // 使用 UTF-8 编码，需要转换为 Unicode
+            uint8 *utf8 = (uint8 *)pcText;
+            int32 total_len = mrc_strlen(pcText);
+            // 分配缓冲区存储转换后的 Unicode 字符串
+            unicode_text = (uint16 *)mrc_malloc((total_len + 1) * sizeof(uint16));
+            if (unicode_text == NULL) {
+                return 0;
+            }
+
+            uint16 *ptr = unicode_text;
+            while (*utf8) {
+                uint16 unicode;
+                // UTF-8 解码
+                if ((*utf8 & 0x80) == 0) {
+                    // 单字节 ASCII
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    // 双字节 UTF-8
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    // 三字节 UTF-8
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+                *ptr++ = swap_bytes_shift(unicode); // 存储为大端序
+                size++;
+            }
+            *ptr = 0; // 字符串结束符
+        }
+        #else
+        {
+            // 非 UTF-8 模式，使用 GBK 编码（通过 mrc_c2u 转换）
+            unicode_text = mrc_c2u(pcText, &err, &size);
+            if (!unicode_text) {
+                return 0;
+            }
+        }
+        #endif
     }
-    
+
     // 计算文本总宽度
     int32 total_width = 0;
     int32 char_count = 0;
@@ -381,19 +679,19 @@ int32 mrc_drawTextRight(char* pcText, int16 x, int16 y, mr_screenRectSt rect, mr
             char_count++;
         }
     }
-    
+
     // 从右向左绘制
     int32 current_x = x;
     int32 drawn_count = 0;
-    
+
     for (int32 i = char_count - 1; i >= 0; i--) {
         uint16 ch = unicode_text[i];
         int char_width = 0, char_height = 0;
         const char* bitmap = mr_table->mr_getCharBitmap(ch, font, &char_width, &char_height);
-        
+
         if (bitmap) {
             // 检查是否在矩形范围内
-            if (current_x - char_width >= rect.x && current_x <= rect.x + rect.w && 
+            if (current_x - char_width >= rect.x && current_x <= rect.x + rect.w &&
                 y >= rect.y && y + char_height <= rect.y + rect.h) {
                 // 绘制字符
                 if (mr_table->mr_platDrawChar) {
@@ -404,10 +702,18 @@ int32 mrc_drawTextRight(char* pcText, int16 x, int16 y, mr_screenRectSt rect, mr
             current_x -= char_width;
         }
     }
-    
-    // 释放转换后的内存
-    mrc_free(unicode_text);
-    
+
+    // 释放转换后的内存（如果是动态分配的）
+    #if USE_UTF8
+    if (!is_unicode) {
+        mrc_free(unicode_text);
+    }
+    #else
+    if (!is_unicode) {
+        mrc_free(unicode_text);
+    }
+    #endif
+
     return drawn_count;
 }
 
@@ -424,10 +730,10 @@ int32 mrc_textWidthHeight(char* pcText, int is_unicode, uint16 font, int32* w, i
     if (!pcText || !w || !h) {
         return MR_FAILED;
     }
-    
+
     int32 total_width = 0;
     int32 max_height = 0;
-    
+
     if (is_unicode) {
         // Unicode字符串
         uint16* unicode_text = (uint16*)pcText;
@@ -435,7 +741,7 @@ int32 mrc_textWidthHeight(char* pcText, int is_unicode, uint16 font, int32* w, i
         while (unicode_text[i]) {
             uint16 ch = unicode_text[i];
             int char_width = 0, char_height = 0;
-            
+
             // 获取字符位图信息
             const char* bitmap = mr_table->mr_getCharBitmap(ch, font, &char_width, &char_height);
             if (bitmap) {
@@ -447,33 +753,68 @@ int32 mrc_textWidthHeight(char* pcText, int is_unicode, uint16 font, int32* w, i
             i++;
         }
     } else {
-        // GB2312字符串，需要转换为Unicode
-        int32 err = 0, size = 0;
-        uint16* unicode_text = mrc_c2u(pcText, &err, &size);
-        if (!unicode_text) {
-            return MR_FAILED;
-        }
-        
-        int32 i = 0;
-        while (i < size && unicode_text[i]) {
-            uint16 ch = unicode_text[i];
-            int char_width = 0, char_height = 0;
-            
-            // 获取字符位图信息
-            const char* bitmap = mr_table->mr_getCharBitmap(ch, font, &char_width, &char_height);
-            if (bitmap) {
-                total_width += char_width;
-                if (char_height > max_height) {
-                    max_height = char_height;
+        #if USE_UTF8
+        {
+            // 使用 UTF-8 编码，需要转换为 Unicode
+            uint8 *utf8 = (uint8 *)pcText;
+            while (*utf8) {
+                uint16 unicode;
+                // UTF-8 解码
+                if ((*utf8 & 0x80) == 0) {
+                    // 单字节 ASCII
+                    unicode = *utf8++;
+                } else if ((*utf8 & 0x20) == 0) {
+                    // 双字节 UTF-8
+                    unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                    utf8 += 2;
+                } else {
+                    // 三字节 UTF-8
+                    unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                    utf8 += 3;
+                }
+
+                int char_width = 0, char_height = 0;
+                // 获取字符位图信息
+                const char* bitmap = mr_table->mr_getCharBitmap(unicode, font, &char_width, &char_height);
+                if (bitmap) {
+                    total_width += char_width;
+                    if (char_height > max_height) {
+                        max_height = char_height;
+                    }
                 }
             }
-            i++;
         }
-        
-        // 释放转换后的内存
-        mrc_free(unicode_text);
+        #else
+        {
+            // GB2312字符串，需要转换为Unicode
+            int32 err = 0, size = 0;
+            uint16* unicode_text = mrc_c2u(pcText, &err, &size);
+            if (!unicode_text) {
+                return MR_FAILED;
+            }
+
+            int32 i = 0;
+            while (i < size && unicode_text[i]) {
+                uint16 ch = unicode_text[i];
+                int char_width = 0, char_height = 0;
+
+                // 获取字符位图信息
+                const char* bitmap = mr_table->mr_getCharBitmap(ch, font, &char_width, &char_height);
+                if (bitmap) {
+                    total_width += char_width;
+                    if (char_height > max_height) {
+                        max_height = char_height;
+                    }
+                }
+                i++;
+            }
+
+            // 释放转换后的内存
+            mrc_free(unicode_text);
+        }
+        #endif
     }
-    
+
     *w = total_width;
     *h = max_height;
     return MR_SUCCESS;
