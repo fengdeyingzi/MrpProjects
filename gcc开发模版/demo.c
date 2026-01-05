@@ -123,6 +123,9 @@ int32 mrc_event(int32 code, int32 p0, int32 p1) {
         mrc_refreshScreen(0, 0, SCRW, SCRH);
 
     } else if (code == MR_KEY_RELEASE) {
+        if(p0 == MR_KEY_1){
+            mrc_runMrp("mrpshop.mrp", "start.mr", NULL);
+        }
         if (p0 == MR_KEY_SELECT) {
             mrc_exit();
         }

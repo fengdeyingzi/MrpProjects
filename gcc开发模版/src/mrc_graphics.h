@@ -110,12 +110,26 @@ void gl_drawRotatedHollowRect(int16 centerX, int16 centerY, int16 width, int16 h
 // 画文字 font表示字体大小，可选0/1/2三种大小
 int32 gl_drawText(char* pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, int is_unicode, uint16 font);
 
-// 获取文字宽高信息 保存到w和h中
-int32 gl_textWidthHeight(char* pcText, int is_unicode, uint16 font, int32* w, int32* h);
+// 在矩形区域内绘制多行uc3字体 y坐标可为负数
+int32 gl_drawTextInRect(const char *pcText, int16 dx, int16 dy, int16 x, int16 y, int16 width, int16 height, uint8 r, uint8 g, uint8 b, int is_unicode, uint16 font);
+
+// 返回待显示字符串若显示在宽为w的区间里，需要的行数；
+int32 gl_textRow(const char* pcText, int32 w, int is_unicode, uint16 font);
+
+// 获取文字宽高 保存到w和h中
+int32 gl_textWidthHeight(const char* pcText, int is_unicode, uint16 font, int32* w, int32* h);
 
 // 获取bitmap信息
 int32 bitmapGetInfo(BITMAP_565 *bmp, BITMAPINFO *info);
 
+// 绘制emoji, size表示emoji图标的宽高
+int32 emoji_draw(char *emoji, int x, int y, int size);
+
+// 绘制emoji封装, size表示emoji图标的宽高
+int32 gl_emoji_draw(char *emoji, int x, int y, int size);
+
+// 释放资源（font资源需要释放）
+int32 gl_free();
 
 
 #endif

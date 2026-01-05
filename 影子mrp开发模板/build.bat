@@ -1,4 +1,4 @@
-mrpbuilder -t build -Isrc -ItPNG -bmp565 -i main.c assets/ src/ -gzip -o demo.mrp ^
+mrpbuilder -t build -gzip -bma  -Isrc -ItPNG -bmp565 -i main.c assets/ src/ -gzip -o demo.mrp ^
 -appid 90010 ^
 -version 1000 ^
 -scrw 240 ^

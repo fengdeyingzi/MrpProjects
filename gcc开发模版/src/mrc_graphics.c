@@ -3,6 +3,8 @@
 #include "xl_bmp.h"
 #include "ex_math.h"
 #include "mpc.h"
+#include "uc3_mfont.h"
+#include "emoji.h"
 
 /*
 实现一些绘图函数
@@ -11,6 +13,35 @@
 风的影子
 
 */
+
+// 字体管理：支持 0, 1, 2 三种字体大小
+static UC3_FONT *g_fonts[3] = {NULL, NULL, NULL};
+
+// 获取字体实例，如果未加载则自动加载
+static UC3_FONT* get_font(uint16 font) {
+    char font_name[32];
+
+    // 检查 font 参数范围
+    if (font > 2) {
+        mrc_printf("get_font: invalid font index: %d", font);
+        return NULL;
+    }
+
+    // 如果字体已加载，直接返回
+    if (g_fonts[font] != NULL) {
+        return g_fonts[font];
+    }
+
+    // 构造字体文件名并加载
+    mrc_sprintf(font_name, "font_%d.uc3", font);
+    g_fonts[font] = mfont_load(font_name);
+
+    if (g_fonts[font] == NULL) {
+        mrc_printf("get_font: failed to load font: %s", font_name);
+    }
+
+    return g_fonts[font];
+}
 // 将rgb888转rgb565
 #define MAKECOLOR565(color) ((uint16)((color >> 8) & 0xf800) | (uint16)((color >> 5) & 0x07e0) | (uint16)((color >> 3) & 0x1f))
 #ifndef MAKERGB
@@ -27,6 +58,7 @@ extern int pointInTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3,
 extern void gl_drawHLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color);
 extern void gl_drawVLine(int32 x1, int32 y1, int32 x2, int32 y2, uint32 color);
 extern void drawBitmap8888(BITMAP_565 *bmp, int32 x, int32 y);
+extern void drawBitmap565(BITMAP_565 *bmp, int32 x, int32 y);
 // 混合两个rgb565颜色 返回新的颜色
 // dstColor 颜色1
 // srcColor 颜色2
@@ -1525,12 +1557,101 @@ int pointInTriangle(int x, int y, int x1, int y1, int x2, int y2, int x3, int y3
 
 #endif
 
+// 画文字 font表示字体大小，可选0/1/2三种大小
 int32 gl_drawText(char* pcText, int16 x, int16 y, uint8 r, uint8 g, uint8 b, int is_unicode, uint16 font){
-  return mrc_drawText(pcText, x, y, r, g, b, is_unicode, font);
+    UC3_FONT *fontObj = get_font(font);
+
+    if (fontObj == NULL) {
+        mrc_printf("gl_drawText: failed to get font %d", font);
+        return MR_FAILED;
+    }
+
+    return mfont_drawText(fontObj, pcText, x, y, r, g, b, is_unicode);
 }
 
-int32 gl_textWidthHeight(char* pcText, int is_unicode, uint16 font, int32* w, int32* h){
-  return mrc_textWidthHeight(pcText, is_unicode, font, w, h);
+// 在矩形区域内绘制多行uc3字体 y坐标可为负数
+int32 gl_drawTextInRect(const char *pcText, int16 dx, int16 dy, int16 x, int16 y, int16 width, int16 height, uint8 r, uint8 g, uint8 b, int is_unicode, uint16 font){
+    UC3_FONT *fontObj = get_font(font);
+
+    if (fontObj == NULL) {
+        mrc_printf("gl_drawTextInRect: failed to get font %d", font);
+        return MR_FAILED;
+    }
+
+    return mfont_drawTextInRect(fontObj, pcText, dx, dy, x, y, width, height, r, g, b, is_unicode);
+}
+
+// 返回待显示字符串若显示在宽为w的区间里，需要的行数
+int32 gl_textRow(const char* pcText, int32 w, int is_unicode, uint16 font){
+    UC3_FONT *fontObj = get_font(font);
+    int line_count = 1;
+    int current_width = 0;
+    int line_height;
+    uint16 *ucptr;
+    uint8 *utf8;
+    uint16 unicode;
+    int char_width;
+
+    if (fontObj == NULL) {
+        mrc_printf("gl_textRow: failed to get font %d", font);
+        return 1;
+    }
+
+    line_height = fontObj->font_height + 2;
+
+    if (is_unicode) {
+        ucptr = (uint16 *)pcText;
+        while (*ucptr) {
+            char_width = mfont_getCharWidth(fontObj, *ucptr);
+            if (current_width + char_width > w) {
+                line_count++;
+                current_width = char_width;
+            } else {
+                current_width += char_width;
+            }
+            ucptr++;
+        }
+    } else {
+        // UTF-8编码处理
+        utf8 = (uint8 *)pcText;
+        while (*utf8) {
+            // UTF-8解码
+            if ((*utf8 & 0x80) == 0) {
+                unicode = *utf8++;
+            } else if ((*utf8 & 0x20) == 0) {
+                unicode = ((utf8[0] & 0x1f) << 6) | (utf8[1] & 0x3f);
+                utf8 += 2;
+            } else {
+                unicode = ((utf8[0] & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f);
+                utf8 += 3;
+            }
+
+            char_width = mfont_getCharWidth(fontObj, unicode);
+            if (current_width + char_width > w) {
+                line_count++;
+                current_width = char_width;
+            } else {
+                current_width += char_width;
+            }
+        }
+    }
+
+    return line_count;
+}
+
+// 获取文字宽高 保存到w和h中
+int32 gl_textWidthHeight(const char* pcText, int is_unicode, uint16 font, int32* w, int32* h){
+    UC3_FONT *fontObj = get_font(font);
+
+    if (fontObj == NULL) {
+        mrc_printf("gl_textWidthHeight: failed to get font %d", font);
+        return MR_FAILED;
+    }
+
+    *w = mfont_getWidth(fontObj, pcText, is_unicode);
+    *h = mfont_getHeight(fontObj, pcText, is_unicode);
+
+    return MR_SUCCESS;
 }
 
 int32 bitmapGetInfo(BITMAP_565* bmp, BITMAPINFO *info)
@@ -1543,3 +1664,24 @@ int32 bitmapGetInfo(BITMAP_565* bmp, BITMAPINFO *info)
   return 0;
 }
 
+
+// 绘制emoji封装, size表示emoji图标的宽高
+int32 gl_emoji_draw(char *emoji, int x, int y, int size){
+    return emoji_draw(emoji, x, y, size);
+}
+
+// 释放资源（font资源需要释放）
+int32 gl_free(){
+    int i;
+    for (i = 0; i < 3; i++) {
+        if (g_fonts[i] != NULL) {
+            mfont_free(g_fonts[i]);
+            g_fonts[i] = NULL;
+        }
+    }
+
+    /* 释放emoji资源 */
+    emoji_free();
+
+    return MR_SUCCESS;
+}

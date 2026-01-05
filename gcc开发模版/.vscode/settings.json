@@ -24,6 +24,7 @@
         "stdarg.h": "c",
         "mrc_graphics.h": "c",
         "tables.h": "c",
-        "display_object.h": "c"
+        "display_object.h": "c",
+        "mrc_sound.h": "c"
     }
 }

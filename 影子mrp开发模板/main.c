@@ -6,6 +6,7 @@
 #include "xl_debug.h"
 
 int32 timer_cd;
+BITMAP_565 *logo;
 extern void drawGame(void);
 void timer_run(int32 id)
 {
@@ -19,7 +20,7 @@ void drawGame(void)
   char *text_exit = NULL;
   int width = 0;
   mrc_clearScreen(0, 0, 0);
-
+/*
   // mrc_printf("uc3 draw");
   uc3_drawText("测试字体 风的影子，制作", 10, 10, 255, 255, 255, 0);
   LOG_MSG("11");
@@ -31,8 +32,15 @@ void drawGame(void)
 
   text_exit = "退出";
   width = uc3_getWidth(text_exit, 0);
+  
   uc3_drawText(text_exit, SCRW - width, SCRH - 16, 255, 255, 255, 0);
+  drawBitmap565(logo, -40, -20);
+  drawBitmap565(logo, 20, 30);
+
   mrc_refreshScreen(0, 0, SCRW, SCRH);
+  */
+  width = mrc_getVersion();
+  mrc_printf("version = %d\n", width);
 }
 
 int32 mrc_init(void)
@@ -44,6 +52,7 @@ int32 mrc_init(void)
   LOG_MSG("uc3 init");
   uc3_init();
   
+  logo = readBitmap565FromAssets("logo_240.png");
   LOG_MSG("getuptime");
   sand(getuptime());
 
@@ -79,6 +88,7 @@ int32 mrc_exitApp()
   int i = 0;
   mrc_timerStop(timer_cd);
   mrc_timerDelete(timer_cd);
+  bitmapFree(logo);
   // 释放字体
   uc3_free();
 

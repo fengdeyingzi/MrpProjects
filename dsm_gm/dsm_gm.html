@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retro Feature Phone UI</title>
+    <style>
+        body {
+            background-color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas {
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            image-rendering: pixelated; 
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent; 
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="screen" width="240" height="320"></canvas>
+
+<div class="controls">
+    键盘：↑ ↓ 选择 | ← → 翻页 | 回车 确定 | Esc 返回<br>
+    鼠标/触屏：直接点击列表项或底部按钮
+</div>
+
+<script>
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+
+    // --- 配置与常量 ---
+    const COLORS = {
+        bg: '#1fa2c3',
+        header: '#165d6f',
+        text: '#ffffff',
+        selectBg: '#dceef5',
+        selectText: '#000000',
+        scrollBar: '#ffffff'
+    };
+
+    const LAYOUT = {
+        headerHeight: 26,
+        footerHeight: 20, // 底部功能区高度，滚动条需避开此区域
+        lineHeight: 22,
+        listStartY: 32,
+        visibleItems: 11,
+        width: 240,
+        height: 320
+    };
+
+    const STATES = {
+        LIST: 'LIST',
+        MENU: 'MENU'
+    };
+
+    // --- 数据 ---
+    const appList = [
+        "神兽传说2", "给力猫", "白跑分", "2012世纪空战 (端午版)",
+        "易编辑", "手机CAPP_1.9 mrp版", "易编辑", "宝贝连连看",
+        "暗黑3之喋血双雄", "刀剑狂之情仇录", "3D美女麻将",
+        "地下城勇士", "疯狂的战神", "QQ斗地主", "UC浏览器", 
+        "天天酷跑", "雷电2014"
+    ];
+
+    const actionMenu = [
+        { text: "启动应用", icon: "💾" },
+        { text: "更新应用", icon: "⬇️" },
+        { text: "应用说明", icon: "📄" },
+        { text: "删除应用", icon: "❌" }
+    ];
+
+    // --- 全局状态 ---
+    let state = {
+        current: STATES.LIST,
+        listIndex: 2,
+        listScrollTop: 0,
+        menuIndex: 0
+    };
+
+    // --- 核心绘制函数 ---
+
+    function draw() {
+        ctx.fillStyle = COLORS.bg;
+        ctx.fillRect(0, 0, LAYOUT.width, LAYOUT.height);
+
+        if (state.current === STATES.LIST) {
+            drawListScreen();
+        } else if (state.current === STATES.MENU) {
+            drawMenuScreen();
+        }
+
+        drawFooter();
+    }
+
+    function drawListScreen() {
+        drawHeader("应用列表", "3");
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        
+        let start = state.listScrollTop;
+        let end = Math.min(start + LAYOUT.visibleItems, appList.length);
+
+        for (let i = start; i < end; i++) {
+            let visualIndex = i - start; 
+            let y = LAYOUT.listStartY + (visualIndex * LAYOUT.lineHeight);
+
+            if (i === state.listIndex) {
+                drawSelectionBar(y);
+                ctx.fillStyle = COLORS.selectText;
+            } else {
+                ctx.fillStyle = COLORS.text;
+            }
+
+            ctx.font = '14px serif'; 
+            ctx.fillText('🐥', 5, y + 3);
+            ctx.font = '16px SimSun, Songti SC, serif';
+            ctx.fillText(appList[i], 28, y + 2);
+        }
+
+        drawScrollBar(appList.length, state.listIndex);
+    }
+
+    function drawMenuScreen() {
+        drawHeader(appList[state.listIndex], "1");
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        for (let i = 0; i < actionMenu.length; i++) {
+            let y = LAYOUT.listStartY + (i * LAYOUT.lineHeight);
+
+            if (i === state.menuIndex) {
+                drawSelectionBar(y);
+                ctx.fillStyle = COLORS.selectText;
+            } else {
+                ctx.fillStyle = COLORS.text;
+            }
+
+            ctx.font = '14px serif';
+            ctx.fillText(actionMenu[i].icon, 5, y + 3);
+
+            ctx.font = '16px SimSun, Songti SC, serif';
+            ctx.fillText(actionMenu[i].text, 28, y + 2);
+        }
+
+        // --- 菜单页面的滚动条 (静态模拟) ---
+        const scrollBarX = 237;
+        const scrollBottomY = LAYOUT.height - LAYOUT.footerHeight; // 300px
+
+        // 槽
+        ctx.beginPath();
+        ctx.moveTo(scrollBarX, LAYOUT.headerHeight);
+        ctx.lineTo(scrollBarX, scrollBottomY); // 绘制到300px处停止
+        ctx.strokeStyle = COLORS.scrollBar;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // 滑块
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(scrollBarX, LAYOUT.headerHeight + 2);
+        ctx.lineTo(scrollBarX, LAYOUT.headerHeight + 20);
+        ctx.stroke();
+    }
+
+    // --- 辅助绘制组件 ---
+
+    function drawHeader(title, rightText) {
+        ctx.fillStyle = COLORS.header;
+        ctx.fillRect(0, 0, LAYOUT.width, LAYOUT.headerHeight);
+        
+        ctx.fillStyle = COLORS.text;
+        ctx.font = '16px SimSun, Songti SC, serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(title, LAYOUT.width / 2, LAYOUT.headerHeight / 2 + 1);
+
+        if (rightText) {
+            ctx.textAlign = 'right';
+            ctx.fillText(rightText, LAYOUT.width - 5, LAYOUT.headerHeight / 2 + 1);
+        }
+    }
+
+    function drawFooter() {
+        const y = LAYOUT.height - 14;
+        ctx.fillStyle = COLORS.text;
+        ctx.font = '16px SimSun, Songti SC, serif';
+        ctx.textBaseline = 'middle';
+        
+        ctx.textAlign = 'left';
+        ctx.fillText("选择", 4, y);
+
+        ctx.textAlign = 'right';
+        ctx.fillText("返回", LAYOUT.width - 4, y);
+    }
+
+    function drawSelectionBar(y) {
+        ctx.fillStyle = COLORS.selectBg;
+        roundRect(ctx, 2, y - 1, 230, 21, 3, true, false);
+    }
+
+    // --- 核心修改：滚动条绘制 ---
+    function drawScrollBar(totalItems, currentIndex) {
+        const scrollBarX = 237;
+        const startY = LAYOUT.headerHeight; // 26
+        // 关键修改：终点减去 footer 高度，避免遮挡 "返回"
+        const endY = LAYOUT.height - LAYOUT.footerHeight; // 300
+        const trackHeight = endY - startY; // 274
+
+        // 绘制槽线
+        ctx.beginPath();
+        ctx.moveTo(scrollBarX, startY);
+        ctx.lineTo(scrollBarX, endY);
+        ctx.strokeStyle = COLORS.scrollBar;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // 绘制滑块
+        if (totalItems > 0) {
+            // 确保滑块最小高度为20，防止过小
+            const barHeight = Math.max(20, trackHeight / (totalItems > LAYOUT.visibleItems ? totalItems : LAYOUT.visibleItems));
+            
+            // 计算滑块位置
+            // 可滚动距离 = 轨道高度 - 滑块高度
+            const maxScrollDist = trackHeight - barHeight;
+            const scrollPercent = currentIndex / (totalItems - 1);
+            
+            const barY = startY + (maxScrollDist * scrollPercent);
+
+            ctx.beginPath();
+            ctx.moveTo(scrollBarX, barY);
+            ctx.lineTo(scrollBarX, barY + barHeight);
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        }
+    }
+
+    function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+    }
+
+    // --- 逻辑控制 (保持不变) ---
+
+    function handleEnter() {
+        if (state.current === STATES.LIST) {
+            state.current = STATES.MENU;
+            state.menuIndex = 0;
+            draw();
+        } else {
+            const action = actionMenu[state.menuIndex].text;
+            alert(`执行功能: ${action} - ${appList[state.listIndex]}`);
+        }
+    }
+
+    function handleBack() {
+        if (state.current === STATES.MENU) {
+            state.current = STATES.LIST;
+            draw();
+        }
+    }
+
+    function moveCursor(delta) {
+        if (state.current === STATES.LIST) {
+            const newIndex = state.listIndex + delta;
+            if (newIndex >= 0 && newIndex < appList.length) {
+                state.listIndex = newIndex;
+                if (state.listIndex < state.listScrollTop) {
+                    state.listScrollTop = state.listIndex;
+                } else if (state.listIndex >= state.listScrollTop + LAYOUT.visibleItems) {
+                    state.listScrollTop = state.listIndex - LAYOUT.visibleItems + 1;
+                }
+                draw();
+            }
+        } else {
+            const newIndex = state.menuIndex + delta;
+            if (newIndex >= 0 && newIndex < actionMenu.length) {
+                state.menuIndex = newIndex;
+                draw();
+            }
+        }
+    }
+
+    function pageTurn(direction) {
+        if (state.current !== STATES.LIST) return;
+        const pageSize = LAYOUT.visibleItems;
+        let newIndex = state.listIndex + (direction * pageSize);
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex >= appList.length) newIndex = appList.length - 1;
+        state.listIndex = newIndex;
+        state.listScrollTop = Math.floor(state.listIndex / pageSize) * pageSize;
+        if (state.listScrollTop + pageSize > appList.length) {
+            state.listScrollTop = Math.max(0, appList.length - pageSize);
+        }
+        draw();
+    }
+
+    // --- 事件监听 (保持不变) ---
+
+    document.addEventListener('keydown', (e) => {
+        switch(e.key) {
+            case 'ArrowUp': e.preventDefault(); moveCursor(-1); break;
+            case 'ArrowDown': e.preventDefault(); moveCursor(1); break;
+            case 'ArrowLeft': e.preventDefault(); pageTurn(-1); break;
+            case 'ArrowRight': e.preventDefault(); pageTurn(1); break;
+            case 'Enter': 
+            case ' ': e.preventDefault(); handleEnter(); break;
+            case 'Escape':
+            case 'Backspace': e.preventDefault(); handleBack(); break;
+        }
+    });
+
+    function handlePointer(x, y) {
+        if (y > LAYOUT.height - LAYOUT.footerHeight) {
+            if (x < LAYOUT.width / 2) handleEnter();
+            else handleBack();
+            return;
+        }
+        if (y > LAYOUT.headerHeight && y < LAYOUT.height - LAYOUT.footerHeight) {
+            const relativeY = y - LAYOUT.listStartY;
+            const clickedRow = Math.floor(relativeY / LAYOUT.lineHeight);
+            if (state.current === STATES.LIST) {
+                const targetIndex = state.listScrollTop + clickedRow;
+                if (targetIndex >= 0 && targetIndex < appList.length) {
+                    state.listIndex = targetIndex;
+                    handleEnter();
+                }
+            } else {
+                if (clickedRow >= 0 && clickedRow < actionMenu.length) {
+                    state.menuIndex = clickedRow;
+                    handleEnter();
+                    draw();
+                }
+            }
+        }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        handlePointer((e.clientX - rect.left) * scaleX, (e.clientY - rect.top) * scaleY);
+    });
+
+    draw();
+
+</script>
+
+</body>
+</html>

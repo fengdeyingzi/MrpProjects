@@ -74,6 +74,92 @@ void *memcpy(void *dest, const void *src, size_t n) {
     return dest;
 }
 
+const char *mrc_strchr(const char *src,int c)
+{
+    while(*src!='\0')
+    {
+        if(*src==(char)c)
+            return (char*)src;
+        src++;
+    }
+    if(c=='\0')
+        return (char*)src;
+    return NULL;
+}
+
+
+
+ int32 mrc_runMrp(char* pack_filename_param, char* start_filename_param, char* parameter)
+  {
+    /*
+    mrc_printf("============= start filename = %s %s", mr_table->pack_filename, mr_table->start_filename);
+      mr_internal_table* internal_table = mr_table->_mr_c_internal_table;
+ // 1. 【修复】：先保存当前现场到 old_* 变量
+    // 将当前的 pack_filename 备份到 old_pack_filename (偏移 408)
+    mr_table->strcpy(mr_table->old_pack_filename, mr_table->pack_filename);
+    // 将当前的 start_filename 备份到 old_start_filename (偏移 412)
+    mr_table->strcpy(mr_table->old_start_filename, mr_table->start_filename);
+
+      // 如果 pack_filename 与参数不同，更新它
+      if (mr_table->pack_filename != pack_filename_param) {
+          mr_table->memset(mr_table->pack_filename, 0, 0x20);  // 清空32字节
+          mr_table->strncpy(mr_table->pack_filename, pack_filename_param, 0x1f);  // 复制31字 节
+      }
+
+      // 如果 start_filename 与参数不同，更新它
+      if (mr_table->start_filename != start_filename_param) {
+          mr_table->memset(mr_table->start_filename, 0, 0x20);  // 清空32字节
+          mr_table->strncpy(mr_table->start_filename, start_filename_param, 0x1f);  // 复制31 字节
+      }
+
+      // 设置定时器相关状态
+      *internal_table->mr_timer_p = (void*)0x89600;  // 设置定时器指针
+      mr_table->g_mr_timerStart(100);                 // 启动100ms定时器
+      *internal_table->mr_timer_state = 1;            // 设置定时器状态为运行
+      *internal_table->mr_state = 3;                  // 设置MR状态为3
+     */
+    if(inFuncs->mrc_runMrp){
+        inFuncs->mrc_runMrp(pack_filename_param, start_filename_param, parameter);
+    }
+      return 0;
+  }
+
+  int32 mrc_getVersion(void){
+    if(inFuncs->mrc_getVersion){
+        return inFuncs->mrc_getVersion();
+    }
+    return 0;
+  }
+/*
+  int32 mrc_runMrp(char* newPackName, char* newStartName, char *param)
+{
+    mr_internal_table* internal_table = mr_table->_mr_c_internal_table;
+
+    // 1. 【修复】：先保存当前现场到 old_* 变量
+    // 将当前的 pack_filename 备份到 old_pack_filename (偏移 408)
+    mr_table->strcpy(mr_table->old_pack_filename, mr_table->pack_filename);
+    // 将当前的 start_filename 备份到 old_start_filename (偏移 412)
+    mr_table->strcpy(mr_table->old_start_filename, mr_table->start_filename);
+
+    // 2. 然后再更新当前文件名 (原有的逻辑)
+    if (mr_table->pack_filename != newPackName) {
+        mr_table->memset(mr_table->pack_filename, 0, 32);
+        mr_table->strncpy(mr_table->pack_filename, newPackName, 31);
+    }
+    
+    if (mr_table->start_filename != newStartName) {
+        mr_table->memset(mr_table->start_filename, 0, 32);
+        mr_table->strncpy(mr_table->start_filename, newStartName, 31);
+    }
+
+    // 3. 切换回调并运行
+    *(void**)internal_table->mr_timer_p = (void*)0x89600; // 子应用回调
+    mr_table->g_mr_timerStart(100);
+    // ...
+    return 0;
+}
+*/
+
  /*
 功能:
 	打开、关闭LCD定时休眠功能。

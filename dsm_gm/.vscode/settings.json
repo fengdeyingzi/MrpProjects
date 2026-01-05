@@ -1,0 +1,30 @@
+{
+    "files.associations": {
+        "base.h": "c",
+        "bridge.h": "c",
+        "cstdio": "c",
+        "deque": "c",
+        "string": "c",
+        "vector": "c",
+        "mr_helper.h": "c",
+        "utils.h": "c",
+        "*.tcc": "c",
+        "unordered_map": "c",
+        "fstream": "c",
+        "istream": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "mrc_base.h": "c",
+        "xl_bmp.h": "c",
+        "mpc.h": "c",
+        "xl_coding.h": "c",
+        "chrono": "c",
+        "system_error": "c",
+        "xlocale": "c",
+        "stdarg.h": "c",
+        "mrc_graphics.h": "c",
+        "tables.h": "c",
+        "display_object.h": "c",
+        "mrpinfo.h": "c"
+    }
+}

@@ -243,26 +243,35 @@ int gl_bitmapShowExTrans(uint16 *p,
   int16 endX = (x + w > SCRW) ? SCRW : x + w; // 截取结束绘制的X边界
   int16 endY = (y + h > SCRH) ? SCRH : y + h; // 截取结束绘制的Y边界
 
+  
+
   // 计算源图片在绘制区域中的对应位置
   int16 sourceX = (startX - x) + sx; // 映射源图像X坐标
   int16 sourceY = (startY - y) + sy; // 映射源图像Y坐标
   int32 sindex, pindex;
+  
+  // 如果绘制区域完全在屏幕外，直接返回
+  if (startX >= endX || startY >= endY) {
+    return MR_SUCCESS;
+  }
+
   // 检查输入参数的有效性
   if (p == NULL || screenBuffer == NULL || w <= 0 || h <= 0 ||
       sx < 0 || sy < 0 || sx + w > mw)
   {
     return MR_FAILED; // 参数无效，返回失败
   }
+  
   switch (rop)
   {
   case BM_COPY:
-    sourceX = sx; // 重置源图像的X坐标
     for (i = startY; i < endY; i++)
     {
-      // 计算源图像的有效位移
+      // 计算源图像的有效位移 - 修正：sourceX应该基于当前行和偏移计算
       pindex = (sourceY * mw + sourceX);
       // 计算目标屏幕中的位置
       sindex = (i * SCRW + startX);
+      // 复制一行像素
       memcpy(screenBuffer + sindex, p + pindex, (endX - startX) * 2);
       sourceY++; // 移动到源图像的下一个行
     }
@@ -271,13 +280,11 @@ int gl_bitmapShowExTrans(uint16 *p,
     // 遍历要绘制的区域
     for (i = startY; i < endY; i++)
     {
+      // 计算当前行的起始索引
       pindex = (sourceY * mw + sourceX);
-      // sindex = (i * SCRW);
       sindex = (i * SCRW + startX);
       for (j = startX; j < endX; j++)
       {
-        // 计算源图像的有效位移
-
         pixelColor = p[pindex]; // 获取当前像素颜色
 
         // 判断是否为透明色
@@ -288,9 +295,11 @@ int gl_bitmapShowExTrans(uint16 *p,
         sindex++;
         pindex++;
       }
-      sourceX = sx; // 重置源图像的X坐标
-      sourceY++;    // 移动到源图像的下一个行
+      sourceY++; // 移动到源图像的下一个行
     }
+    break;
+  default:
+    return MR_FAILED; // 无效的绘制模式
   }
 
   return MR_SUCCESS; // 成功完成绘制
@@ -318,33 +327,41 @@ int gl_bitmapShowExTrans8888(uint32 *p,
   int16 endX = (x + w > SCRW) ? SCRW : x + w; // 截取结束绘制的X边界
   int16 endY = (y + h > SCRH) ? SCRH : y + h; // 截取结束绘制的Y边界
 
+  
+
   // 计算源图片在绘制区域中的对应位置
   int16 sourceX = (startX - x) + sx; // 映射源图像X坐标
   int16 sourceY = (startY - y) + sy; // 映射源图像Y坐标
 
+  // 如果绘制区域完全在屏幕外，直接返回
+  if (startX >= endX || startY >= endY) {
+    return MR_SUCCESS;
+  }
+  
   // 检查输入参数的有效性
   if (p == NULL || screenBuffer == NULL || w <= 0 || h <= 0 ||
       sx < 0 || sy < 0 || sx + w > mw)
   {
     return MR_FAILED; // 参数无效，返回失败
   }
+  
   // 遍历要绘制的区域
   for (i = startY; i < endY; i++)
   {
+    // 重置当前行的源图像X坐标
+    int16 currentSourceX = sourceX;
     for (j = startX; j < endX; j++)
     {
-      pixel = p[(sourceY * mw + sourceX)]; // 从图像缓冲区获取当前32位像素
+      pixel = p[(sourceY * mw + currentSourceX)]; // 从图像缓冲区获取当前32位像素
       alpha = pixel >> 24;
       if (alpha != 0) // 判断是否为透明色
       {
-        pixelColor = blendColor888(screenBuffer[i * SCRW + j], pixel); // B
-
+        pixelColor = blendColor888(screenBuffer[i * SCRW + j], pixel);
         screenBuffer[i * SCRW + j] = pixelColor; // 写入屏幕缓冲区
       }
-      sourceX++; // 移动到源图像的下一个像素
+      currentSourceX++; // 移动到源图像的下一个像素
     }
-    sourceX = sx; // 重置源图像的X坐标
-    sourceY++;    // 移动到源图像的下一个行
+    sourceY++; // 移动到源图像的下一个行
   }
 
   return MR_SUCCESS; // 成功完成绘制
