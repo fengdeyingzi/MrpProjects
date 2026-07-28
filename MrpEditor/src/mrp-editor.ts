@@ -65,16 +65,28 @@ class FileItem {
 
 // UI 控制器类
 class MrpEditorUI {
-    private mrpInfo: MrpInfo | null = null;
-    private currentFile: File | null = null;
-    private player: Player | null = null;
+    public mrpInfo: MrpInfo | null = null;
+    public currentFile: File | null = null;
+    public player: Player | null = null;
+    public customViewers: Map<string, string | ((filename: string, fileData: Uint8Array) => void)> = new Map();
+
+    public registerViewer(extension: string, action: string | ((filename: string, fileData: Uint8Array) => void)): void {
+        this.customViewers.set(extension.toLowerCase(), action);
+    }
 
     constructor() {
         this.initEventListeners();
         this.setupFileInputListener();
+        this.setupClipboardListener();
+        // 暴露全局 API 供插件开发使用
+        (window as any).mrpEditorApp = this;
+        (window as any).MrpInfo = MrpInfo;
+        (window as any).FileItem = FileItem;
+        (window as any).pako = pako;
+        (window as any).GBK = GBK;
     }
 
-    private showToast(message: string, duration: number = 3000): void {
+    public showToast(message: string, duration: number = 3000): void {
         console.log("toast:" + message);
         const toastContainer = document.getElementById('toastContainer');
         if (!toastContainer) return;
@@ -449,7 +461,7 @@ class MrpEditorUI {
         reader.readAsArrayBuffer(file);
     }
 
-    private viewFile(filename: string): void {
+    public viewFile(filename: string): void {
         if (!this.mrpInfo) return;
 
         try {
@@ -462,10 +474,30 @@ class MrpEditorUI {
                 fileData = pako.ungzip(fileData);
             }
 
+            const ext = filename.split('.').pop()?.toLowerCase();
+
+            // 1. 优先检查自定义查看器 (插件注册)
+            if (ext && this.customViewers.has(ext)) {
+                const action = this.customViewers.get(ext);
+                if (typeof action === 'function') {
+                    action(filename, fileData);
+                } else if (typeof action === 'string') {
+                    // 如果是URL，将数据存入 localStorage 并跳转
+                    const base64Data = encodeBase64(fileData);
+                    localStorage.setItem('ext_filename', filename);
+                    localStorage.setItem('ext_filedata', base64Data);
+                    if (this.currentFile) {
+                        localStorage.setItem("mrpfile", encodeBase64(this.mrpInfo.data));
+                        localStorage.setItem("mrpfilename", this.currentFile.name);
+                    }
+                    window.location.href = action;
+                }
+                return;
+            }
+
             // 检查是否是文本文件
             const textExtensions = ['txt', 'ini', 'conf', 'js', 'json', 'xml', 'html', 'css'];
             const musicExtensions = ['mp3', 'wav', 'ogg', 'flac', 'mid'];
-            const ext = filename.split('.').pop()?.toLowerCase();
 
             if (ext && textExtensions.includes(ext)) {
                 // 尝试解码为文本
@@ -677,6 +709,9 @@ class MrpEditorUI {
     private updateFileInfoUI(): void {
         if (!this.mrpInfo) return;
 
+        // 动态修改网页标题
+        document.title = `[MRP编辑器] - ${this.mrpInfo.displayName || this.mrpInfo.fileName}`;
+
         // 基本信息
         document.getElementById('basicDisplayName')!.textContent = this.mrpInfo.displayName;
         document.getElementById('basicVersion')!.textContent = this.mrpInfo.version.toString();
@@ -706,6 +741,92 @@ class MrpEditorUI {
         if (!this.mrpInfo) return;
 
         document.getElementById('basicFileCount')!.textContent = this.mrpInfo.files.length.toString();
+    }
+
+    private setupClipboardListener(): void {
+        window.addEventListener('paste', (e: ClipboardEvent) => {
+            if (!e.clipboardData || !e.clipboardData.items) return;
+            
+            for (let i = 0; i < e.clipboardData.items.length; i++) {
+                const item = e.clipboardData.items[i];
+                if (item.kind === 'file') {
+                    const file = item.getAsFile();
+                    if (file && (file.name.toLowerCase().endsWith('.mrp') || file.name === 'blob')) {
+                        this.currentFile = file;
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const fileData = new Uint8Array(event.target?.result as ArrayBuffer);
+                                this.mrpInfo = MrpInfo.fromBytes(fileData);
+                                
+                                // 给无后缀的文件补充后缀展示
+                                if (file.name === 'blob') {
+                                   Object.defineProperty(file, 'name', {value: 'pasted_file.mrp', writable: false});
+                                }
+
+                                this.updateFileInfoUI();
+                                this.updateFileListUI();
+                                this.updateBasicInfoUI();
+                                this.showToast('从剪切板加载MRP文件成功！');
+                            } catch (error) {
+                                alert(`剪切板文件解析失败: ${error}`);
+                            }
+                        };
+                        reader.readAsArrayBuffer(file);
+                        break;
+                    }
+                }
+            }
+        });
+    }
+
+    public showDialog(title: string, contentHtml: string, onConfirm?: () => void, onCancel?: () => void): void {
+        const dialogOverlay = document.createElement('div');
+        dialogOverlay.className = 'modal';
+        dialogOverlay.style.display = 'flex';
+        dialogOverlay.style.zIndex = '9999';
+
+        const dialogContent = document.createElement('div');
+        dialogContent.className = 'modal-content';
+        dialogContent.innerHTML = `
+            <div class="modal-header">
+                <div class="modal-title">${title}</div>
+                <button class="close-btn">&times;</button>
+            </div>
+            <div style="padding: 15px 0;">
+                ${contentHtml}
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary cancel-btn">取消</button>
+                <button type="button" class="btn btn-primary confirm-btn">确定</button>
+            </div>
+        `;
+
+        dialogOverlay.appendChild(dialogContent);
+        document.body.appendChild(dialogOverlay);
+
+        const closeDialog = () => {
+            dialogOverlay.remove();
+        };
+
+        const confirmBtn = dialogContent.querySelector('.confirm-btn');
+        const cancelBtn = dialogContent.querySelector('.cancel-btn');
+        const closeBtn = dialogContent.querySelector('.close-btn');
+
+        confirmBtn?.addEventListener('click', () => {
+            if (onConfirm) onConfirm();
+            closeDialog();
+        });
+
+        cancelBtn?.addEventListener('click', () => {
+            if (onCancel) onCancel();
+            closeDialog();
+        });
+
+        closeBtn?.addEventListener('click', () => {
+            if (onCancel) onCancel();
+            closeDialog();
+        });
     }
 
     private updateFileListUI(): void {
